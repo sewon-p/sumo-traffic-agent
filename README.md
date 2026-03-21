@@ -1,8 +1,8 @@
 # LLM-Guided Synthetic Driving Scenario Generation Workflow
 
-This project turns natural-language traffic requests into structured synthetic driving scenarios using SUMO as the scenario execution engine, then closes the loop with human corrections, structured logging, evaluation, and retraining exports.
+This project converts natural-language traffic requests into structured synthetic driving scenarios in SUMO, then closes the loop with correction logging, evaluation, and retraining exports.
 
-It was built as an applied LLM systems project for synthetic scenario generation and dataset refinement, with emphasis on:
+The repository focuses on:
 
 - structured dataset generation
 - domain-specific fine-tuning
@@ -12,9 +12,7 @@ It was built as an applied LLM systems project for synthetic scenario generation
 
 ## Overview
 
-Building realistic synthetic driving scenarios is tedious and domain-heavy. Even when a user already knows the target scene, writing or editing SUMO XML by hand takes time and traffic engineering context.
-
-This project treats that problem as a role-separated LLM workflow:
+Building realistic synthetic driving scenarios is tedious and domain-heavy. This project addresses that through a role-separated LLM workflow:
 
 1. A user describes a traffic scene in natural language.
 2. A fine-tuned model extracts structured simulation parameters.
@@ -22,7 +20,7 @@ This project treats that problem as a role-separated LLM workflow:
 4. The system generates or modifies SUMO artifacts and executes the scenario.
 5. Results are validated, and human corrections are logged for future dataset improvement.
 
-The key design choice is responsibility split rather than one-model-does-everything:
+The key design choice is responsibility split rather than a single model doing everything:
 
 - Fine-tuned model:
   - specializes in `natural language -> structured traffic parameters`
@@ -63,7 +61,7 @@ flowchart TD
     A[Generated Scenario] --> B[User Interaction]
     B --> C{Intent}
     C -- Correction --> D[Trainable Feedback]
-    C -- Tuning --> E[Non-Trainable Variant Feedback]
+    C -- Tuning --> E[Analysis-Only Variant Feedback]
 
     D --> F{Modification target}
     E --> F
@@ -75,28 +73,11 @@ flowchart TD
     H --> J
     I --> J
     J --> K[Session Logging]
-    K --> L[Correction-Only Export]
-    L --> M[Future Fine-Tuning Dataset]
-```
-
-### Role-separated model and tool workflow
-
-```mermaid
-flowchart LR
-    A[User Request] --> B[Fine-Tuned Model]
-    B --> C[Structured Parameters]
-
-    A --> D[Base LLM]
-    D --> E[Modification Classification]
-    D --> F[Geometry Reasoning]
-    D --> G[XML Generation / Editing]
-
-    C --> H[Tool Layer]
-    E --> H
-    F --> H
-    G --> H
-
-    H --> I[OSM / SUMO / Validation / DB]
+    K --> L{Retraining eligibility}
+    L -- Correction only --> M[Correction-Only Export]
+    L -- Tuning --> N[Keep for analysis only]
+    M --> O[Future Fine-Tuning Dataset]
+    O --> P[Updated FT Extraction Stage]
 ```
 
 ## Pipeline
@@ -109,7 +90,7 @@ Example input:
 
 ### 1. Fine-tuned parameter extraction
 
-The fine-tuned OpenAI model converts the user request into a structured parameter set. This is the main fine-tuning task in the project.
+The fine-tuned OpenAI model converts the user request into a structured parameter set.
 
 Target fields include:
 
@@ -152,11 +133,9 @@ This prevents preference edits from polluting fine-tuning or dataset-improvement
 
 ## Fine-Tuning Data and Logging
 
-One of the main contributions of this project is not only the fine-tuned model itself, but the way its training and improvement data are created and extended.
+The project uses three data paths for fine-tuning and later improvement.
 
 ### Synthetic dataset path
-
-Implemented in:
 
 - [training/generate_dataset.py](training/generate_dataset.py)
 
@@ -171,15 +150,11 @@ This script builds supervised prompt/target pairs from:
 
 ### Real-data-derived dataset path
 
-Implemented in:
-
 - [training/build_from_real_data.py](training/build_from_real_data.py)
 
 This stage loads observed Seoul speed and volume files, aggregates them by road and time period, and converts them into structured FT targets.
 
 ### Correction-derived retraining path
-
-Implemented in:
 
 - [src/session_db.py](src/session_db.py)
 
@@ -201,40 +176,28 @@ prompt -> FT prediction -> scenario execution -> human correction -> DB -> expor
 
 ### Fine-tuned extractor
 
-Implemented in:
-
 - [src/llm_parser.py](src/llm_parser.py)
 
-Responsibilities:
-
 - parse natural language into structured simulation parameters
-- provide the stable machine-readable target for the rest of the pipeline
+- provide the machine-readable target for the rest of the pipeline
 
 ### Base LLM geometry / modification layer
 
-Implemented in:
-
 - [src/base_llm.py](src/base_llm.py)
-
-Responsibilities:
 
 - classify modification requests
 - handle geometry edits
 - generate fallback XML
 - extract FT training hints from geometry edits when useful
 
-This matters because some fields, such as `lanes` or `avg_block_m`, are meaningful as FT targets but operationally applied through geometry changes.
+Some fields, such as `lanes` or `avg_block_m`, are meaningful as FT targets but operationally applied through geometry changes.
 
 ### Logging, export, and reporting layer
-
-Implemented in:
 
 - [src/session_db.py](src/session_db.py)
 - [server.py](server.py)
 - [web/index.html](web/index.html)
 - [web/admin.html](web/admin.html)
-
-Responsibilities:
 
 - store simulation runs and modification sessions
 - separate trainable corrections from non-trainable tuning requests
@@ -243,7 +206,7 @@ Responsibilities:
 
 ## Evaluation and Admin Layer
 
-The project uses a database-backed evaluation workflow so that results remain auditable and reusable instead of becoming temporary chat history.
+The project uses a database-backed evaluation workflow so that results remain auditable and reusable.
 
 Current admin capabilities include:
 
@@ -276,9 +239,8 @@ This repository is relevant to AD/ADAS-oriented LLM work because it demonstrates
 - human-in-the-loop quality control
 - correction logging and retraining export
 - evaluation and error analysis
-- specialized model and tool orchestration
 
-The project is clearly LLM-first, not VLM-first. The relevance is in the workflow pattern: define a structured target, generate supervision from mixed sources, separate specialized sub-tasks, capture corrections, and feed validated signals back into training.
+The project is clearly LLM-first, not VLM-first. Its relevance is in the workflow pattern: define a structured target, capture corrections, and feed validated signals back into training.
 
 ## Repository Structure
 
@@ -309,36 +271,91 @@ The project is clearly LLM-first, not VLM-first. The relevance is in the workflo
 
 ## Running the Project
 
-### 1. Start the local server
+### Option A: Docker (recommended)
 
 ```bash
-./.venv/bin/python server.py
+# Build and run with docker compose
+docker compose up --build
+
+# Or run directly with Docker
+docker build -t sumo-traffic-agent .
+docker run -p 8080:8080 --env-file .env sumo-traffic-agent
 ```
 
 Then open:
 
-- `http://localhost:8080/`
-- `http://localhost:8080/admin`
+- `http://localhost:8080/` — simulation UI
+- `http://localhost:8080/admin` — admin / evaluation dashboard
 
-### 2. Fine-tuning dataset generation
-
-Synthetic dataset:
+### Option B: Local Python
 
 ```bash
-python -m training.generate_dataset
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python server.py
 ```
 
-Real-data-derived dataset:
+### Environment Variables
+
+Copy `.env.example` to `.env` and fill in:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `OPENAI_API_KEY` | Yes | For fine-tuned parameter extraction |
+| `OPENAI_FT_MODEL` | Yes | Fine-tuned model ID (e.g., `ft:gpt-4.1-mini-...`) |
+| `TOPIS_API_KEY` | No | Seoul real-time traffic API |
+| `ANTHROPIC_API_KEY` | No | Claude API (agent mode) |
+| `GEMINI_API_KEY` | No | Gemini API |
+
+### Fine-tuning dataset generation
 
 ```bash
+# Synthetic dataset
+python -m training.generate_dataset
+
+# Real-data-derived dataset
 python -m training.build_from_real_data
 ```
 
-### 3. Export correction-based retraining data
+### Export correction-based retraining data
 
 Available from the admin page, or through the backend export flow in:
 
 - [src/session_db.py](src/session_db.py)
+
+## CI/CD and Deployment
+
+### CI/CD Pipeline (GitHub Actions)
+
+Every push to `main` triggers:
+
+1. **test** — runs `pytest tests/` (15 tests)
+2. **docker-build** — builds Docker image and verifies container health
+3. **deploy** — pushes to GCP Artifact Registry and deploys to Cloud Run (requires secrets)
+
+### GCP Cloud Run Deployment
+
+To enable automatic deployment, set these GitHub Secrets:
+
+| Secret | Description |
+|--------|-------------|
+| `GCP_PROJECT_ID` | GCP project ID |
+| `GCP_SA_KEY` | Service account JSON key (with Cloud Run, Artifact Registry, Secret Manager permissions) |
+
+GCP prerequisites:
+
+```bash
+# Create Artifact Registry repository
+gcloud artifacts repositories create docker-repo \
+  --repository-format=docker --location=asia-northeast1
+
+# Store API keys in Secret Manager
+echo -n "sk-..." | gcloud secrets create openai-api-key --data-file=-
+echo -n "..." | gcloud secrets create topis-api-key --data-file=-
+```
+
+Deployment target: `asia-northeast1` (Tokyo), 1Gi memory, max 3 instances.
 
 ## Current Strengths
 
@@ -356,9 +373,3 @@ Available from the admin page, or through the backend export flow in:
 - external dependencies such as OSM and public APIs can fail
 - some SUMO behavior parameters are not yet fully calibrated into a stronger closed-loop setup
 - evaluation is stronger for correction-driven analysis than for a large held-out benchmark suite
-
-## Portfolio Summary
-
-If I had to summarize this project in one sentence:
-
-> I built a domain-specialized LLM workflow that converts natural-language traffic scene requests into structured synthetic driving scenarios, separates fine-tuned parameter extraction from general geometry reasoning, and closes the loop with human-in-the-loop correction logging, evaluation, and retraining exports.
