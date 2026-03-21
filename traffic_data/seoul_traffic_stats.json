@@ -1,0 +1,98 @@
+{
+  "_meta": {
+    "description": "서울시 도로유형별·시간대별 교통 대표 통계값",
+    "source": "서울시 교통통계연보, 서울시 교통정보센터 기반 추정",
+    "unit": {
+      "speed": "km/h",
+      "volume": "veh/h/lane (편도 1차로당)",
+      "density": "veh/km/lane"
+    },
+    "note": "volume은 1차로당 값. 전체 교통량 = volume × 차로수"
+  },
+  "도시고속도로": {
+    "speed_limit": 80,
+    "typical_lanes": 4,
+    "examples": ["올림픽대로", "강변북로", "내부순환로", "동부간선도로"],
+    "weekday": {
+      "심야(00-06)":   {"speed": 85, "volume": 200, "v_c_ratio": 0.15},
+      "출근(07-09)":   {"speed": 35, "volume": 1100, "v_c_ratio": 0.85},
+      "오전(09-12)":   {"speed": 55, "volume": 750, "v_c_ratio": 0.55},
+      "점심(12-14)":   {"speed": 50, "volume": 800, "v_c_ratio": 0.60},
+      "오후(14-18)":   {"speed": 45, "volume": 900, "v_c_ratio": 0.70},
+      "퇴근(18-20)":   {"speed": 30, "volume": 1200, "v_c_ratio": 0.90},
+      "야간(20-24)":   {"speed": 70, "volume": 400, "v_c_ratio": 0.30}
+    },
+    "saturday": {
+      "심야(00-06)":   {"speed": 88, "volume": 180, "v_c_ratio": 0.12},
+      "오전(09-12)":   {"speed": 60, "volume": 650, "v_c_ratio": 0.48},
+      "오후(14-18)":   {"speed": 50, "volume": 800, "v_c_ratio": 0.60},
+      "야간(20-24)":   {"speed": 75, "volume": 350, "v_c_ratio": 0.25}
+    },
+    "sunday": {
+      "심야(00-06)":   {"speed": 90, "volume": 120, "v_c_ratio": 0.08},
+      "오전(09-12)":   {"speed": 65, "volume": 500, "v_c_ratio": 0.35},
+      "오후(14-18)":   {"speed": 55, "volume": 650, "v_c_ratio": 0.48},
+      "야간(20-24)":   {"speed": 80, "volume": 250, "v_c_ratio": 0.18}
+    }
+  },
+  "간선도로": {
+    "speed_limit": 60,
+    "typical_lanes": 4,
+    "examples": ["강남대로", "테헤란로", "한강대로", "종로", "도산대로"],
+    "weekday": {
+      "심야(00-06)":   {"speed": 45, "volume": 80, "v_c_ratio": 0.10},
+      "출근(07-09)":   {"speed": 18, "volume": 550, "v_c_ratio": 0.80},
+      "오전(09-12)":   {"speed": 28, "volume": 380, "v_c_ratio": 0.55},
+      "점심(12-14)":   {"speed": 25, "volume": 420, "v_c_ratio": 0.60},
+      "오후(14-18)":   {"speed": 22, "volume": 480, "v_c_ratio": 0.70},
+      "퇴근(18-20)":   {"speed": 15, "volume": 600, "v_c_ratio": 0.90},
+      "야간(20-24)":   {"speed": 38, "volume": 180, "v_c_ratio": 0.25}
+    },
+    "saturday": {
+      "심야(00-06)":   {"speed": 48, "volume": 60, "v_c_ratio": 0.08},
+      "오전(09-12)":   {"speed": 32, "volume": 300, "v_c_ratio": 0.42},
+      "오후(14-18)":   {"speed": 28, "volume": 400, "v_c_ratio": 0.58},
+      "야간(20-24)":   {"speed": 40, "volume": 150, "v_c_ratio": 0.20}
+    },
+    "sunday": {
+      "심야(00-06)":   {"speed": 50, "volume": 40, "v_c_ratio": 0.05},
+      "오전(09-12)":   {"speed": 35, "volume": 220, "v_c_ratio": 0.30},
+      "오후(14-18)":   {"speed": 30, "volume": 320, "v_c_ratio": 0.45},
+      "야간(20-24)":   {"speed": 42, "volume": 120, "v_c_ratio": 0.16}
+    }
+  },
+  "보조간선": {
+    "speed_limit": 50,
+    "typical_lanes": 2,
+    "examples": ["논현로", "역삼로", "서초대로", "반포대로", "봉은사로"],
+    "weekday": {
+      "심야(00-06)":   {"speed": 40, "volume": 50, "v_c_ratio": 0.08},
+      "출근(07-09)":   {"speed": 16, "volume": 450, "v_c_ratio": 0.75},
+      "오전(09-12)":   {"speed": 25, "volume": 300, "v_c_ratio": 0.50},
+      "점심(12-14)":   {"speed": 22, "volume": 340, "v_c_ratio": 0.55},
+      "오후(14-18)":   {"speed": 20, "volume": 380, "v_c_ratio": 0.65},
+      "퇴근(18-20)":   {"speed": 14, "volume": 500, "v_c_ratio": 0.85},
+      "야간(20-24)":   {"speed": 35, "volume": 120, "v_c_ratio": 0.20}
+    }
+  },
+  "이면도로": {
+    "speed_limit": 30,
+    "typical_lanes": 1,
+    "examples": ["서초동 이면도로", "역삼동 이면도로", "방배동 이면도로"],
+    "weekday": {
+      "심야(00-06)":   {"speed": 28, "volume": 20, "v_c_ratio": 0.05},
+      "출근(07-09)":   {"speed": 12, "volume": 250, "v_c_ratio": 0.65},
+      "오전(09-12)":   {"speed": 18, "volume": 150, "v_c_ratio": 0.40},
+      "점심(12-14)":   {"speed": 15, "volume": 200, "v_c_ratio": 0.50},
+      "오후(14-18)":   {"speed": 16, "volume": 180, "v_c_ratio": 0.48},
+      "퇴근(18-20)":   {"speed": 10, "volume": 300, "v_c_ratio": 0.80},
+      "야간(20-24)":   {"speed": 25, "volume": 60, "v_c_ratio": 0.15}
+    }
+  },
+  "vehicle_composition": {
+    "도시고속도로": {"passenger": 0.82, "truck": 0.12, "bus": 0.06},
+    "간선도로":     {"passenger": 0.85, "truck": 0.08, "bus": 0.07},
+    "보조간선":     {"passenger": 0.88, "truck": 0.07, "bus": 0.05},
+    "이면도로":     {"passenger": 0.92, "truck": 0.05, "bus": 0.03}
+  }
+}

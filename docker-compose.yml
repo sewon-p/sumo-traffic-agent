@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    volumes:
+      - app-data:/app/data
+      - app-output:/app/output
+    restart: unless-stopped
+
+volumes:
+  app-data:
+  app-output:

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SUMO Admin</title>
+<style>
+  :root {
+    --bg: #0b0d10;
+    --panel: #141920;
+    --panel2: #1b2230;
+    --text: #e7edf7;
+    --dim: #93a1b5;
+    --accent: #59a8ff;
+    --good: #62d394;
+    --warn: #f3c969;
+    --bad: #ef6b73;
+    --border: #2a3444;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  header { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border); background: var(--panel); }
+  h1 { margin:0; font-size:16px; }
+  .wrap { padding: 20px; display:grid; gap:20px; }
+  .grid { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:12px; }
+  .card, .section { background: var(--panel); border:1px solid var(--border); border-radius:10px; }
+  .card { padding:14px; }
+  .label { color: var(--dim); font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
+  .value { margin-top:6px; font-size:22px; font-weight:700; }
+  .actions { display:flex; gap:10px; flex-wrap:wrap; }
+  button { background: var(--accent); color:white; border:0; padding:10px 14px; border-radius:8px; cursor:pointer; font: inherit; }
+  button.secondary { background: var(--panel2); border:1px solid var(--border); color: var(--text); }
+  .section { overflow:hidden; }
+  .section h2 { margin:0; padding:14px 16px; font-size:13px; border-bottom:1px solid var(--border); }
+  .section h3 { margin: 0 0 10px; font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; }
+  .table-scroll { max-height: 360px; overflow-y: auto; }
+  table { width:100%; border-collapse:collapse; }
+  th, td { padding:10px 12px; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; font-size:12px; }
+  th { color: var(--dim); font-weight:600; }
+  .content { padding: 12px 16px; }
+  .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; }
+  .good { background: rgba(98,211,148,.15); color: var(--good); }
+  .warn { background: rgba(243,201,105,.12); color: var(--warn); }
+  .bad { background: rgba(239,107,115,.12); color: var(--bad); }
+  .bars { display:grid; gap:8px; }
+  .bar-row { display:grid; grid-template-columns: 180px 1fr 56px; gap:10px; align-items:center; font-size:12px; }
+  .bar-label { color: var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .bar-track { width:100%; height:10px; background: var(--panel2); border:1px solid var(--border); border-radius:999px; overflow:hidden; }
+  .bar-fill { height:100%; background: linear-gradient(90deg, #59a8ff, #62d394); }
+  .metric-grid { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:12px; margin-bottom:14px; }
+  .mini-card { background: var(--panel2); border:1px solid var(--border); border-radius:8px; padding:12px; }
+  .mini-card .value { font-size:18px; margin-top:4px; }
+  .split { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+  pre { white-space:pre-wrap; word-break:break-word; background: var(--panel2); padding:12px; border-radius:8px; border:1px solid var(--border); color: var(--dim); margin:0; }
+  @media (max-width: 1000px) { .grid, .metric-grid, .split { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  @media (max-width: 700px) { .split, .grid, .metric-grid { grid-template-columns: 1fr; } .bar-row { grid-template-columns: 120px 1fr 48px; } }
+</style>
+</head>
+<body>
+  <header>
+    <h1>SUMO Admin</h1>
+    <div class="actions">
+      <button onclick="downloadCorrections()">Correction Export</button>
+      <button class="secondary" onclick="downloadReport()">Evaluation Report</button>
+      <button class="secondary" onclick="downloadLlmReport()">LLM Eval Report</button>
+      <button class="secondary" onclick="refreshAll()">Refresh</button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="grid">
+      <div class="card"><div class="label">Simulations</div><div class="value" id="sim-total">-</div></div>
+      <div class="card"><div class="label">Correction Rate</div><div class="value" id="llm-correction-rate-top">-</div></div>
+      <div class="card"><div class="label">Parameter Corr.</div><div class="value" id="llm-parameter-corrections-top">-</div></div>
+      <div class="card"><div class="label">Geometry Corr.</div><div class="value" id="llm-geometry-corrections-top">-</div></div>
+      <div class="card"><div class="label">Mixed Fail Rate</div><div class="value" id="llm-mixed-fail-rate-top">-</div></div>
+    </div>
+
+    <div class="section">
+      <h2>LLM Correction Evaluation</h2>
+      <div class="content">
+        <div style="margin-bottom:12px; color:var(--dim); font-size:12px;">
+          Based on `correction` logs only: shows which parameters are frequently incorrect and where geometry corrections are concentrated.
+          This is an operational metric closer to `natural language -> parameter/geometry interpretation` quality, not SUMO fidelity.
+        </div>
+        <div class="metric-grid">
+          <div class="mini-card"><div class="label">Correction Rate</div><div class="value" id="llm-correction-rate">-</div></div>
+          <div class="mini-card"><div class="label">Parameter Corrections</div><div class="value" id="llm-parameter-corrections">-</div></div>
+          <div class="mini-card"><div class="label">Geometry Corrections</div><div class="value" id="llm-geometry-corrections">-</div></div>
+        </div>
+        <div class="split">
+          <div>
+            <h3>Field Error Counts</h3>
+            <div class="bars" id="param-field-bars"></div>
+          </div>
+          <div>
+            <h3>Geometry Correction Types</h3>
+            <div class="bars" id="geometry-bars"></div>
+          </div>
+        </div>
+        <div style="margin-top:16px;">
+          <h3>Average Parameter Delta</h3>
+          <pre id="param-delta-json">loading...</pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>System Summary</h2>
+      <div class="content">
+        <div style="margin-bottom:12px; color:var(--dim); font-size:12px;">
+          This section shows supplementary metrics such as SUMO fidelity. At this stage, the `LLM Correction Evaluation` above is the more important operational metric.
+        </div>
+        <pre id="summary-json">loading...</pre>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Recent Simulations</h2>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Created</th><th>Grade</th><th>Prompt</th></tr>
+          </thead>
+          <tbody id="sim-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Recent Modifications</h2>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Intent</th><th>Type</th><th>Trainable</th><th>Prompt</th></tr>
+          </thead>
+          <tbody id="mod-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+<script>
+async function getJson(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`${url} ${r.status}`);
+  return r.json();
+}
+
+function gradePill(grade) {
+  const cls = grade === 'A' || grade === 'B' ? 'good' : grade === 'C' ? 'warn' : 'bad';
+  return `<span class="pill ${cls}">${grade || 'N/A'}</span>`;
+}
+
+async function loadSummary() {
+  const data = await getJson('/api/admin/summary');
+  document.getElementById('sim-total').textContent = data.simulations.total;
+  document.getElementById('summary-json').textContent = JSON.stringify(data, null, 2);
+}
+
+function renderBars(containerId, data) {
+  const root = document.getElementById(containerId);
+  const entries = Object.entries(data || {}).sort((a, b) => b[1] - a[1]);
+  if (!entries.length) {
+    root.innerHTML = '<div style="color:var(--dim); font-size:12px;">No data</div>';
+    return;
+  }
+  const max = Math.max(...entries.map(([, value]) => value), 1);
+  root.innerHTML = entries.map(([label, value]) => `
+    <div class="bar-row">
+      <div class="bar-label">${escapeHtml(label)}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.max((value / max) * 100, 6)}%"></div></div>
+      <div>${value}</div>
+    </div>
+  `).join('');
+}
+
+async function loadLlmEval() {
+  const data = await getJson('/api/admin/llm-eval');
+  document.getElementById('llm-correction-rate').textContent = `${data.overview.correction_rate_pct}%`;
+  document.getElementById('llm-parameter-corrections').textContent = data.overview.parameter_corrections;
+  document.getElementById('llm-geometry-corrections').textContent = data.overview.geometry_corrections;
+  document.getElementById('llm-correction-rate-top').textContent = `${data.overview.correction_rate_pct}%`;
+  document.getElementById('llm-parameter-corrections-top').textContent = data.overview.parameter_corrections;
+  document.getElementById('llm-geometry-corrections-top').textContent = data.overview.geometry_corrections;
+  document.getElementById('param-delta-json').textContent = JSON.stringify(data.parameter_avg_delta, null, 2);
+  renderBars('param-field-bars', data.parameter_fields);
+  renderBars('geometry-bars', data.geometry_categories);
+}
+
+async function loadSimulations() {
+  const data = await getJson('/api/admin/simulations?limit=30');
+  const tbody = document.getElementById('sim-table');
+  tbody.innerHTML = data.items.map(item => `
+    <tr>
+      <td>${item.id}</td>
+      <td>${item.created_at || ''}</td>
+      <td>${gradePill(item.grade)}</td>
+      <td>${escapeHtml(item.user_input || '')}</td>
+    </tr>
+  `).join('');
+}
+
+async function loadModifications() {
+  const data = await getJson('/api/admin/modifications?limit=50');
+  const tbody = document.getElementById('mod-table');
+  tbody.innerHTML = data.items.map(item => `
+    <tr>
+      <td>${item.id}</td>
+      <td>${escapeHtml(item.edit_intent || '-')}</td>
+      <td>${escapeHtml(item.modification_type || '-')}</td>
+      <td>${item.trainable ? '<span class="pill good">yes</span>' : '<span class="pill warn">no</span>'}</td>
+      <td>${escapeHtml(item.user_input || '')}</td>
+    </tr>
+  `).join('');
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function downloadCorrections() {
+  window.location.href = '/api/admin/export/corrections/download';
+}
+
+function downloadReport() {
+  window.location.href = '/api/admin/report/evaluation/download';
+}
+
+function downloadLlmReport() {
+  window.location.href = '/api/admin/report/llm-evaluation/download';
+}
+
+async function refreshAll() {
+  await Promise.all([loadSummary(), loadLlmEval(), loadSimulations(), loadModifications()]);
+}
+
+refreshAll().catch(err => {
+  document.getElementById('summary-json').textContent = String(err);
+});
+</script>
+</body>
+</html>

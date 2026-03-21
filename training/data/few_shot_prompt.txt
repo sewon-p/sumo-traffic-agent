@@ -1,0 +1,62 @@
+다음은 교통 시뮬레이션 파라미터 예시다:
+
+[예시 1]
+입력: 대형마트 주변 주말 도로 시뮬레이션 해줘
+출력: {"speed_kmh": 15, "volume_vph": 1800, "lanes": 2, "speed_limit_kmh": 50, "sigma": 0.7, "tau": 1.0, "accel": 2.6, "decel": 4.5, "minGap": 2.5, "speedFactor": 0.3, "passenger_ratio": 0.93, "truck_ratio": 0.04, "bus_ratio": 0.03, "reasoning": "주말 대형마트 진출입 차량으로 주변 도로 극심한 정체."}
+
+[예시 2]
+입력: 공항 연결 도로 새벽 시간에서 교통 시뮬레이션
+출력: {"speed_kmh": 70, "volume_vph": 800, "lanes": 3, "speed_limit_kmh": 80, "sigma": 0.35, "tau": 1.8, "accel": 2.0, "decel": 3.5, "minGap": 3.5, "speedFactor": 0.88, "passenger_ratio": 0.8, "truck_ratio": 0.05, "bus_ratio": 0.15, "reasoning": "새벽 공항 리무진 및 택시 비율 높음. 한산하여 자유류 근접."}
+
+[예시 3]
+입력: 고속도로 졸음운전 구간 조건으로 SUMO 돌려줘
+출력: {"speed_kmh": 85, "volume_vph": 1200, "lanes": 3, "speed_limit_kmh": 100, "sigma": 0.6, "tau": 1.8, "accel": 2.0, "decel": 3.0, "minGap": 4.0, "speedFactor": 0.85, "passenger_ratio": 0.8, "truck_ratio": 0.16, "bus_ratio": 0.04, "reasoning": "장거리 고속도로 단조 구간. sigma 높게 설정하여 주의력 저하 반영."}
+
+[예시 4]
+입력: 스쿨존 등하교 시간
+출력: {"speed_kmh": 20, "volume_vph": 600, "lanes": 1, "speed_limit_kmh": 30, "sigma": 0.7, "tau": 1.5, "accel": 1.5, "decel": 5.0, "minGap": 3.0, "speedFactor": 0.67, "passenger_ratio": 0.95, "truck_ratio": 0.02, "bus_ratio": 0.03, "reasoning": "스쿨존 30km/h 제한. 보행자 횡단 빈번, 급정거 대비 높은 감속도."}
+
+[예시 5]
+입력: 신도시 아파트단지 내부도로에서 교통 시뮬레이션
+출력: {"speed_kmh": 25, "volume_vph": 500, "lanes": 1, "speed_limit_kmh": 30, "sigma": 0.5, "tau": 1.5, "accel": 2.0, "decel": 4.5, "minGap": 3.0, "speedFactor": 0.83, "passenger_ratio": 0.92, "truck_ratio": 0.03, "bus_ratio": 0.05, "reasoning": "단지 내부 30km/h 제한, 과속방지턱, 보행자 혼재."}
+
+[예시 6]
+입력: 서울역 앞 도로 3차로 새벽 한산
+출력: {"speed_kmh": 45.0, "volume_vph": 640, "lanes": 3, "speed_limit_kmh": 50, "sigma": 0.34, "tau": 2.2, "accel": 2.6, "decel": 4.5, "minGap": 3.0, "speedFactor": 0.9, "passenger_ratio": 0.85, "truck_ratio": 0.08, "bus_ratio": 0.07, "reasoning": "서울역 앞 도로은(는) 도심간선 도로(편도 3차로, 제한속도 50km/h). 새벽 한산 시간대이므로 V/C비 약 0.12 추정. BPR 함수 적용 시 평균속도 약 45.0km/h."}
+
+[예시 7]
+입력: 점심시간에 London M25 motorway 비일 때 교통 시뮬레이션 해줘
+출력: {"speed_kmh": 84.7, "volume_vph": 4616, "lanes": 4, "speed_limit_kmh": 112, "sigma": 0.46, "tau": 1.2, "accel": 2.0, "decel": 3.5, "minGap": 3.0, "speedFactor": 0.76, "passenger_ratio": 0.78, "truck_ratio": 0.18, "bus_ratio": 0.04, "reasoning": "London M25 motorway은(는) 고속도로 도로(편도 4차로, 제한속도 112km/h). 낮 시간대 시간대이므로 V/C비 약 0.52 추정. BPR 함수 적용 시 평균속도 약 84.7km/h. 비 조건 반영하여 속도 15% 감소."}
+
+[예시 8]
+입력: 남부순환로 출근시간 시뮬레이션
+출력: {"speed_kmh": 38.7, "volume_vph": 4505, "lanes": 3, "speed_limit_kmh": 60, "sigma": 0.66, "tau": 1.0, "accel": 2.6, "decel": 4.5, "minGap": 2.5, "speedFactor": 0.65, "passenger_ratio": 0.85, "truck_ratio": 0.08, "bus_ratio": 0.07, "reasoning": "남부순환로은(는) 보조간선 도로(편도 3차로, 제한속도 60km/h). 오전 출근 피크 시간대이므로 V/C비 약 0.94 추정. BPR 함수 적용 시 평균속도 약 38.7km/h. 안개 조건 반영하여 속도 19% 감소."}
+
+[예시 9]
+입력: 서울역 앞 도로에서 12:00시 맑음 상황
+출력: {"speed_kmh": 43.9, "volume_vph": 3427, "lanes": 3, "speed_limit_kmh": 50, "sigma": 0.56, "tau": 1.3, "accel": 2.6, "decel": 4.5, "minGap": 3.0, "speedFactor": 0.88, "passenger_ratio": 0.85, "truck_ratio": 0.08, "bus_ratio": 0.07, "reasoning": "서울역 앞 도로은(는) 도심간선 도로(편도 3차로, 제한속도 50km/h). 낮 시간대 시간대이므로 V/C비 약 0.63 추정. BPR 함수 적용 시 평균속도 약 43.9km/h."}
+
+[예시 10]
+입력: 주말 오후에 판교테크노밸리 내부도로 눈일 때 교통 시뮬레이션 해줘
+출력: {"speed_kmh": 24.7, "volume_vph": 1458, "lanes": 2, "speed_limit_kmh": 40, "sigma": 0.41, "tau": 1.2, "accel": 2.6, "decel": 4.5, "minGap": 3.0, "speedFactor": 0.62, "passenger_ratio": 0.9, "truck_ratio": 0.05, "bus_ratio": 0.05, "reasoning": "판교테크노밸리 내부도로은(는) 집산도로 도로(편도 2차로, 제한속도 40km/h). 주말 여가 통행 시간대이므로 V/C비 약 0.61 추정. BPR 함수 적용 시 평균속도 약 24.7km/h. 눈 조건 반영하여 속도 30% 감소."}
+
+[예시 11]
+입력: 점심시간에 강남대로 맑음일 때 교통 시뮬레이션 해줘
+출력: {"speed_kmh": 44.1, "volume_vph": 5502, "lanes": 5, "speed_limit_kmh": 50, "sigma": 0.55, "tau": 1.3, "accel": 2.6, "decel": 4.5, "minGap": 3.0, "speedFactor": 0.88, "passenger_ratio": 0.85, "truck_ratio": 0.08, "bus_ratio": 0.07, "reasoning": "강남대로은(는) 도심간선 도로(편도 5차로, 제한속도 50km/h). 낮 시간대 시간대이므로 V/C비 약 0.61 추정. BPR 함수 적용 시 평균속도 약 44.1km/h."}
+
+[예시 12]
+입력: 서울역 앞 도로 3차로 주말 전야 혼잡
+출력: {"speed_kmh": 32.5, "volume_vph": 4984, "lanes": 3, "speed_limit_kmh": 50, "sigma": 0.76, "tau": 0.8, "accel": 2.6, "decel": 4.5, "minGap": 2.5, "speedFactor": 0.65, "passenger_ratio": 0.85, "truck_ratio": 0.08, "bus_ratio": 0.07, "reasoning": "서울역 앞 도로은(는) 도심간선 도로(편도 3차로, 제한속도 50km/h). 주말 전야 혼잡 시간대이므로 V/C비 약 0.92 추정. BPR 함수 적용 시 평균속도 약 32.5km/h. 안개 조건 반영하여 속도 19% 감소."}
+
+[예시 13]
+입력: 세종대로 6차로 오후 퇴근 피크
+출력: {"speed_kmh": 29.3, "volume_vph": 9054, "lanes": 6, "speed_limit_kmh": 50, "sigma": 0.74, "tau": 1.0, "accel": 2.6, "decel": 4.5, "minGap": 2.5, "speedFactor": 0.59, "passenger_ratio": 0.85, "truck_ratio": 0.08, "bus_ratio": 0.07, "reasoning": "세종대로은(는) 도심간선 도로(편도 6차로, 제한속도 50km/h). 오후 퇴근 피크 시간대이므로 V/C비 약 0.84 추정. BPR 함수 적용 시 평균속도 약 29.3km/h. 눈 조건 반영하여 속도 30% 감소."}
+
+[예시 14]
+입력: 경부고속도로 서울-수원에서 02:00시 눈 상황
+출력: {"speed_kmh": 63.0, "volume_vph": 1039, "lanes": 4, "speed_limit_kmh": 100, "sigma": 0.24, "tau": 1.6, "accel": 2.0, "decel": 3.5, "minGap": 3.0, "speedFactor": 0.63, "passenger_ratio": 0.78, "truck_ratio": 0.18, "bus_ratio": 0.04, "reasoning": "경부고속도로 서울-수원은(는) 고속도로 도로(편도 4차로, 제한속도 100km/h). 새벽 한산 시간대이므로 V/C비 약 0.12 추정. BPR 함수 적용 시 평균속도 약 63.0km/h. 눈 조건 반영하여 속도 30% 감소."}
+
+[예시 15]
+입력: Paris Champs-Élysées에서 08:00시 맑음 상황
+출력: {"speed_kmh": 40.2, "volume_vph": 6796, "lanes": 4, "speed_limit_kmh": 50, "sigma": 0.72, "tau": 1.1, "accel": 2.6, "decel": 4.5, "minGap": 2.5, "speedFactor": 0.8, "passenger_ratio": 0.85, "truck_ratio": 0.08, "bus_ratio": 0.07, "reasoning": "Paris Champs-Élysées은(는) 도심간선 도로(편도 4차로, 제한속도 50km/h). 오전 출근 피크 시간대이므로 V/C비 약 0.94 추정. BPR 함수 적용 시 평균속도 약 40.2km/h."}
+
