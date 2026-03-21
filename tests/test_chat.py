@@ -67,7 +67,7 @@ class ServerModificationTest(unittest.TestCase):
         with mock.patch.dict(server._session, {"net_path": None, "params": None, "ft": {}, "output_dir": None, "history": []}, clear=False):
             handler._run_simulation("오른쪽 도로 좀 위로 휘게 해줘", provider="modify", modify_intent="alternative")
         self.assertEqual(events[-1]["type"], "error")
-        self.assertIn("이전 시뮬레이션", events[-1]["text"])
+        self.assertIn("No previous simulation", events[-1]["text"])
 
 
 if __name__ == "__main__":
