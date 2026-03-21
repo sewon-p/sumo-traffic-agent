@@ -30,7 +30,7 @@ def _find_binary(name: str) -> str:
         f"/opt/homebrew/bin/{name}",
     ]
     for c in candidates:
-        if os.path.isfile(c):
+        if c and os.path.isfile(c):
             return c
 
     return ""
