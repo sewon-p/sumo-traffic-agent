@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SUMO Traffic Simulation Agent - Portfolio</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111116;
+    --surface2: #1a1a22;
+    --surface3: #222230;
+    --border: #2a2a3a;
+    --text: #e0e0e0;
+    --text-dim: #8888a0;
+    --accent: #4ecdc4;
+    --accent-dim: rgba(78,205,196,.12);
+    --accent-glow: rgba(78,205,196,.25);
+    --font: 'SF Mono', 'Fira Code', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html {
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: var(--surface3) var(--bg);
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---- NAV ---- */
+  nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: rgba(10,10,10,.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: box-shadow .3s;
+  }
+
+  nav.scrolled {
+    box-shadow: 0 4px 24px rgba(0,0,0,.4);
+  }
+
+  .nav-brand {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    color: var(--text);
+  }
+
+  .nav-brand span { color: var(--accent); }
+
+  .nav-links {
+    display: flex;
+    gap: 28px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    font-size: 12px;
+    color: var(--text-dim);
+    text-decoration: none;
+    letter-spacing: .3px;
+    transition: color .2s;
+  }
+
+  .nav-links a:hover { color: var(--accent); }
+
+  .nav-toggle {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: 20px;
+    cursor: pointer;
+  }
+
+  /* ---- SECTIONS ---- */
+  section {
+    padding: 100px 32px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .15em;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+
+  .section-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    line-height: 1.3;
+  }
+
+  .section-desc {
+    color: var(--text-dim);
+    font-size: 13px;
+    max-width: 640px;
+    margin-bottom: 48px;
+    line-height: 1.7;
+  }
+
+  /* ---- HERO ---- */
+  #hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-top: 56px;
+    position: relative;
+  }
+
+  .hero-badge {
+    display: inline-block;
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid rgba(78,205,196,.3);
+    padding: 6px 14px;
+    border-radius: 999px;
+    margin-bottom: 28px;
+    background: var(--accent-dim);
+  }
+
+  .hero-title {
+    font-size: clamp(32px, 5vw, 56px);
+    font-weight: 800;
+    line-height: 1.15;
+    margin-bottom: 20px;
+  }
+
+  .hero-title .highlight {
+    color: var(--accent);
+  }
+
+  .hero-sub {
+    font-size: 15px;
+    color: var(--text-dim);
+    max-width: 560px;
+    margin-bottom: 40px;
+    line-height: 1.7;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font: 13px/1 var(--font);
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+    transition: transform .15s, box-shadow .15s, background .2s;
+  }
+
+  .btn:hover {
+    transform: translateY(-1px);
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #0a0a0a;
+    box-shadow: 0 0 20px var(--accent-glow);
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 0 32px var(--accent-glow);
+  }
+
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .hero-grid-bg {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background-image:
+      radial-gradient(circle at 70% 30%, rgba(78,205,196,.06) 0%, transparent 50%),
+      linear-gradient(rgba(78,205,196,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(78,205,196,.03) 1px, transparent 1px);
+    background-size: 100% 100%, 48px 48px, 48px 48px;
+  }
+
+  /* ---- HOW IT WORKS ---- */
+  .flow {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    position: relative;
+  }
+
+  .flow-step {
+    text-align: center;
+    padding: 32px 20px;
+    position: relative;
+  }
+
+  .flow-step::after {
+    content: '';
+    position: absolute;
+    top: 56px;
+    right: -12px;
+    width: 24px;
+    height: 2px;
+    background: var(--border);
+  }
+
+  .flow-step:last-child::after { display: none; }
+
+  .flow-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    background: var(--accent-dim);
+    border: 1px solid rgba(78,205,196,.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    font-size: 20px;
+    color: var(--accent);
+  }
+
+  .flow-num {
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .flow-label {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .flow-desc {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  /* ---- ARCHITECTURE ---- */
+  .arch-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .arch-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 24px;
+    transition: border-color .2s, box-shadow .2s;
+  }
+
+  .arch-card:hover {
+    border-color: rgba(78,205,196,.3);
+    box-shadow: 0 0 24px rgba(78,205,196,.06);
+  }
+
+  .arch-card-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--accent-dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    color: var(--accent);
+    font-size: 16px;
+  }
+
+  .arch-card-title {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .arch-card-role {
+    font-size: 11px;
+    color: var(--accent);
+    margin-bottom: 12px;
+    letter-spacing: .05em;
+  }
+
+  .arch-card-desc {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.65;
+  }
+
+  .arch-card ul {
+    list-style: none;
+    margin-top: 12px;
+  }
+
+  .arch-card ul li {
+    font-size: 12px;
+    color: var(--text-dim);
+    padding: 4px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .arch-card ul li::before {
+    content: '';
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-top: 7px;
+    flex-shrink: 0;
+  }
+
+  /* ---- FEATURES ---- */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .feature-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    transition: border-color .2s, transform .15s;
+  }
+
+  .feature-card:hover {
+    border-color: rgba(78,205,196,.3);
+    transform: translateY(-2px);
+  }
+
+  .feature-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--accent-dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+    color: var(--accent);
+    font-size: 14px;
+  }
+
+  .feature-title {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .feature-desc {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.65;
+  }
+
+  /* ---- TECH STACK ---- */
+  .stack-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .stack-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 20px;
+    font-size: 12px;
+    font-weight: 600;
+    transition: border-color .2s;
+  }
+
+  .stack-item:hover {
+    border-color: rgba(78,205,196,.35);
+  }
+
+  .stack-item i {
+    color: var(--accent);
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+  }
+
+  /* ---- DATASET PIPELINE ---- */
+  .pipeline-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .pipeline-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 24px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color .2s;
+  }
+
+  .pipeline-card:hover {
+    border-color: rgba(78,205,196,.3);
+  }
+
+  .pipeline-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    opacity: 0;
+    transition: opacity .2s;
+  }
+
+  .pipeline-card:hover::before { opacity: 1; }
+
+  .pipeline-num {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--surface3);
+    margin-bottom: 12px;
+    line-height: 1;
+  }
+
+  .pipeline-title {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+
+  .pipeline-desc {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.65;
+  }
+
+  /* ---- FOOTER ---- */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 40px 32px;
+    text-align: center;
+  }
+
+  .footer-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .footer-text {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 20px;
+  }
+
+  .footer-links a {
+    font-size: 12px;
+    color: var(--text-dim);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: color .2s;
+  }
+
+  .footer-links a:hover { color: var(--accent); }
+
+  /* ---- DIVIDER ---- */
+  .divider {
+    max-width: 1100px;
+    margin: 0 auto;
+    border: 0;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ---- RESPONSIVE ---- */
+  @media (max-width: 900px) {
+    section { padding: 72px 24px; }
+
+    .flow {
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .flow-step::after { display: none; }
+
+    .arch-grid,
+    .features-grid,
+    .pipeline-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  @media (max-width: 600px) {
+    nav { padding: 0 20px; }
+
+    .nav-links {
+      display: none;
+      position: absolute;
+      top: 56px;
+      left: 0;
+      right: 0;
+      flex-direction: column;
+      background: rgba(10,10,10,.95);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      gap: 16px;
+    }
+
+    .nav-links.open { display: flex; }
+    .nav-toggle { display: block; }
+
+    section { padding: 56px 20px; }
+
+    .section-title { font-size: 22px; }
+
+    .flow,
+    .arch-grid,
+    .features-grid,
+    .pipeline-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .flow-step::after { display: none; }
+
+    .footer-inner {
+      flex-direction: column;
+      gap: 16px;
+    }
+  }
+
+  /* ---- SCROLL ANIMATION ---- */
+  .fade-in {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity .5s ease, transform .5s ease;
+  }
+
+  .fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="navbar">
+  <div class="nav-brand">SUMO <span>Agent</span></div>
+  <button class="nav-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')" aria-label="Toggle navigation">
+    <i class="fa-solid fa-bars"></i>
+  </button>
+  <ul class="nav-links">
+    <li><a href="#hero">Home</a></li>
+    <li><a href="#how-it-works">How It Works</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#tech-stack">Tech Stack</a></li>
+    <li><a href="#dataset">Dataset</a></li>
+    <li><a href="/">Demo</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-grid-bg"></div>
+  <div class="hero-badge">Portfolio Project -- Woven by Toyota</div>
+  <h1 class="hero-title">
+    Natural Language to<br>
+    <span class="highlight">SUMO Traffic Simulation</span>
+  </h1>
+  <p class="hero-sub">
+    An LLM-powered agent that converts plain English descriptions into
+    fully configured SUMO traffic simulations -- bridging the gap between
+    domain experts and microscopic traffic modeling.
+  </p>
+  <div class="hero-actions">
+    <a href="/" class="btn btn-primary"><i class="fa-solid fa-play"></i> Try Demo</a>
+    <a href="https://github.com" class="btn btn-secondary" target="_blank" rel="noopener"><i class="fa-brands fa-github"></i> GitHub</a>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- HOW IT WORKS -->
+<section id="how-it-works">
+  <div class="section-label">Process</div>
+  <h2 class="section-title">How It Works</h2>
+  <p class="section-desc">
+    From a single sentence to a running microscopic traffic simulation in four automated steps.
+  </p>
+  <div class="flow fade-in">
+    <div class="flow-step">
+      <div class="flow-icon"><i class="fa-solid fa-message"></i></div>
+      <div class="flow-num">Step 01</div>
+      <div class="flow-label">Natural Language Input</div>
+      <div class="flow-desc">User describes a traffic scenario in plain English -- intersection type, traffic volume, signal timing, road conditions.</div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-icon"><i class="fa-solid fa-brain"></i></div>
+      <div class="flow-num">Step 02</div>
+      <div class="flow-label">Parameter Extraction</div>
+      <div class="flow-desc">A fine-tuned LLM parses the description and extracts structured simulation parameters with high accuracy.</div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-icon"><i class="fa-solid fa-road"></i></div>
+      <div class="flow-num">Step 03</div>
+      <div class="flow-label">Network Generation</div>
+      <div class="flow-desc">Road networks are generated via OSM data or LLM-driven geometry, then compiled into SUMO-compatible XML files.</div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-icon"><i class="fa-solid fa-car"></i></div>
+      <div class="flow-num">Step 04</div>
+      <div class="flow-label">SUMO Simulation</div>
+      <div class="flow-desc">The complete simulation runs in SUMO with real-time metrics -- vehicle counts, queue lengths, travel times, and more.</div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ARCHITECTURE -->
+<section id="architecture">
+  <div class="section-label">System Design</div>
+  <h2 class="section-title">Architecture</h2>
+  <p class="section-desc">
+    A role-separated architecture where each layer handles what it does best -- fine-tuned precision for parameter extraction, base LLM flexibility for geometry, and deterministic tooling for simulation.
+  </p>
+  <div class="arch-grid fade-in">
+    <div class="arch-card">
+      <div class="arch-card-icon"><i class="fa-solid fa-microchip"></i></div>
+      <div class="arch-card-title">Fine-tuned LLM</div>
+      <div class="arch-card-role">Parameter Extraction Layer</div>
+      <div class="arch-card-desc">
+        A fine-tuned model trained on synthetic and real traffic data to reliably convert natural language into structured simulation parameters.
+      </div>
+      <ul>
+        <li>Trained on domain-specific traffic scenarios</li>
+        <li>Outputs structured JSON with validated fields</li>
+        <li>Continuously improved via correction feedback</li>
+      </ul>
+    </div>
+    <div class="arch-card">
+      <div class="arch-card-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+      <div class="arch-card-title">Base LLM</div>
+      <div class="arch-card-role">Geometry &amp; Reasoning Layer</div>
+      <div class="arch-card-desc">
+        A general-purpose LLM handles complex spatial reasoning -- generating road network geometries, merging lanes, and interpreting ambiguous descriptions.
+      </div>
+      <ul>
+        <li>Generates node/edge geometry for custom networks</li>
+        <li>Handles multi-turn clarification dialogues</li>
+        <li>Supports Claude, GPT-4, and Gemini backends</li>
+      </ul>
+    </div>
+    <div class="arch-card">
+      <div class="arch-card-icon"><i class="fa-solid fa-gears"></i></div>
+      <div class="arch-card-title">Tool Layer</div>
+      <div class="arch-card-role">Simulation &amp; Integration</div>
+      <div class="arch-card-desc">
+        Deterministic tooling compiles network XML, generates traffic routes, launches SUMO, and streams back real-time simulation metrics.
+      </div>
+      <ul>
+        <li>SUMO netconvert, duarouter, and TraCI</li>
+        <li>OSM network download and processing</li>
+        <li>Seoul real-time traffic API integration</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-label">Capabilities</div>
+  <h2 class="section-title">Key Features</h2>
+  <p class="section-desc">
+    Built end-to-end for production readiness and continuous improvement.
+  </p>
+  <div class="features-grid fade-in">
+    <div class="feature-card">
+      <div class="feature-icon"><i class="fa-solid fa-layer-group"></i></div>
+      <div class="feature-title">Multi-LLM Support</div>
+      <div class="feature-desc">Swap between Claude, GPT-4, and Gemini models at runtime. Compare outputs and benchmark accuracy across providers.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon"><i class="fa-solid fa-database"></i></div>
+      <div class="feature-title">Fine-tuning Pipeline</div>
+      <div class="feature-desc">Automated pipeline combining synthetic generation with real Seoul metropolitan traffic data to build high-quality training sets.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon"><i class="fa-solid fa-user-pen"></i></div>
+      <div class="feature-title">Human-in-the-Loop</div>
+      <div class="feature-desc">Users can correct LLM outputs directly. Every correction is logged, analyzed, and fed back into the fine-tuning pipeline.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon"><i class="fa-solid fa-tower-broadcast"></i></div>
+      <div class="feature-title">Real-time Seoul Traffic API</div>
+      <div class="feature-desc">Integrates live traffic volume data from Seoul metropolitan sensors to ground simulations in real-world conditions.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon"><i class="fa-brands fa-docker"></i></div>
+      <div class="feature-title">Docker + CI/CD</div>
+      <div class="feature-desc">Containerized deployment with GitHub Actions CI/CD pipeline. Automated testing, building, and deployment to GCP Cloud Run.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon"><i class="fa-solid fa-chart-line"></i></div>
+      <div class="feature-title">Admin Dashboard</div>
+      <div class="feature-desc">Built-in admin panel with LLM evaluation metrics, correction rate tracking, field-level error analysis, and exportable reports.</div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- TECH STACK -->
+<section id="tech-stack">
+  <div class="section-label">Technologies</div>
+  <h2 class="section-title">Tech Stack</h2>
+  <p class="section-desc">
+    Purpose-selected tools for each layer of the system.
+  </p>
+  <div class="stack-grid fade-in">
+    <div class="stack-item"><i class="fa-brands fa-python"></i> Python</div>
+    <div class="stack-item"><i class="fa-solid fa-traffic-light"></i> SUMO</div>
+    <div class="stack-item"><i class="fa-solid fa-robot"></i> OpenAI API</div>
+    <div class="stack-item"><i class="fa-solid fa-robot"></i> Anthropic API</div>
+    <div class="stack-item"><i class="fa-solid fa-robot"></i> Google Gemini</div>
+    <div class="stack-item"><i class="fa-brands fa-docker"></i> Docker</div>
+    <div class="stack-item"><i class="fa-brands fa-github"></i> GitHub Actions</div>
+    <div class="stack-item"><i class="fa-brands fa-google"></i> GCP Cloud Run</div>
+    <div class="stack-item"><i class="fa-solid fa-database"></i> SQLite</div>
+    <div class="stack-item"><i class="fa-solid fa-map"></i> OpenStreetMap</div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- DATASET PIPELINE -->
+<section id="dataset">
+  <div class="section-label">Data Strategy</div>
+  <h2 class="section-title">Dataset Pipeline</h2>
+  <p class="section-desc">
+    Three complementary data paths feed the fine-tuning pipeline, ensuring both coverage and accuracy.
+  </p>
+  <div class="pipeline-grid fade-in">
+    <div class="pipeline-card">
+      <div class="pipeline-num">01</div>
+      <div class="pipeline-title">Synthetic Generation</div>
+      <div class="pipeline-desc">
+        LLM-generated prompt-response pairs covering diverse intersection types, traffic volumes, signal configurations, and edge cases. Provides broad coverage for initial model training.
+      </div>
+    </div>
+    <div class="pipeline-card">
+      <div class="pipeline-num">02</div>
+      <div class="pipeline-title">Real Seoul Traffic Data</div>
+      <div class="pipeline-desc">
+        Live sensor data from Seoul metropolitan traffic infrastructure converted into natural language scenarios. Grounds the model in real-world traffic patterns and volumes.
+      </div>
+    </div>
+    <div class="pipeline-card">
+      <div class="pipeline-num">03</div>
+      <div class="pipeline-title">Correction-derived Data</div>
+      <div class="pipeline-desc">
+        Human corrections from production usage are transformed into training pairs. This closed-loop feedback continuously targets the model's actual weaknesses.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-text">SUMO Traffic Simulation Agent -- Portfolio Project</div>
+    <div class="footer-links">
+      <a href="https://github.com" target="_blank" rel="noopener"><i class="fa-brands fa-github"></i> GitHub Repository</a>
+      <a href="/"><i class="fa-solid fa-play"></i> Live Demo</a>
+      <a href="/admin.html"><i class="fa-solid fa-chart-line"></i> Admin</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Navbar scroll shadow
+  const nav = document.getElementById('navbar');
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 20);
+  });
+
+  // Close mobile nav on link click
+  document.querySelectorAll('.nav-links a').forEach(link => {
+    link.addEventListener('click', () => {
+      document.querySelector('.nav-links').classList.remove('open');
+    });
+  });
+
+  // Intersection Observer for fade-in animations
+  const observer = new IntersectionObserver(
+    entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    },
+    { threshold: 0.15 }
+  );
+
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>

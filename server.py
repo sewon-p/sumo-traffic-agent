@@ -303,6 +303,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.path = "/admin.html"
             super().do_GET()
 
+        elif parsed.path == "/about":
+            self.path = "/about.html"
+            super().do_GET()
+
         elif parsed.path == "/" or parsed.path == "/index.html":
             # Prevent caching: no-cache header
             self.path = "/index.html"

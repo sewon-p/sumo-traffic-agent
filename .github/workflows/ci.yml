@@ -84,5 +84,5 @@ jobs:
             --timeout 300 \
             --max-instances 3 \
             --set-env-vars "SUMO_SERVER_SKIP_VENV_REEXEC=1" \
-            --set-secrets "OPENAI_API_KEY=openai-api-key:latest,TOPIS_API_KEY=topis-api-key:latest" \
+            --set-secrets "OPENAI_API_KEY=openai-api-key:latest,TOPIS_API_KEY=topis-api-key:latest,OPENAI_FT_MODEL=openai-ft-model:latest" \
             --allow-unauthenticated
