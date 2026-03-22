@@ -1,6 +1,6 @@
 # LLM-Guided Synthetic Driving Scenario Generation Workflow
 
-This project converts natural-language traffic requests into structured synthetic driving scenarios in SUMO, then closes the loop with correction logging, evaluation, and retraining exports.
+This project converts natural-language traffic requests into structured synthetic driving scenarios in SUMO, closing the loop with correction logging, evaluation, and retraining exports.
 
 The repository focuses on:
 
@@ -23,17 +23,17 @@ Building realistic synthetic driving scenarios is tedious and domain-heavy. This
 The key design choice is responsibility split rather than a single model doing everything:
 
 - Fine-tuned model:
-  - specializes in `natural language -> structured traffic parameters`
+  - maps `natural language -> structured traffic parameters`
   - predicts fields such as `speed_kmh`, `volume_vph`, `lanes`, `speed_limit_kmh`, `sigma`, `tau`, and `avg_block_m`
 - Base LLM:
   - handles modification classification and geometry/XML reasoning
-  - edits network structure or generates fallback XML when OSM retrieval fails
+  - edits network structure or generates fallback XML
 - Tool / pipeline layer:
-  - builds SUMO files, runs the scenario, validates outputs, and stores logs and reports
+  - builds SUMO files, runs scenarios, validates outputs, and stores logs and reports
 
 ## Architecture at a Glance
 
-### End-to-end generation flow
+### End-to-End Generation Flow
 
 ```mermaid
 flowchart TD
@@ -54,7 +54,7 @@ flowchart TD
     J --> K[Validation and Statistics]
 ```
 
-### Human-in-the-loop refinement and retraining flow
+### Human-in-the-Loop Refinement and Retraining Flow
 
 ```mermaid
 flowchart TD
@@ -111,23 +111,23 @@ Target fields include:
 
 ### 3. Scenario execution and refinement
 
-The pipeline creates the simulation artifacts:
+The pipeline creates:
 
 - `.net.xml`
 - `.rou.xml`
 - `.add.xml`
 - `.sumocfg`
 
-Traffic demand is generated from the extracted parameters, then SUMO is executed in headless mode.
+Traffic demand is generated from the extracted parameters, then SUMO runs in headless mode.
 
 After generation, the user can continue the session in two different ways:
 
 - `Correction`
-  - indicates that the generated result was wrong
-  - treated as trainable feedback
+  - marks the result as wrong
+  - becomes trainable feedback
 - `Tuning`
-  - indicates that the result was acceptable but the user wants another variant
-  - logged but excluded from retraining by default
+  - requests another acceptable variant
+  - is logged but excluded from retraining by default
 
 This prevents preference edits from polluting fine-tuning or dataset-improvement signals.
 
@@ -176,33 +176,36 @@ prompt -> FT prediction -> scenario execution -> human correction -> DB -> expor
 
 ### Fine-tuned extractor
 
-- [src/llm_parser.py](src/llm_parser.py)
+Implemented in [src/llm_parser.py](src/llm_parser.py)
 
-- parse natural language into structured simulation parameters
-- provide the machine-readable target for the rest of the pipeline
+Responsibilities:
+
+- parses natural language into structured simulation parameters
+- provides the machine-readable target for the rest of the pipeline
 
 ### Base LLM geometry / modification layer
 
-- [src/base_llm.py](src/base_llm.py)
+Implemented in [src/base_llm.py](src/base_llm.py)
 
-- classify modification requests
-- handle geometry edits
-- generate fallback XML
-- extract FT training hints from geometry edits when useful
+Responsibilities:
+
+- classifies modification requests
+- handles geometry edits
+- generates fallback XML
+- extracts FT training hints from geometry edits when useful
 
 Some fields, such as `lanes` or `avg_block_m`, are meaningful as FT targets but operationally applied through geometry changes.
 
 ### Logging, export, and reporting layer
 
-- [src/session_db.py](src/session_db.py)
-- [server.py](server.py)
-- [web/index.html](web/index.html)
-- [web/admin.html](web/admin.html)
+Implemented in [src/session_db.py](src/session_db.py), [server.py](server.py), [web/index.html](web/index.html), and [web/admin.html](web/admin.html)
 
-- store simulation runs and modification sessions
-- separate trainable corrections from non-trainable tuning requests
-- build downloadable reports
-- export retraining JSONL
+Responsibilities:
+
+- stores simulation runs and modification sessions
+- separates trainable corrections from non-trainable tuning requests
+- builds downloadable reports
+- exports retraining JSONL
 
 ## Evaluation and Admin Layer
 
@@ -210,15 +213,10 @@ The project uses a database-backed evaluation workflow so that results remain au
 
 Current admin capabilities include:
 
-- recent simulation history
-- recent modification history
-- correction-focused LLM evaluation summary
-- field error counts
-- average parameter deltas
-- geometry correction categories
-- correction-only export download
-- evaluation report download
-- LLM evaluation report download
+- simulation and modification history
+- correction-focused evaluation summaries
+- field error counts, average deltas, and geometry correction categories
+- correction export and downloadable reports
 
 The current evaluation view has two levels:
 
@@ -271,7 +269,18 @@ The project is clearly LLM-first, not VLM-first. Its relevance is in the workflo
 
 ## Running the Project
 
-### Option A: Docker (recommended)
+### Option A: Local Python (recommended for development)
+
+This is the most practical option when the machine already has local LLM CLIs installed and you want to run `server.py` directly.
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python server.py
+```
+
+### Option B: Docker
 
 ```bash
 # Build and run with docker compose
@@ -287,15 +296,6 @@ Then open:
 - `http://localhost:8080/` — simulation UI
 - `http://localhost:8080/admin` — admin / evaluation dashboard
 
-### Option B: Local Python
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python server.py
-```
-
 ### Environment Variables
 
 Copy `.env.example` to `.env` and fill in:
@@ -305,7 +305,7 @@ Copy `.env.example` to `.env` and fill in:
 | `OPENAI_API_KEY` | Yes | For fine-tuned parameter extraction |
 | `OPENAI_FT_MODEL` | Yes | Fine-tuned model ID (e.g., `ft:gpt-4.1-mini-...`) |
 | `TOPIS_API_KEY` | No | Seoul real-time traffic API |
-| `ANTHROPIC_API_KEY` | No | Claude API (agent mode) |
+| `ANTHROPIC_API_KEY` | No | Claude API for optional base LLM usage |
 | `GEMINI_API_KEY` | No | Gemini API |
 
 ### Fine-tuning dataset generation
@@ -328,15 +328,15 @@ Available from the admin page, or through the backend export flow in:
 
 ### CI/CD Pipeline (GitHub Actions)
 
-Every push to `main` triggers:
+Pushes to `main` trigger:
 
 1. **test** — runs `pytest tests/` (15 tests)
-2. **docker-build** — builds Docker image and verifies container health
-3. **deploy** — pushes to GCP Artifact Registry and deploys to Cloud Run (requires secrets)
+2. **docker-build** — builds the Docker image and verifies container health
+3. **deploy** — deploys to Cloud Run when the required secrets are configured
 
 ### GCP Cloud Run Deployment
 
-To enable automatic deployment, set these GitHub Secrets:
+Automatic deployment requires these GitHub Secrets:
 
 | Secret | Description |
 |--------|-------------|
@@ -357,19 +357,46 @@ echo -n "..." | gcloud secrets create topis-api-key --data-file=-
 
 Deployment target: `asia-northeast1` (Tokyo), 1Gi memory, max 3 instances.
 
+## Fine-Tuning Evaluation
+
+Benchmark comparing the fine-tuned model against the base model (`gpt-4.1-mini`) on 30 held-out validation samples with ground truth labels derived from real Seoul traffic data.
+
+### Accuracy (MAPE %, lower is better)
+
+| Field | Fine-tuned | Base (gpt-4.1-mini) |
+|-------|-----------|---------------------|
+| speed_kmh | **5.1%** | 74.6% |
+| volume_vph | **34.8%** | 48.1% |
+| lanes | **8.9%** | 13.9% |
+| speed_limit_kmh | **1.7%** | 23.8% |
+| sigma | **4.5%** | 21.3% |
+| tau | **4.6%** | 11.4% |
+| avg_block_m | **14.5%** | 167.6% |
+| **Overall** | **10.6%** | **51.5%** |
+
+The fine-tuned model reduces overall MAPE by ~5x compared to the base model. The largest improvement is in `speed_kmh` (5.1% vs 74.6%), where the base model consistently overestimates realistic traffic speeds. Output consistency is also higher: the fine-tuned model produces a coefficient of variation of 1.47% across repeated runs, compared to 3.89% for the base model.
+
+Reproduce with:
+
+```bash
+python -m evaluation.benchmark --accuracy --samples 30
+python -m evaluation.benchmark --all  # includes consistency benchmark
+```
+
 ## Current Strengths
 
-- clear role separation between FT extraction, base-model geometry reasoning, and the tool layer
+- clear role separation across FT extraction, base-model geometry reasoning, and the tool layer
 - correction vs tuning split to protect retraining data quality
-- structured logging and retraining export
-- admin UI for evaluation and report download
-- synthetic + real-data fine-tuning dataset generation paths
-- end-to-end path from prompt to retraining export
+- structured logging and correction-derived retraining export
+- admin UI for evaluation summaries and report download
+- synthetic and real-data fine-tuning dataset paths
+- end-to-end flow from prompt to retraining export
 
 ## Current Limitations
 
-- the project is stronger in LLM workflow design than in frontend polish
-- geometry editing is still more fragile than parameter extraction
+- stronger in LLM workflow design than in frontend polish
+- geometry editing remains more fragile than parameter extraction
 - external dependencies such as OSM and public APIs can fail
-- some SUMO behavior parameters are not yet fully calibrated into a stronger closed-loop setup
-- evaluation is stronger for correction-driven analysis than for a large held-out benchmark suite
+- some SUMO behavior parameters are not yet fully calibrated in the closed loop
+- the fine-tuned model was trained on a limited dataset (~70 samples); accuracy is expected to improve with more training data and additional epochs
+- evaluation covers accuracy and consistency but does not yet include cross-domain generalization tests

@@ -3,873 +3,1034 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SUMO Traffic Simulation Agent - Portfolio</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<title>LLM-Guided Synthetic Driving Scenario Generation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    securityLevel: 'loose',
+    themeVariables: {
+      background: '#0a1117',
+      primaryColor: '#18242f',
+      primaryTextColor: '#f5f7fb',
+      primaryBorderColor: '#36506a',
+      lineColor: '#7fd6d4',
+      secondaryColor: '#121b23',
+      tertiaryColor: '#0f151c',
+      fontFamily: 'IBM Plex Mono'
+    },
+    flowchart: {
+      curve: 'basis',
+      htmlLabels: true
+    }
+  });
+  window.mermaid = mermaid;
+</script>
 <style>
   :root {
-    --bg: #0a0a0a;
-    --surface: #111116;
-    --surface2: #1a1a22;
-    --surface3: #222230;
-    --border: #2a2a3a;
-    --text: #e0e0e0;
-    --text-dim: #8888a0;
-    --accent: #4ecdc4;
-    --accent-dim: rgba(78,205,196,.12);
-    --accent-glow: rgba(78,205,196,.25);
-    --font: 'SF Mono', 'Fira Code', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --bg: #061018;
+    --bg2: #091621;
+    --panel: rgba(13, 24, 34, 0.9);
+    --panel-2: rgba(18, 31, 43, 0.92);
+    --panel-3: rgba(23, 38, 52, 0.96);
+    --border: rgba(130, 176, 212, 0.18);
+    --border-strong: rgba(130, 176, 212, 0.28);
+    --text: #f3f7fb;
+    --text-dim: #9fb2c4;
+    --text-soft: #c7d4e1;
+    --accent: #8ce3df;
+    --accent-2: #7ab6ff;
+    --accent-glow: rgba(140, 227, 223, 0.18);
+    --warn: #f5cf77;
+    --good: #87e2a5;
+    --hero-max: 1180px;
+    --mono: 'IBM Plex Mono', ui-monospace, monospace;
+    --display: 'Space Grotesk', system-ui, sans-serif;
   }
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
   html {
     scroll-behavior: smooth;
     scrollbar-width: thin;
-    scrollbar-color: var(--surface3) var(--bg);
+    scrollbar-color: rgba(127, 214, 212, 0.28) var(--bg);
   }
 
   body {
-    font-family: var(--font);
-    background: var(--bg);
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at top left, rgba(122, 182, 255, 0.12), transparent 34%),
+      radial-gradient(circle at 82% 18%, rgba(140, 227, 223, 0.12), transparent 26%),
+      linear-gradient(180deg, #07111a 0%, #08121b 34%, #071019 100%);
     color: var(--text);
-    line-height: 1.6;
+    font: 15px/1.7 var(--mono);
     -webkit-font-smoothing: antialiased;
   }
 
-  /* ---- NAV ---- */
-  nav {
+  a { color: inherit; }
+
+  .shell {
+    position: relative;
+  }
+
+  .shell::before {
+    content: '';
     position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(140, 227, 223, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(140, 227, 223, 0.03) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(circle at center, black 30%, transparent 78%);
+    opacity: 0.7;
+  }
+
+  nav {
+    position: sticky;
     top: 0;
-    left: 0;
-    right: 0;
-    z-index: 100;
-    background: rgba(10,10,10,.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--border);
-    padding: 0 32px;
-    height: 56px;
+    z-index: 20;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    transition: box-shadow .3s;
+    gap: 24px;
+    padding: 18px 28px;
+    backdrop-filter: blur(14px);
+    background: rgba(5, 13, 20, 0.74);
+    border-bottom: 1px solid var(--border);
   }
 
-  nav.scrolled {
-    box-shadow: 0 4px 24px rgba(0,0,0,.4);
+  .brand {
+    font: 700 14px/1 var(--display);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
   }
 
-  .nav-brand {
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: .5px;
-    color: var(--text);
-  }
-
-  .nav-brand span { color: var(--accent); }
+  .brand span { color: var(--accent); }
 
   .nav-links {
     display: flex;
-    gap: 28px;
+    gap: 18px;
     list-style: none;
+    flex-wrap: wrap;
+    justify-content: center;
   }
 
   .nav-links a {
     font-size: 12px;
-    color: var(--text-dim);
     text-decoration: none;
-    letter-spacing: .3px;
-    transition: color .2s;
+    color: var(--text-dim);
+    transition: color 0.18s ease;
   }
 
   .nav-links a:hover { color: var(--accent); }
 
-  .nav-toggle {
-    display: none;
-    background: none;
-    border: none;
+  .nav-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .nav-btn,
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 0 18px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    text-decoration: none;
+    font: 600 12px/1 var(--mono);
+    letter-spacing: 0.02em;
+    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+  }
+
+  .nav-btn:hover,
+  .btn:hover {
+    transform: translateY(-1px);
+    border-color: var(--border-strong);
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #a6f6e4);
+    color: #061018;
+    border-color: transparent;
+    box-shadow: 0 12px 40px var(--accent-glow);
+  }
+
+  .btn-primary:visited,
+  .btn-primary:hover,
+  .btn-primary:focus {
+    color: #061018;
+  }
+
+  .btn-secondary {
+    background: rgba(15, 26, 37, 0.88);
     color: var(--text);
-    font-size: 20px;
-    cursor: pointer;
   }
 
-  /* ---- SECTIONS ---- */
-  section {
-    padding: 100px 32px;
-    max-width: 1100px;
+  .btn-secondary:visited,
+  .btn-secondary:hover,
+  .btn-secondary:focus {
+    color: var(--text);
+  }
+
+  main {
+    max-width: var(--hero-max);
     margin: 0 auto;
+    padding: 0 28px 96px;
   }
 
-  .section-label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: .15em;
+  section {
+    padding: 88px 0 0;
+  }
+
+  .eyebrow {
+    margin-bottom: 14px;
     color: var(--accent);
-    margin-bottom: 12px;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
   }
 
   .section-title {
-    font-size: 28px;
-    font-weight: 700;
+    font: 700 clamp(28px, 4vw, 46px)/1.1 var(--display);
     margin-bottom: 16px;
-    line-height: 1.3;
+    max-width: 760px;
   }
 
-  .section-desc {
-    color: var(--text-dim);
-    font-size: 13px;
-    max-width: 640px;
-    margin-bottom: 48px;
-    line-height: 1.7;
+  .section-copy {
+    max-width: 760px;
+    color: var(--text-soft);
+    font-size: 14px;
   }
 
-  /* ---- HERO ---- */
   #hero {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding-top: 56px;
-    position: relative;
+    min-height: calc(100vh - 78px);
+    display: grid;
+    align-items: center;
   }
 
-  .hero-badge {
-    display: inline-block;
-    font-size: 11px;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    color: var(--accent);
-    border: 1px solid rgba(78,205,196,.3);
-    padding: 6px 14px;
+  .hero-layout {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 32px;
+    align-items: end;
+  }
+
+  .hero-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
     border-radius: 999px;
-    margin-bottom: 28px;
-    background: var(--accent-dim);
+    margin-bottom: 26px;
+    background: rgba(140, 227, 223, 0.1);
+    border: 1px solid rgba(140, 227, 223, 0.22);
+    color: var(--accent);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
   }
 
   .hero-title {
-    font-size: clamp(32px, 5vw, 56px);
-    font-weight: 800;
-    line-height: 1.15;
+    font: 700 clamp(40px, 7vw, 76px)/0.98 var(--display);
+    max-width: 760px;
     margin-bottom: 20px;
   }
 
-  .hero-title .highlight {
+  .hero-title em {
     color: var(--accent);
+    font-style: normal;
   }
 
   .hero-sub {
-    font-size: 15px;
+    max-width: 690px;
+    color: var(--text-soft);
+    font-size: 16px;
+    margin-bottom: 24px;
+  }
+
+  .hero-detail {
+    max-width: 660px;
     color: var(--text-dim);
-    max-width: 560px;
-    margin-bottom: 40px;
-    line-height: 1.7;
+    font-size: 13px;
   }
 
   .hero-actions {
     display: flex;
-    gap: 14px;
+    gap: 12px;
     flex-wrap: wrap;
+    margin-top: 30px;
   }
 
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font: 13px/1 var(--font);
-    font-weight: 600;
-    text-decoration: none;
-    cursor: pointer;
-    border: none;
-    transition: transform .15s, box-shadow .15s, background .2s;
-  }
-
-  .btn:hover {
-    transform: translateY(-1px);
-  }
-
-  .btn-primary {
-    background: var(--accent);
-    color: #0a0a0a;
-    box-shadow: 0 0 20px var(--accent-glow);
-  }
-
-  .btn-primary:hover {
-    box-shadow: 0 0 32px var(--accent-glow);
-  }
-
-  .btn-secondary {
-    background: var(--surface2);
-    color: var(--text);
+  .hero-panel {
+    background: linear-gradient(180deg, rgba(15, 28, 39, 0.94), rgba(12, 22, 32, 0.94));
     border: 1px solid var(--border);
-  }
-
-  .btn-secondary:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-
-  .hero-grid-bg {
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    background-image:
-      radial-gradient(circle at 70% 30%, rgba(78,205,196,.06) 0%, transparent 50%),
-      linear-gradient(rgba(78,205,196,.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(78,205,196,.03) 1px, transparent 1px);
-    background-size: 100% 100%, 48px 48px, 48px 48px;
-  }
-
-  /* ---- HOW IT WORKS ---- */
-  .flow {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0;
-    position: relative;
-  }
-
-  .flow-step {
-    text-align: center;
-    padding: 32px 20px;
-    position: relative;
-  }
-
-  .flow-step::after {
-    content: '';
-    position: absolute;
-    top: 56px;
-    right: -12px;
-    width: 24px;
-    height: 2px;
-    background: var(--border);
-  }
-
-  .flow-step:last-child::after { display: none; }
-
-  .flow-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 14px;
-    background: var(--accent-dim);
-    border: 1px solid rgba(78,205,196,.25);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 16px;
-    font-size: 20px;
-    color: var(--accent);
-  }
-
-  .flow-num {
-    font-size: 10px;
-    color: var(--accent);
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    margin-bottom: 8px;
-  }
-
-  .flow-label {
-    font-size: 13px;
-    font-weight: 700;
-    margin-bottom: 8px;
-  }
-
-  .flow-desc {
-    font-size: 11px;
-    color: var(--text-dim);
-    line-height: 1.6;
-  }
-
-  /* ---- ARCHITECTURE ---- */
-  .arch-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-  }
-
-  .arch-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 28px 24px;
-    transition: border-color .2s, box-shadow .2s;
-  }
-
-  .arch-card:hover {
-    border-color: rgba(78,205,196,.3);
-    box-shadow: 0 0 24px rgba(78,205,196,.06);
-  }
-
-  .arch-card-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    background: var(--accent-dim);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 16px;
-    color: var(--accent);
-    font-size: 16px;
-  }
-
-  .arch-card-title {
-    font-size: 14px;
-    font-weight: 700;
-    margin-bottom: 4px;
-  }
-
-  .arch-card-role {
-    font-size: 11px;
-    color: var(--accent);
-    margin-bottom: 12px;
-    letter-spacing: .05em;
-  }
-
-  .arch-card-desc {
-    font-size: 12px;
-    color: var(--text-dim);
-    line-height: 1.65;
-  }
-
-  .arch-card ul {
-    list-style: none;
-    margin-top: 12px;
-  }
-
-  .arch-card ul li {
-    font-size: 12px;
-    color: var(--text-dim);
-    padding: 4px 0;
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  .arch-card ul li::before {
-    content: '';
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: var(--accent);
-    margin-top: 7px;
-    flex-shrink: 0;
-  }
-
-  /* ---- FEATURES ---- */
-  .features-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-  }
-
-  .feature-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 24px;
     padding: 24px;
-    transition: border-color .2s, transform .15s;
+    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.28);
   }
 
-  .feature-card:hover {
-    border-color: rgba(78,205,196,.3);
-    transform: translateY(-2px);
+  .hero-panel-title {
+    font: 700 15px/1.2 var(--display);
+    margin-bottom: 16px;
   }
 
-  .feature-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    background: var(--accent-dim);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 14px;
-    color: var(--accent);
-    font-size: 14px;
-  }
-
-  .feature-title {
-    font-size: 13px;
-    font-weight: 700;
-    margin-bottom: 8px;
-  }
-
-  .feature-desc {
-    font-size: 11px;
-    color: var(--text-dim);
-    line-height: 1.65;
-  }
-
-  /* ---- TECH STACK ---- */
-  .stack-grid {
-    display: flex;
-    flex-wrap: wrap;
+  .hero-metrics {
+    display: grid;
     gap: 12px;
   }
 
-  .stack-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 14px 20px;
+  .metric {
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: rgba(23, 39, 54, 0.72);
+    border: 1px solid rgba(130, 176, 212, 0.12);
+  }
+
+  .metric-label {
+    color: var(--text-dim);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+
+  .metric-value {
+    font: 700 18px/1.2 var(--display);
+    margin-bottom: 6px;
+  }
+
+  .metric-copy {
+    color: var(--text-soft);
     font-size: 12px;
-    font-weight: 600;
-    transition: border-color .2s;
   }
 
-  .stack-item:hover {
-    border-color: rgba(78,205,196,.35);
+  .highlights {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 28px;
   }
 
-  .stack-item i {
-    color: var(--accent);
-    font-size: 16px;
-    width: 20px;
-    text-align: center;
-  }
-
-  /* ---- DATASET PIPELINE ---- */
-  .pipeline-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-  }
-
-  .pipeline-card {
-    background: var(--surface);
+  .highlight-pill {
+    padding: 10px 14px;
+    border-radius: 999px;
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 28px 24px;
-    position: relative;
-    overflow: hidden;
-    transition: border-color .2s;
+    background: rgba(14, 26, 37, 0.76);
+    color: var(--text-soft);
+    font-size: 12px;
   }
 
-  .pipeline-card:hover {
-    border-color: rgba(78,205,196,.3);
+  .overview-grid,
+  .explore-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 22px;
+    margin-top: 28px;
   }
 
-  .pipeline-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--accent), transparent);
-    opacity: 0;
-    transition: opacity .2s;
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    padding: 24px;
   }
 
-  .pipeline-card:hover::before { opacity: 1; }
-
-  .pipeline-num {
-    font-size: 32px;
-    font-weight: 800;
-    color: var(--surface3);
-    margin-bottom: 12px;
-    line-height: 1;
+  .panel p + p {
+    margin-top: 14px;
   }
 
-  .pipeline-title {
-    font-size: 14px;
-    font-weight: 700;
+  .panel-note {
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+
+  .mini-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .mini-item {
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: rgba(20, 34, 46, 0.72);
+    border: 1px solid rgba(130, 176, 212, 0.12);
+  }
+
+  .mini-item strong {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--text);
+    font-size: 13px;
+  }
+
+  .mini-item span {
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+    margin-top: 28px;
+  }
+
+  .card {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    padding: 22px;
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .card:hover {
+    transform: translateY(-3px);
+    border-color: var(--border-strong);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+  }
+
+  .card-icon {
+    width: 42px;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    margin-bottom: 14px;
+    color: var(--accent);
+    background: rgba(140, 227, 223, 0.1);
+    border: 1px solid rgba(140, 227, 223, 0.18);
+    font-size: 16px;
+  }
+
+  .card-title {
+    font: 700 18px/1.2 var(--display);
     margin-bottom: 10px;
   }
 
-  .pipeline-desc {
-    font-size: 12px;
+  .card-copy {
+    color: var(--text-soft);
+    font-size: 13px;
+  }
+
+  .workflow-grid {
+    display: grid;
+    gap: 24px;
+    margin-top: 28px;
+  }
+
+  .workflow-tabs {
+    display: inline-flex;
+    gap: 8px;
+    padding: 6px;
+    margin-top: 28px;
+    border-radius: 999px;
+    background: rgba(14, 26, 37, 0.82);
+    border: 1px solid var(--border);
+  }
+
+  .workflow-tab {
+    min-height: 38px;
+    padding: 0 16px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background: transparent;
     color: var(--text-dim);
-    line-height: 1.65;
+    font: 600 12px/1 var(--mono);
+    cursor: pointer;
+    transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
   }
 
-  /* ---- FOOTER ---- */
-  footer {
-    border-top: 1px solid var(--border);
-    padding: 40px 32px;
+  .workflow-tab.active {
+    background: rgba(140, 227, 223, 0.12);
+    border-color: rgba(140, 227, 223, 0.2);
+    color: var(--text);
+  }
+
+  .workflow-card {
+    background: linear-gradient(180deg, rgba(12, 24, 34, 0.95), rgba(15, 28, 40, 0.95));
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 24px;
+  }
+
+  .workflow-card[hidden] {
+    display: none;
+  }
+
+  .workflow-title {
+    font: 700 20px/1.2 var(--display);
+    margin-bottom: 8px;
+  }
+
+  .workflow-copy {
+    color: var(--text-dim);
+    font-size: 13px;
+    margin-bottom: 18px;
+    max-width: 760px;
+  }
+
+  .mermaid-wrap {
+    overflow-x: auto;
+    padding: 12px;
+    border-radius: 18px;
+    background: rgba(6, 13, 19, 0.58);
+    border: 1px solid rgba(130, 176, 212, 0.1);
+  }
+
+  .mermaid {
+    min-width: 780px;
+  }
+
+  .signal-band {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 18px;
+  }
+
+  .signal {
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: rgba(18, 34, 47, 0.8);
+    border: 1px solid rgba(130, 176, 212, 0.12);
+  }
+
+  .signal strong {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 13px;
+  }
+
+  .signal span {
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+
+  .signal.correction strong { color: var(--good); }
+  .signal.tuning strong { color: var(--warn); }
+  .signal.export strong { color: var(--accent); }
+
+  .explore-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 18px;
+    min-height: 220px;
+  }
+
+  .explore-meta {
+    color: var(--accent);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 10px;
+  }
+
+  .explore-title {
+    font: 700 20px/1.15 var(--display);
+    margin-bottom: 10px;
+  }
+
+  .explore-copy {
+    color: var(--text-soft);
+    font-size: 13px;
+  }
+
+  .limits {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin-top: 28px;
+  }
+
+  .limit-item {
+    padding: 18px 20px;
+    border-radius: 18px;
+    background: rgba(15, 27, 38, 0.82);
+    border: 1px solid var(--border);
+    color: var(--text-soft);
+    font-size: 13px;
+  }
+
+  .cta {
     text-align: center;
+    padding-bottom: 64px;
   }
 
-  .footer-inner {
-    max-width: 1100px;
+  .cta .section-title,
+  .cta .section-copy {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .cta-actions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 28px;
+  }
+
+  footer {
+    max-width: var(--hero-max);
     margin: 0 auto;
+    padding: 0 28px 48px;
+    color: var(--text-dim);
+    font-size: 12px;
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
   }
 
-  .footer-text {
-    font-size: 12px;
-    color: var(--text-dim);
-  }
-
-  .footer-links {
-    display: flex;
-    gap: 20px;
-  }
-
-  .footer-links a {
-    font-size: 12px;
-    color: var(--text-dim);
+  footer a {
     text-decoration: none;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    transition: color .2s;
+    color: var(--text-dim);
   }
 
-  .footer-links a:hover { color: var(--accent); }
+  footer a:hover { color: var(--accent); }
 
-  /* ---- DIVIDER ---- */
-  .divider {
-    max-width: 1100px;
-    margin: 0 auto;
-    border: 0;
-    border-top: 1px solid var(--border);
-  }
-
-  /* ---- RESPONSIVE ---- */
-  @media (max-width: 900px) {
-    section { padding: 72px 24px; }
-
-    .flow {
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    .flow-step::after { display: none; }
-
-    .arch-grid,
-    .features-grid,
-    .pipeline-grid {
-      grid-template-columns: 1fr 1fr;
-    }
-  }
-
-  @media (max-width: 600px) {
-    nav { padding: 0 20px; }
-
-    .nav-links {
-      display: none;
-      position: absolute;
-      top: 56px;
-      left: 0;
-      right: 0;
-      flex-direction: column;
-      background: rgba(10,10,10,.95);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
-      padding: 16px 24px;
-      gap: 16px;
-    }
-
-    .nav-links.open { display: flex; }
-    .nav-toggle { display: block; }
-
-    section { padding: 56px 20px; }
-
-    .section-title { font-size: 22px; }
-
-    .flow,
-    .arch-grid,
-    .features-grid,
-    .pipeline-grid {
+  @media (max-width: 1100px) {
+    .hero-layout,
+    .overview-grid,
+    .explore-grid,
+    .limits {
       grid-template-columns: 1fr;
     }
 
-    .flow-step::after { display: none; }
-
-    .footer-inner {
-      flex-direction: column;
-      gap: 16px;
+    .cards {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
-  /* ---- SCROLL ANIMATION ---- */
-  .fade-in {
-    opacity: 0;
-    transform: translateY(20px);
-    transition: opacity .5s ease, transform .5s ease;
+  @media (max-width: 780px) {
+    nav {
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 16px 20px;
+    }
+
+    .nav-links {
+      gap: 12px;
+    }
+
+    .nav-actions {
+      width: 100%;
+      flex-wrap: wrap;
+    }
+
+    main {
+      padding: 0 20px 84px;
+    }
+
+    section {
+      padding-top: 76px;
+    }
+
+    .hero-layout {
+      gap: 20px;
+    }
+
+    .hero-title {
+      font-size: clamp(34px, 12vw, 54px);
+    }
+
+    .cards,
+    .signal-band {
+      grid-template-columns: 1fr;
+    }
+
+    .mermaid {
+      min-width: 680px;
+    }
+
+    .workflow-tabs {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .workflow-tab {
+      width: 100%;
+    }
   }
 
-  .fade-in.visible {
-    opacity: 1;
-    transform: translateY(0);
+  @media (max-width: 560px) {
+    .section-title {
+      font-size: 30px;
+    }
+
+    .hero-sub {
+      font-size: 15px;
+    }
+
+    .btn,
+    .nav-btn {
+      width: 100%;
+    }
+
+    .cta-actions {
+      flex-direction: column;
+    }
   }
 </style>
 </head>
 <body>
-
-<!-- NAV -->
-<nav id="navbar">
-  <div class="nav-brand">SUMO <span>Agent</span></div>
-  <button class="nav-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')" aria-label="Toggle navigation">
-    <i class="fa-solid fa-bars"></i>
-  </button>
-  <ul class="nav-links">
-    <li><a href="#hero">Home</a></li>
-    <li><a href="#how-it-works">How It Works</a></li>
-    <li><a href="#architecture">Architecture</a></li>
-    <li><a href="#features">Features</a></li>
-    <li><a href="#tech-stack">Tech Stack</a></li>
-    <li><a href="#dataset">Dataset</a></li>
-    <li><a href="/">Demo</a></li>
-  </ul>
-</nav>
-
-<!-- HERO -->
-<section id="hero">
-  <div class="hero-grid-bg"></div>
-  <div class="hero-badge">Portfolio Project -- Woven by Toyota</div>
-  <h1 class="hero-title">
-    Natural Language to<br>
-    <span class="highlight">SUMO Traffic Simulation</span>
-  </h1>
-  <p class="hero-sub">
-    An LLM-powered agent that converts plain English descriptions into
-    fully configured SUMO traffic simulations -- bridging the gap between
-    domain experts and microscopic traffic modeling.
-  </p>
-  <div class="hero-actions">
-    <a href="/" class="btn btn-primary"><i class="fa-solid fa-play"></i> Try Demo</a>
-    <a href="https://github.com" class="btn btn-secondary" target="_blank" rel="noopener"><i class="fa-brands fa-github"></i> GitHub</a>
-  </div>
-</section>
-
-<hr class="divider">
-
-<!-- HOW IT WORKS -->
-<section id="how-it-works">
-  <div class="section-label">Process</div>
-  <h2 class="section-title">How It Works</h2>
-  <p class="section-desc">
-    From a single sentence to a running microscopic traffic simulation in four automated steps.
-  </p>
-  <div class="flow fade-in">
-    <div class="flow-step">
-      <div class="flow-icon"><i class="fa-solid fa-message"></i></div>
-      <div class="flow-num">Step 01</div>
-      <div class="flow-label">Natural Language Input</div>
-      <div class="flow-desc">User describes a traffic scenario in plain English -- intersection type, traffic volume, signal timing, road conditions.</div>
+<div class="shell">
+  <nav>
+    <div class="brand">Synthetic <span>Scenario</span> Workflow</div>
+    <ul class="nav-links">
+      <li><a href="#hero">Hero</a></li>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#built">What I Built</a></li>
+      <li><a href="#workflow">Workflow</a></li>
+      <li><a href="#explore">Explore</a></li>
+      <li><a href="#limits">Limits</a></li>
+    </ul>
+    <div class="nav-actions">
+      <a class="nav-btn btn-secondary" href="/admin">Open Admin</a>
+      <a class="nav-btn btn-primary" href="/">Open Demo</a>
     </div>
-    <div class="flow-step">
-      <div class="flow-icon"><i class="fa-solid fa-brain"></i></div>
-      <div class="flow-num">Step 02</div>
-      <div class="flow-label">Parameter Extraction</div>
-      <div class="flow-desc">A fine-tuned LLM parses the description and extracts structured simulation parameters with high accuracy.</div>
-    </div>
-    <div class="flow-step">
-      <div class="flow-icon"><i class="fa-solid fa-road"></i></div>
-      <div class="flow-num">Step 03</div>
-      <div class="flow-label">Network Generation</div>
-      <div class="flow-desc">Road networks are generated via OSM data or LLM-driven geometry, then compiled into SUMO-compatible XML files.</div>
-    </div>
-    <div class="flow-step">
-      <div class="flow-icon"><i class="fa-solid fa-car"></i></div>
-      <div class="flow-num">Step 04</div>
-      <div class="flow-label">SUMO Simulation</div>
-      <div class="flow-desc">The complete simulation runs in SUMO with real-time metrics -- vehicle counts, queue lengths, travel times, and more.</div>
-    </div>
-  </div>
-</section>
+  </nav>
 
-<hr class="divider">
+  <main>
+    <section id="hero">
+      <div class="hero-layout">
+        <div>
+          <div class="hero-chip">LLM Workflow for Synthetic Scenario Generation</div>
+          <h1 class="hero-title">Natural Language to <em>Runnable Driving Scenarios</em></h1>
+          <p class="hero-sub">
+            A role-separated LLM workflow that turns traffic requests into structured SUMO scenarios,
+            validates the result, and captures human corrections as future retraining signals.
+          </p>
+          <p class="hero-detail">
+            The system combines fine-tuned parameter extraction, base-model geometry reasoning,
+            scenario execution, evaluation, and correction-derived export in one connected loop.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="/">Open Demo</a>
+            <a class="btn btn-secondary" href="/admin">Open Admin</a>
+            <a class="btn btn-secondary" href="/readme">Read README</a>
+          </div>
+      <div class="highlights">
+            <div class="highlight-pill">Fine-Tuned Extraction</div>
+            <div class="highlight-pill">Correction vs Tuning</div>
+            <div class="highlight-pill">Retraining Export</div>
+            <div class="highlight-pill">Docker / CI/CD / GCP</div>
+          </div>
+        </div>
 
-<!-- ARCHITECTURE -->
-<section id="architecture">
-  <div class="section-label">System Design</div>
-  <h2 class="section-title">Architecture</h2>
-  <p class="section-desc">
-    A role-separated architecture where each layer handles what it does best -- fine-tuned precision for parameter extraction, base LLM flexibility for geometry, and deterministic tooling for simulation.
-  </p>
-  <div class="arch-grid fade-in">
-    <div class="arch-card">
-      <div class="arch-card-icon"><i class="fa-solid fa-microchip"></i></div>
-      <div class="arch-card-title">Fine-tuned LLM</div>
-      <div class="arch-card-role">Parameter Extraction Layer</div>
-      <div class="arch-card-desc">
-        A fine-tuned model trained on synthetic and real traffic data to reliably convert natural language into structured simulation parameters.
+        <aside class="hero-panel">
+          <div class="hero-panel-title">What stands out in this project</div>
+          <div class="hero-metrics">
+            <div class="metric">
+              <div class="metric-label">Role Separation</div>
+              <div class="metric-value">FT + Base LLM + Tool Layer</div>
+              <div class="metric-copy">Each layer handles a different part of the workflow instead of relying on one monolithic prompt.</div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">Feedback Structure</div>
+              <div class="metric-value">Correction vs Tuning</div>
+              <div class="metric-copy">Trainable errors are separated from non-trainable preference edits.</div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">Evidence Flow</div>
+              <div class="metric-value">Demo + Admin + README</div>
+              <div class="metric-copy">The user flow, evidence layer, and technical document are intentionally split.</div>
+            </div>
+          </div>
+        </aside>
       </div>
-      <ul>
-        <li>Trained on domain-specific traffic scenarios</li>
-        <li>Outputs structured JSON with validated fields</li>
-        <li>Continuously improved via correction feedback</li>
-      </ul>
-    </div>
-    <div class="arch-card">
-      <div class="arch-card-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
-      <div class="arch-card-title">Base LLM</div>
-      <div class="arch-card-role">Geometry &amp; Reasoning Layer</div>
-      <div class="arch-card-desc">
-        A general-purpose LLM handles complex spatial reasoning -- generating road network geometries, merging lanes, and interpreting ambiguous descriptions.
+    </section>
+
+    <section id="overview">
+      <div class="eyebrow">Overview</div>
+      <h2 class="section-title">From Prompt to Reusable Training Signal</h2>
+      <p class="section-copy">
+        Scenario creation is usually slow, manual, and difficult to scale. This project treats it as an LLM-driven workflow where generation, evaluation, and refinement are connected from the start.
+      </p>
+
+      <div class="overview-grid">
+        <div class="panel">
+          <p>
+            A fine-tuned model extracts structured scenario parameters from natural-language traffic requests.
+            A base LLM handles open-ended geometry and XML reasoning. SUMO executes the resulting scenario,
+            while the backend logs what happened, what was corrected, and what can be reused as future training data.
+          </p>
+          <p class="panel-note">
+            The goal is not only to generate scenarios, but to preserve correction signals in a form that can be evaluated,
+            exported, and fed back into future fine-tuning.
+          </p>
+        </div>
+
+        <div class="mini-list">
+          <div class="mini-item">
+            <strong>Natural language in</strong>
+            <span>Traffic requests are translated into structured scenario parameters.</span>
+          </div>
+          <div class="mini-item">
+            <strong>Runnable scenario out</strong>
+            <span>Generated parameters and geometry become executable SUMO artifacts.</span>
+          </div>
+          <div class="mini-item">
+            <strong>Human feedback preserved</strong>
+            <span>Correction logs remain reusable instead of disappearing into chat history.</span>
+          </div>
+        </div>
       </div>
-      <ul>
-        <li>Generates node/edge geometry for custom networks</li>
-        <li>Handles multi-turn clarification dialogues</li>
-        <li>Supports Claude, GPT-4, and Gemini backends</li>
-      </ul>
-    </div>
-    <div class="arch-card">
-      <div class="arch-card-icon"><i class="fa-solid fa-gears"></i></div>
-      <div class="arch-card-title">Tool Layer</div>
-      <div class="arch-card-role">Simulation &amp; Integration</div>
-      <div class="arch-card-desc">
-        Deterministic tooling compiles network XML, generates traffic routes, launches SUMO, and streams back real-time simulation metrics.
+    </section>
+
+    <section id="built">
+      <div class="eyebrow">What I Built</div>
+      <h2 class="section-title">A Workflow, Not a Single Prompt</h2>
+      <p class="section-copy">
+        Each layer has a clear role in generation, refinement, evaluation, and future dataset improvement.
+      </p>
+
+      <div class="cards">
+        <article class="card">
+          <div class="card-icon">FT</div>
+          <h3 class="card-title">Fine-Tuned Extraction</h3>
+          <p class="card-copy">
+            A fine-tuned model converts traffic requests into structured parameters such as speed, volume, lanes, speed limit, sigma, tau, and block length.
+          </p>
+        </article>
+
+        <article class="card">
+          <div class="card-icon">XML</div>
+          <h3 class="card-title">Base LLM Geometry / XML</h3>
+          <p class="card-copy">
+            A separate base model handles geometry edits, XML generation, and modification classification when structured extraction alone is not enough.
+          </p>
+        </article>
+
+        <article class="card">
+          <div class="card-icon">RUN</div>
+          <h3 class="card-title">SUMO Scenario Execution</h3>
+          <p class="card-copy">
+            Structured parameters and network artifacts are turned into runnable SUMO scenarios with generated network, route, additional, and config files.
+          </p>
+        </article>
+
+        <article class="card">
+          <div class="card-icon">C/T</div>
+          <h3 class="card-title">Correction vs Tuning</h3>
+          <p class="card-copy">
+            User feedback is split into trainable corrections and non-trainable tuning requests, so preference edits do not contaminate retraining data.
+          </p>
+        </article>
+
+        <article class="card">
+          <div class="card-icon">ADM</div>
+          <h3 class="card-title">Evaluation and Reporting</h3>
+          <p class="card-copy">
+            An admin layer exposes correction history, field-level error patterns, geometry correction categories, and downloadable retraining exports.
+          </p>
+        </article>
+
+        <article class="card">
+          <div class="card-icon">OPS</div>
+          <h3 class="card-title">Deployment Readiness</h3>
+          <p class="card-copy">
+            The project includes local execution, Docker support, CI/CD setup, and a Cloud Run deployment path for serving the workflow beyond local development.
+          </p>
+        </article>
       </div>
-      <ul>
-        <li>SUMO netconvert, duarouter, and TraCI</li>
-        <li>OSM network download and processing</li>
-        <li>Seoul real-time traffic API integration</li>
-      </ul>
-    </div>
-  </div>
-</section>
+    </section>
 
-<hr class="divider">
-
-<!-- FEATURES -->
-<section id="features">
-  <div class="section-label">Capabilities</div>
-  <h2 class="section-title">Key Features</h2>
-  <p class="section-desc">
-    Built end-to-end for production readiness and continuous improvement.
-  </p>
-  <div class="features-grid fade-in">
-    <div class="feature-card">
-      <div class="feature-icon"><i class="fa-solid fa-layer-group"></i></div>
-      <div class="feature-title">Multi-LLM Support</div>
-      <div class="feature-desc">Swap between Claude, GPT-4, and Gemini models at runtime. Compare outputs and benchmark accuracy across providers.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon"><i class="fa-solid fa-database"></i></div>
-      <div class="feature-title">Fine-tuning Pipeline</div>
-      <div class="feature-desc">Automated pipeline combining synthetic generation with real Seoul metropolitan traffic data to build high-quality training sets.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon"><i class="fa-solid fa-user-pen"></i></div>
-      <div class="feature-title">Human-in-the-Loop</div>
-      <div class="feature-desc">Users can correct LLM outputs directly. Every correction is logged, analyzed, and fed back into the fine-tuning pipeline.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon"><i class="fa-solid fa-tower-broadcast"></i></div>
-      <div class="feature-title">Real-time Seoul Traffic API</div>
-      <div class="feature-desc">Integrates live traffic volume data from Seoul metropolitan sensors to ground simulations in real-world conditions.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon"><i class="fa-brands fa-docker"></i></div>
-      <div class="feature-title">Docker + CI/CD</div>
-      <div class="feature-desc">Containerized deployment with GitHub Actions CI/CD pipeline. Automated testing, building, and deployment to GCP Cloud Run.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon"><i class="fa-solid fa-chart-line"></i></div>
-      <div class="feature-title">Admin Dashboard</div>
-      <div class="feature-desc">Built-in admin panel with LLM evaluation metrics, correction rate tracking, field-level error analysis, and exportable reports.</div>
-    </div>
-  </div>
-</section>
-
-<hr class="divider">
-
-<!-- TECH STACK -->
-<section id="tech-stack">
-  <div class="section-label">Technologies</div>
-  <h2 class="section-title">Tech Stack</h2>
-  <p class="section-desc">
-    Purpose-selected tools for each layer of the system.
-  </p>
-  <div class="stack-grid fade-in">
-    <div class="stack-item"><i class="fa-brands fa-python"></i> Python</div>
-    <div class="stack-item"><i class="fa-solid fa-traffic-light"></i> SUMO</div>
-    <div class="stack-item"><i class="fa-solid fa-robot"></i> OpenAI API</div>
-    <div class="stack-item"><i class="fa-solid fa-robot"></i> Anthropic API</div>
-    <div class="stack-item"><i class="fa-solid fa-robot"></i> Google Gemini</div>
-    <div class="stack-item"><i class="fa-brands fa-docker"></i> Docker</div>
-    <div class="stack-item"><i class="fa-brands fa-github"></i> GitHub Actions</div>
-    <div class="stack-item"><i class="fa-brands fa-google"></i> GCP Cloud Run</div>
-    <div class="stack-item"><i class="fa-solid fa-database"></i> SQLite</div>
-    <div class="stack-item"><i class="fa-solid fa-map"></i> OpenStreetMap</div>
-  </div>
-</section>
-
-<hr class="divider">
-
-<!-- DATASET PIPELINE -->
-<section id="dataset">
-  <div class="section-label">Data Strategy</div>
-  <h2 class="section-title">Dataset Pipeline</h2>
-  <p class="section-desc">
-    Three complementary data paths feed the fine-tuning pipeline, ensuring both coverage and accuracy.
-  </p>
-  <div class="pipeline-grid fade-in">
-    <div class="pipeline-card">
-      <div class="pipeline-num">01</div>
-      <div class="pipeline-title">Synthetic Generation</div>
-      <div class="pipeline-desc">
-        LLM-generated prompt-response pairs covering diverse intersection types, traffic volumes, signal configurations, and edge cases. Provides broad coverage for initial model training.
+    <section id="workflow">
+      <div class="eyebrow">How the Workflow Runs</div>
+      <h2 class="section-title">Generation and Refinement Are Part of the Same Loop</h2>
+      <p class="section-copy">
+        The workflow starts from natural-language input, produces a structured scenario, executes it in SUMO, and keeps the result auditable through validation and logging.
+      </p>
+      <div class="workflow-tabs" role="tablist" aria-label="Workflow diagrams">
+        <button class="workflow-tab active" data-target="generation-flow" role="tab" aria-selected="true">Generation Flow</button>
+        <button class="workflow-tab" data-target="refinement-flow" role="tab" aria-selected="false">Refinement Flow</button>
       </div>
-    </div>
-    <div class="pipeline-card">
-      <div class="pipeline-num">02</div>
-      <div class="pipeline-title">Real Seoul Traffic Data</div>
-      <div class="pipeline-desc">
-        Live sensor data from Seoul metropolitan traffic infrastructure converted into natural language scenarios. Grounds the model in real-world traffic patterns and volumes.
-      </div>
-    </div>
-    <div class="pipeline-card">
-      <div class="pipeline-num">03</div>
-      <div class="pipeline-title">Correction-derived Data</div>
-      <div class="pipeline-desc">
-        Human corrections from production usage are transformed into training pairs. This closed-loop feedback continuously targets the model's actual weaknesses.
-      </div>
-    </div>
-  </div>
-</section>
 
-<!-- FOOTER -->
-<footer>
-  <div class="footer-inner">
-    <div class="footer-text">SUMO Traffic Simulation Agent -- Portfolio Project</div>
-    <div class="footer-links">
-      <a href="https://github.com" target="_blank" rel="noopener"><i class="fa-brands fa-github"></i> GitHub Repository</a>
-      <a href="/"><i class="fa-solid fa-play"></i> Live Demo</a>
-      <a href="/admin.html"><i class="fa-solid fa-chart-line"></i> Admin</a>
-    </div>
-  </div>
-</footer>
+      <div class="workflow-grid">
+        <article class="workflow-card" id="generation-flow">
+          <h3 class="workflow-title">Generation Flow</h3>
+          <p class="workflow-copy">
+            A traffic request is converted into structured parameters, used to build or retrieve geometry, executed in SUMO, and validated as a complete scenario run.
+          </p>
+          <div class="mermaid-wrap">
+            <div class="mermaid">
+flowchart TD
+    A[User Natural-Language Request] --> B[Fine-Tuned Parameter Extraction]
+    B --> C[Structured Scenario Parameters]
+    C --> D{Usable real location?}
+    D -- Yes --> E[OSM-Based Network Retrieval]
+    D -- No / Failed --> F[Base LLM Geometry or XML Generation]
+    E --> G[SUMO Network Build]
+    F --> G
+    C --> H[Demand / Route / Config Generation]
+    G --> I[Runnable SUMO Artifacts]
+    H --> I
+    I --> J[Scenario Execution]
+    J --> K[Validation and Statistics]
+            </div>
+          </div>
+        </article>
 
+        <article class="workflow-card" id="refinement-flow" hidden>
+          <h3 class="workflow-title">Refinement and Retraining Flow</h3>
+          <p class="workflow-copy">
+            After execution, users continue with either Correction or Tuning. Only correction paths become retraining exports; tuning remains available for analysis.
+          </p>
+          <div class="mermaid-wrap">
+            <div class="mermaid">
+flowchart TD
+    A[Generated Scenario] --> B[User Interaction]
+    B --> C{Intent}
+    C -- Correction --> D[Trainable Feedback]
+    C -- Tuning --> E[Analysis-Only Variant Feedback]
+    D --> F{Modification target}
+    E --> F
+    F -- Parameter --> G[Base LLM Parameter Update]
+    F -- Geometry --> H[Base LLM Geometry or XML Update]
+    F -- Mixed --> I[Combined Update]
+    G --> J[Rebuild / Re-run]
+    H --> J
+    I --> J
+    J --> K[Session Logging]
+    K --> L{Retraining eligibility}
+    L -- Correction only --> M[Correction-Only Export]
+    L -- Tuning --> N[Keep for analysis only]
+    M --> O[Future Fine-Tuning Dataset]
+    O --> P[Updated FT Extraction Stage]
+            </div>
+          </div>
+          <div class="signal-band">
+            <div class="signal correction">
+              <strong>Correction -> trainable</strong>
+              <span>Verified error feedback is preserved as future retraining signal.</span>
+            </div>
+            <div class="signal tuning">
+              <strong>Tuning -> analysis only</strong>
+              <span>Alternative variants remain logged, but stay out of the trainable dataset by default.</span>
+            </div>
+            <div class="signal export">
+              <strong>Correction export -> FT dataset</strong>
+              <span>The system closes the loop by turning validated corrections back into structured training data.</span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="explore">
+      <div class="eyebrow">Explore the System</div>
+      <h2 class="section-title">Demo on One Side, Evidence on the Other</h2>
+      <p class="section-copy">
+        The project is split into a user-facing generation flow and an evidence layer for evaluation, export, and analysis.
+      </p>
+
+      <div class="cards explore-grid">
+        <article class="card explore-card">
+          <div>
+            <div class="explore-meta">Demo</div>
+            <h3 class="explore-title">Interactive Generation Flow</h3>
+            <p class="explore-copy">
+              Use the main interface to generate scenarios from natural-language requests and continue the same session through correction or tuning.
+            </p>
+            <p class="panel-note" style="margin-top:12px;">
+              A shared server Gemini fallback is available. Using your own base-model API key lets you choose the provider model directly and avoids shared quota limits.
+            </p>
+          </div>
+          <a class="btn btn-primary" href="/">Open Demo</a>
+        </article>
+
+        <article class="card explore-card">
+          <div>
+            <div class="explore-meta">Evidence</div>
+            <h3 class="explore-title">Admin Dashboard</h3>
+            <p class="explore-copy">
+              Inspect correction logs, evaluation summaries, field error counts, geometry categories, and downloadable retraining exports.
+            </p>
+          </div>
+          <a class="btn btn-secondary" href="/admin">Open Admin</a>
+        </article>
+
+        <article class="card explore-card">
+          <div>
+            <div class="explore-meta">Documentation</div>
+            <h3 class="explore-title">Technical README</h3>
+            <p class="explore-copy">
+              Read the full implementation breakdown, dataset paths, deployment setup, and workflow details behind the portfolio view.
+            </p>
+          </div>
+          <a class="btn btn-secondary" href="/readme">Read README</a>
+        </article>
+      </div>
+    </section>
+
+    <section id="limits">
+      <div class="eyebrow">Current Limits</div>
+      <h2 class="section-title">What Is Strong Today, and What Still Needs Work</h2>
+      <p class="section-copy">
+        The project is strongest in workflow design, correction logging, and retraining structure. The current limits are mostly around robustness and evaluation breadth rather than missing pipeline pieces.
+      </p>
+
+      <div class="limits">
+        <div class="limit-item">Geometry editing remains more fragile than parameter extraction, especially under more open-ended or mixed modification requests.</div>
+        <div class="limit-item">Some external dependencies such as OSM and public traffic APIs can fail, which affects runtime reliability more than workflow design.</div>
+        <div class="limit-item">The project is more mature in LLM workflow design and data logging than in frontend polish.</div>
+        <div class="limit-item">Evaluation is currently stronger for correction-driven analysis than for a large held-out benchmark suite.</div>
+      </div>
+    </section>
+
+    <section id="cta" class="cta">
+      <div class="eyebrow">Final CTA</div>
+      <h2 class="section-title">See the Workflow in Action</h2>
+      <p class="section-copy">
+        Start with the generation interface, then inspect the same system through the admin view to see how scenario execution, correction logging, and retraining export connect into one workflow.
+      </p>
+      <div class="cta-actions">
+        <a class="btn btn-primary" href="/">Open Demo</a>
+        <a class="btn btn-secondary" href="/admin">Open Admin</a>
+        <a class="btn btn-secondary" href="/readme">Read README</a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div>LLM-guided synthetic driving scenario generation workflow</div>
+    <div>
+      <a href="/">Demo</a> /
+      <a href="/admin">Admin</a> /
+      <a href="/readme">README</a>
+    </div>
+  </footer>
+</div>
 <script>
-  // Navbar scroll shadow
-  const nav = document.getElementById('navbar');
-  window.addEventListener('scroll', () => {
-    nav.classList.toggle('scrolled', window.scrollY > 20);
-  });
+  const workflowTabs = document.querySelectorAll('.workflow-tab');
+  const workflowCards = document.querySelectorAll('.workflow-card');
 
-  // Close mobile nav on link click
-  document.querySelectorAll('.nav-links a').forEach(link => {
-    link.addEventListener('click', () => {
-      document.querySelector('.nav-links').classList.remove('open');
+  workflowTabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      const targetId = tab.dataset.target;
+      workflowTabs.forEach((btn) => {
+        const active = btn === tab;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+      workflowCards.forEach((card) => {
+        card.hidden = card.id !== targetId;
+      });
     });
   });
-
-  // Intersection Observer for fade-in animations
-  const observer = new IntersectionObserver(
-    entries => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-        }
-      });
-    },
-    { threshold: 0.15 }
-  );
-
-  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
 </script>
 </body>
 </html>

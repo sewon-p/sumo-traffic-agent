@@ -11,6 +11,7 @@ import os
 import re
 import shutil
 import subprocess
+from threading import local
 
 
 def _load_env():
@@ -25,6 +26,33 @@ def _load_env():
 
 
 _load_env()
+_REQUEST_OVERRIDE = local()
+
+
+def set_request_base_llm_override(mode: str = "", cli: str = "", provider: str = "", api_key: str = "", model: str = ""):
+    _REQUEST_OVERRIDE.config = {
+        "mode": mode,
+        "cli": cli,
+        "provider": provider,
+        "api_key": api_key,
+        "model": model,
+    }
+
+
+def clear_request_base_llm_override():
+    if hasattr(_REQUEST_OVERRIDE, "config"):
+        delattr(_REQUEST_OVERRIDE, "config")
+
+
+def _request_base_llm_override():
+    return getattr(_REQUEST_OVERRIDE, "config", {}) or {}
+
+
+def _shared_base_llm_settings():
+    provider = os.environ.get("BASE_LLM_SHARED_PROVIDER") or os.environ.get("BASE_LLM_CUSTOM_PROVIDER", "")
+    api_key = os.environ.get("BASE_LLM_SHARED_KEY") or os.environ.get("BASE_LLM_CUSTOM_KEY", "")
+    model = os.environ.get("BASE_LLM_SHARED_MODEL") or os.environ.get("BASE_LLM_CUSTOM_MODEL", "")
+    return provider, api_key, model
 
 
 def _cli_timeout_sec() -> int:
@@ -40,12 +68,14 @@ def ask_base_llm(prompt: str, system: str = "") -> str:
     Ask a general-purpose LLM a question.
     Uses CLI if BASE_LLM_MODE=cli, otherwise uses API.
     """
-    print(f"\n[BASE_LLM] mode={os.environ.get('BASE_LLM_MODE','api')}")
+    override = _request_base_llm_override()
+    mode = override.get("mode") or os.environ.get("BASE_LLM_MODE", "api")
+
+    print(f"\n[BASE_LLM] mode={mode}")
     print(f"[BASE_LLM] prompt: {prompt[:100]}...")
-    mode = os.environ.get("BASE_LLM_MODE", "api")
 
     if mode == "cli":
-        preferred = os.environ.get("BASE_LLM_CLI", "")
+        preferred = override.get("cli") or os.environ.get("BASE_LLM_CLI", "")
         if preferred and shutil.which(preferred):
             return _ask_cli(prompt, system, preferred)
         for cli in ["gemini", "claude", "codex"]:
@@ -54,20 +84,29 @@ def ask_base_llm(prompt: str, system: str = "") -> str:
         mode = "api"
 
     if mode == "api":
-        # User custom key takes priority
-        custom_key = os.environ.get("BASE_LLM_CUSTOM_KEY", "")
-        custom_provider = os.environ.get("BASE_LLM_CUSTOM_PROVIDER", "")
-        if custom_key and custom_provider:
-            if custom_provider == "gpt":
-                return _ask_openai(prompt, system, custom_key)
-            elif custom_provider == "gemini":
-                return _ask_gemini(prompt, system, custom_key)
-            elif custom_provider == "claude":
-                return _ask_claude(prompt, system, custom_key)
+        request_key = override.get("api_key", "")
+        request_provider = override.get("provider", "")
+        request_model = override.get("model", "")
+        if request_key and request_provider:
+            if request_provider == "gpt":
+                return _ask_openai(prompt, system, request_key, request_model)
+            if request_provider == "gemini":
+                return _ask_gemini(prompt, system, request_key, request_model)
+            if request_provider == "claude":
+                return _ask_claude(prompt, system, request_key, request_model)
+
+        shared_provider, shared_key, shared_model = _shared_base_llm_settings()
+        if shared_key and shared_provider:
+            if shared_provider == "gpt":
+                return _ask_openai(prompt, system, shared_key, shared_model)
+            if shared_provider == "gemini":
+                return _ask_gemini(prompt, system, shared_key, shared_model)
+            if shared_provider == "claude":
+                return _ask_claude(prompt, system, shared_key, shared_model)
 
         api_key = os.environ.get("OPENAI_API_KEY")
         if api_key:
-            return _ask_openai(prompt, system, api_key)
+            return _ask_openai(prompt, system, api_key, "")
 
     raise RuntimeError("Cannot use LLM. Check BASE_LLM_MODE and API keys in .env.")
 
@@ -77,10 +116,10 @@ def _log_response(text):
     return text
 
 
-def _ask_openai(prompt: str, system: str, api_key: str) -> str:
+def _ask_openai(prompt: str, system: str, api_key: str, model_override: str = "") -> str:
     from openai import OpenAI
     client = OpenAI(api_key=api_key)
-    model = os.environ.get("BASE_LLM_MODEL", "gpt-4.1-mini-2025-04-14")
+    model = model_override or os.environ.get("BASE_LLM_OPENAI_MODEL") or os.environ.get("BASE_LLM_MODEL", "gpt-5.4")
     messages = []
     if system:
         messages.append({"role": "system", "content": system})
@@ -95,22 +134,24 @@ def _ask_openai(prompt: str, system: str, api_key: str) -> str:
     return result
 
 
-def _ask_gemini(prompt: str, system: str, api_key: str) -> str:
+def _ask_gemini(prompt: str, system: str, api_key: str, model_override: str = "") -> str:
     from google import genai
     client = genai.Client(api_key=api_key)
     full = f"{system}\n\n{prompt}" if system else prompt
+    model = model_override or os.environ.get("BASE_LLM_GEMINI_MODEL", "gemini-2.5-flash")
     resp = client.models.generate_content(
-        model="gemini-3.1-flash-lite-preview",
+        model=model,
         contents=full,
     )
     return resp.text.strip()
 
 
-def _ask_claude(prompt: str, system: str, api_key: str) -> str:
+def _ask_claude(prompt: str, system: str, api_key: str, model_override: str = "") -> str:
     import anthropic
     client = anthropic.Anthropic(api_key=api_key)
+    model = model_override or os.environ.get("BASE_LLM_CLAUDE_MODEL", "claude-sonnet-4-5")
     msg = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model=model,
         max_tokens=2000,
         system=system or "",
         messages=[{"role": "user", "content": prompt}],

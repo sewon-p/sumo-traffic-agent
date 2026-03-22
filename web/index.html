@@ -367,17 +367,18 @@
       <span style="color:var(--accent);">SUMO</span> Traffic Simulation Agent
     </h1>
     <p style="font-size:11px; color:var(--text-dim); margin-bottom:8px;">Generate traffic simulations using natural language.</p>
-    <div style="font-size:10px; color:var(--green); margin-bottom:24px;" id="setup-ft-status"></div>
+    <div style="font-size:10px; color:var(--green); margin-bottom:6px;" id="setup-ft-status"></div>
+    <div style="font-size:10px; color:var(--text-dim); margin-bottom:24px;" id="setup-base-status"></div>
 
-    <!-- Road generation LLM selection -->
-    <div style="font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">Select Road Generation LLM</div>
+    <!-- Base LLM selection -->
+    <div style="font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">Select Base LLM</div>
 
     <div class="setup-option" onclick="selectBaseLLM('default')" id="opt-default" style="
       padding:14px 16px; border:2px solid var(--accent); border-radius:8px;
       margin-bottom:8px; cursor:pointer; background:rgba(108,140,255,0.05);
     ">
-      <div style="font-size:13px; font-weight:600;">Default (GPT API)</div>
-      <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">Use server default settings - no additional configuration needed</div>
+      <div style="font-size:13px; font-weight:600;">Default (Server Gemini API)</div>
+      <div style="font-size:11px; color:var(--text-dim); margin-top:4px;" id="default-base-desc">Use the shared server Gemini setup as the Base LLM for geometry generation and modification</div>
     </div>
 
     <div class="setup-option" onclick="selectBaseLLM('cli')" id="opt-cli" style="
@@ -393,7 +394,7 @@
       cursor:pointer; transition: border-color 0.2s;
     ">
       <div style="font-size:13px; font-weight:600;">Use Custom API Key</div>
-      <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">Connect with your own Gemini / Claude / GPT key</div>
+      <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">Use your own Gemini, Claude, or OpenAI key for the Base LLM</div>
     </div>
 
     <!-- CLI selection -->
@@ -403,24 +404,44 @@
 
     <!-- API key input -->
     <div id="setup-api-input" style="display:none; margin-top:12px;">
-      <div style="margin-bottom:8px;">
-        <label style="font-size:10px; color:var(--text-dim);">Gemini</label>
-        <input type="password" id="setup-key-gemini" placeholder="AIzaSy..." style="width:100%; margin-top:4px; background:var(--surface2); border:1px solid var(--border); color:var(--text); font-family:var(--font); font-size:12px; padding:8px 10px; border-radius:6px;">
+      <div id="setup-api-key-step">
+        <div style="font-size:10px; color:var(--text-dim); margin-bottom:8px;">Enter one provider key. The model selector appears in the next step for that provider.</div>
+        <div style="margin-bottom:8px;">
+          <label style="font-size:10px; color:var(--text-dim);">Gemini</label>
+          <input type="password" id="setup-key-gemini" placeholder="AIzaSy..." style="width:100%; margin-top:4px; background:var(--surface2); border:1px solid var(--border); color:var(--text); font-family:var(--font); font-size:12px; padding:8px 10px; border-radius:6px;">
+        </div>
+        <div style="margin-bottom:8px;">
+          <label style="font-size:10px; color:var(--text-dim);">Claude</label>
+          <input type="password" id="setup-key-claude" placeholder="sk-ant-..." style="width:100%; margin-top:4px; background:var(--surface2); border:1px solid var(--border); color:var(--text); font-family:var(--font); font-size:12px; padding:8px 10px; border-radius:6px;">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:10px; color:var(--text-dim);">OpenAI</label>
+          <input type="password" id="setup-key-gpt" placeholder="sk-..." style="width:100%; margin-top:4px; background:var(--surface2); border:1px solid var(--border); color:var(--text); font-family:var(--font); font-size:12px; padding:8px 10px; border-radius:6px;">
+        </div>
+        <button class="btn" style="width:100%;" onclick="continueCustomApiSelection()">Continue to Model Selection</button>
       </div>
-      <div style="margin-bottom:8px;">
-        <label style="font-size:10px; color:var(--text-dim);">Claude</label>
-        <input type="password" id="setup-key-claude" placeholder="sk-ant-..." style="width:100%; margin-top:4px; background:var(--surface2); border:1px solid var(--border); color:var(--text); font-family:var(--font); font-size:12px; padding:8px 10px; border-radius:6px;">
+
+      <div id="setup-api-model-step" style="display:none;">
+        <div style="font-size:10px; color:var(--text-dim); margin-bottom:8px;">Select the Base LLM model for the provider you entered.</div>
+        <div style="margin-bottom:8px;">
+          <label style="font-size:10px; color:var(--text-dim);">Selected Provider</label>
+          <div id="setup-selected-provider" style="margin-top:4px; padding:8px 10px; background:var(--surface2); border:1px solid var(--border); color:var(--text); font-size:12px; border-radius:6px;">-</div>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:10px; color:var(--text-dim);">Model</label>
+          <select id="setup-model-selected" style="width:100%; margin-top:4px; background:var(--surface2); border:1px solid var(--border); color:var(--text); font-family:var(--font); font-size:12px; padding:8px 10px; border-radius:6px;"></select>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-secondary" style="flex:1;" onclick="backToCustomApiKeys()">Back</button>
+          <button class="btn" style="flex:1;" onclick="confirmCustomApi()">Connect</button>
+        </div>
       </div>
-      <div style="margin-bottom:12px;">
-        <label style="font-size:10px; color:var(--text-dim);">OpenAI</label>
-        <input type="password" id="setup-key-gpt" placeholder="sk-..." style="width:100%; margin-top:4px; background:var(--surface2); border:1px solid var(--border); color:var(--text); font-family:var(--font); font-size:12px; padding:8px 10px; border-radius:6px;">
-      </div>
-      <button class="btn" style="width:100%;" onclick="confirmCustomApi()">Connect</button>
     </div>
 
     <!-- Bottom note -->
-    <div style="text-align:center; margin-top:16px; font-size:9px; color:var(--text-dim);">
-      Parameter prediction: Fine-tuned model (automatic) - Road generation/modification: LLM selected above
+    <div style="margin-top:16px; font-size:9px; color:var(--text-dim); line-height:1.6;">
+      <div><strong style="color:var(--text);">Fine-Tuning LLM</strong> handles structured traffic parameter extraction.</div>
+      <div><strong style="color:var(--text);">Base LLM</strong> handles road geometry generation and modification.</div>
     </div>
   </div>
 </div>
@@ -430,7 +451,7 @@
   <h1><span>SUMO</span> Traffic Simulation Agent</h1>
   <div class="status-bar">
     <div class="status-item"><span class="dot green" id="dot-sumo"></span> SUMO</div>
-    <div class="status-item"><span class="dot" id="dot-llm"></span> <span id="llm-status">LLM</span></div>
+    <div class="status-item"><span class="dot" id="dot-llm"></span> <span id="llm-status">Fine-Tuning LLM / Base LLM</span></div>
     <div class="status-item"><span class="dot" id="dot-data"></span> Data</div>
   </div>
 </header>
@@ -562,6 +583,75 @@ let _selectedProvider = '';
 let _baseLLMMode = 'default';
 let _awaitingActionChoice = false;
 let _modifyIntent = null;
+let _pendingCustomApi = null;
+
+const CUSTOM_MODEL_OPTIONS = {
+  gemini: [
+    {value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite'},
+    {value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash'},
+    {value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro'},
+    {value: 'gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash-Lite Preview'},
+    {value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview'},
+  ],
+  claude: [
+    {value: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5'},
+    {value: 'claude-opus-4-6', label: 'Claude Opus 4.6'},
+    {value: 'claude-haiku-4-5', label: 'Claude Haiku 4.5'},
+  ],
+  gpt: [
+    {value: 'gpt-5.4', label: 'GPT-5.4'},
+    {value: 'gpt-5', label: 'GPT-5'},
+    {value: 'gpt-5-mini', label: 'GPT-5 Mini'},
+  ],
+};
+
+function providerDisplayName(provider) {
+  return provider === 'gpt' ? 'OpenAI' : provider === 'gemini' ? 'Gemini' : provider === 'claude' ? 'Claude' : provider;
+}
+
+function parseBaseLLMConfig(config) {
+  if (!config || config === 'default') return {mode: 'default'};
+  if (config.startsWith('cli:')) {
+    return {mode: 'cli', cli: config.split(':', 2)[1]};
+  }
+  if (config.startsWith('api:')) {
+    const parts = config.split(':');
+    return {
+      mode: 'api',
+      provider: parts[1] || '',
+      model: parts[2] || '',
+      key: parts.slice(3).join(':'),
+    };
+  }
+  return {mode: config};
+}
+
+function describeBaseLLMConfig(config) {
+  const parsed = parseBaseLLMConfig(config);
+  if (parsed.mode === 'default') {
+    return _setupData.base_name || 'Server default';
+  }
+  if (parsed.mode === 'cli') {
+    return `${parsed.cli} CLI`;
+  }
+  if (parsed.mode === 'api') {
+    const provider = providerDisplayName(parsed.provider);
+    return `${provider} API · ${parsed.model}`;
+  }
+  return config;
+}
+
+function applySelectedBaseStatus(config) {
+  const ftLabel = _setupData.ft_ready ? 'ready' : 'fallback';
+  const parsed = parseBaseLLMConfig(config);
+  let baseLabel = _setupData.base_model || _setupData.base_provider || 'off';
+  if (parsed.mode === 'cli') {
+    baseLabel = `${parsed.cli} CLI`;
+  } else if (parsed.mode === 'api') {
+    baseLabel = parsed.model || providerDisplayName(parsed.provider);
+  }
+  document.getElementById('llm-status').textContent = `Fine-Tuning LLM: ${ftLabel} / Base LLM: ${baseLabel}`;
+}
 
 fetch('/api/status')
   .then(r => {
@@ -575,12 +665,22 @@ fetch('/api/status')
     updateStatus(data);
 
     const ftEl = document.getElementById('setup-ft-status');
-    if (data.llm) {
-      ftEl.textContent = `✓ ${data.llm_name} connected`;
+    const baseEl = document.getElementById('setup-base-status');
+    if (data.ft_ready) {
+      ftEl.textContent = `✓ Fine-Tuning LLM: ${data.ft_name} · structured parameter extraction`;
       ftEl.style.color = 'var(--green)';
     } else {
-      ftEl.textContent = '✗ Parameter prediction LLM not connected (using rule-based)';
+      ftEl.textContent = '✗ Fine-Tuning LLM unavailable (using rule-based extraction fallback)';
       ftEl.style.color = 'var(--yellow)';
+    }
+    const rateLimit = data.base_shared_key
+      ? ` · shared limit ${data.base_rate_limit_max_requests}/${data.base_rate_limit_window_sec}s`
+      : '';
+    baseEl.textContent = `${data.base_ready ? '✓' : '✗'} Base LLM: ${data.base_name}${rateLimit} · geometry generation and modification`;
+    baseEl.style.color = data.base_ready ? 'var(--text-dim)' : 'var(--yellow)';
+    const defaultDesc = document.getElementById('default-base-desc');
+    if (defaultDesc && data.base_model) {
+      defaultDesc.textContent = `Use the shared server ${providerDisplayName(data.base_provider)} setup (${data.base_model}) for geometry generation and modification`;
     }
 
     const clis = data.available_cli || [];
@@ -597,8 +697,10 @@ fetch('/api/status')
   })
   .catch((err) => {
     console.error('status init failed', err);
-    document.getElementById('setup-ft-status').textContent = '✗ Status check failed';
+    document.getElementById('setup-ft-status').textContent = '✗ Fine-Tuning LLM status check failed';
     document.getElementById('setup-ft-status').style.color = 'var(--red)';
+    document.getElementById('setup-base-status').textContent = 'Unable to verify Fine-Tuning LLM / Base LLM status';
+    document.getElementById('setup-base-status').style.color = 'var(--yellow)';
     document.getElementById('cli-desc').textContent = 'Unable to verify';
     document.getElementById('setup-screen').style.display = 'flex';
   });
@@ -640,44 +742,82 @@ function selectBaseLLM(mode) {
   } else if (mode === 'custom-api') {
     document.getElementById('opt-custom').style.borderColor = 'var(--accent)';
     document.getElementById('opt-custom').style.background = 'rgba(108,140,255,0.05)';
+    backToCustomApiKeys();
     document.getElementById('setup-api-input').style.display = 'block';
   }
 }
 
-function confirmCustomApi() {
-  const keys = {
-    gemini: document.getElementById('setup-key-gemini').value,
-    claude: document.getElementById('setup-key-claude').value,
-    gpt: document.getElementById('setup-key-gpt').value,
-  };
-  for (const [name, key] of Object.entries(keys)) {
-    if (key) {
-      startApp('api:' + name + ':' + key);
-      return;
-    }
+function continueCustomApiSelection() {
+  const configs = [
+    {
+      provider: 'gemini',
+      key: document.getElementById('setup-key-gemini').value.trim(),
+    },
+    {
+      provider: 'claude',
+      key: document.getElementById('setup-key-claude').value.trim(),
+    },
+    {
+      provider: 'gpt',
+      key: document.getElementById('setup-key-gpt').value.trim(),
+    },
+  ];
+  const filled = configs.filter(config => config.key);
+  if (!filled.length) {
+    alert('Please enter one API key.');
+    return;
   }
-  alert('Please enter at least one API key.');
+  if (filled.length > 1) {
+    alert('Please enter only one provider key at a time.');
+    return;
+  }
+  _pendingCustomApi = filled[0];
+  const provider = _pendingCustomApi.provider;
+  const options = CUSTOM_MODEL_OPTIONS[provider] || [];
+  const select = document.getElementById('setup-model-selected');
+  select.innerHTML = options.map((option, index) => `
+    <option value="${option.value}" ${index === 0 ? 'selected' : ''}>${option.label}</option>
+  `).join('');
+  document.getElementById('setup-selected-provider').textContent = providerDisplayName(provider);
+  document.getElementById('setup-api-key-step').style.display = 'none';
+  document.getElementById('setup-api-model-step').style.display = 'block';
+}
+
+function backToCustomApiKeys() {
+  _pendingCustomApi = null;
+  document.getElementById('setup-api-key-step').style.display = 'block';
+  document.getElementById('setup-api-model-step').style.display = 'none';
+}
+
+function confirmCustomApi() {
+  if (!_pendingCustomApi) {
+    alert('Please enter an API key first.');
+    return;
+  }
+  const model = document.getElementById('setup-model-selected').value;
+  startApp(`api:${_pendingCustomApi.provider}:${model}:${_pendingCustomApi.key}`);
 }
 
 function startApp(baseLLMConfig) {
   _baseLLMMode = baseLLMConfig;
   document.getElementById('setup-screen').style.display = 'none';
-  const label = baseLLMConfig === 'default' ? 'GPT API (server default)'
-    : baseLLMConfig.startsWith('cli:') ? baseLLMConfig.split(':')[1] + ' CLI'
-    : baseLLMConfig.startsWith('api:') ? baseLLMConfig.split(':')[1] + ' API'
-    : baseLLMConfig;
-  addMessage('system', `Road generation LLM: ${label}`);
-  if (_setupData.llm) {
-    addMessage('system', `Parameter prediction: ${_setupData.llm_name}`);
+  const label = describeBaseLLMConfig(baseLLMConfig);
+  applySelectedBaseStatus(baseLLMConfig);
+  addMessage('system', `Base LLM: ${label}`);
+  addMessage('system', `Fine-Tuning LLM: ${_setupData.ft_name || 'Rule-based fallback'} · structured parameter extraction`);
+  if (baseLLMConfig === 'default' && _setupData.base_shared_key) {
+    const sharedLabel = `${providerDisplayName(_setupData.base_provider)} ${_setupData.base_model || ''}`.trim();
+    addMessage('system', `Shared server ${sharedLabel} active (${_setupData.base_rate_limit_max_requests} requests / ${_setupData.base_rate_limit_window_sec}s per IP). Use your own API key for higher flexibility.`);
   }
   setModeBanner();
 }
 
 function updateStatus(data) {
   document.getElementById('dot-sumo').className = 'dot ' + (data.sumo ? 'green' : 'red');
-  document.getElementById('dot-llm').className = 'dot ' + (data.llm ? 'green' : 'yellow');
+  document.getElementById('dot-llm').className = 'dot ' + ((data.ft_ready || data.base_ready) ? 'green' : 'yellow');
   document.getElementById('dot-data').className = 'dot ' + (data.traffic_data ? 'green' : 'yellow');
-  document.getElementById('llm-status').textContent = data.llm_name || 'Rule-based';
+  const baseLabel = data.base_model || data.base_provider || 'off';
+  document.getElementById('llm-status').textContent = `Fine-Tuning LLM: ${data.ft_ready ? 'ready' : 'fallback'} / Base LLM: ${baseLabel}`;
 
   const select = document.getElementById('llm-select');
   if (!select) return;

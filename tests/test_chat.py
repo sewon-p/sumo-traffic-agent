@@ -20,6 +20,22 @@ class ChatStatusTest(unittest.TestCase):
 
 
 class ServerModificationTest(unittest.TestCase):
+    def test_base_llm_request_override_uses_selected_model(self):
+        with mock.patch.object(base_llm, "_ask_gemini", return_value="ok") as ask_gemini:
+            base_llm.set_request_base_llm_override(
+                mode="api",
+                provider="gemini",
+                api_key="test-key",
+                model="gemini-2.5-pro",
+            )
+            try:
+                base_llm.ask_base_llm("generate geometry", "system")
+            finally:
+                base_llm.clear_request_base_llm_override()
+
+        self.assertEqual(ask_gemini.call_args.args[2], "test-key")
+        self.assertEqual(ask_gemini.call_args.args[3], "gemini-2.5-pro")
+
     def test_classify_modification_supports_mixed(self):
         with mock.patch.object(base_llm, "ask_base_llm", return_value="mixed"):
             self.assertEqual(base_llm.classify_modification("제한속도는 70, 교차로는 없애줘"), "mixed")
@@ -36,6 +52,22 @@ class ServerModificationTest(unittest.TestCase):
                 status = server._ft_runtime_status()
         self.assertTrue(status["configured"])
         self.assertTrue(status["ready"])
+
+    def test_base_runtime_status_reports_shared_model(self):
+        with mock.patch.dict(
+            server.os.environ,
+            {
+                "BASE_LLM_SHARED_PROVIDER": "gemini",
+                "BASE_LLM_SHARED_KEY": "shared-key",
+                "BASE_LLM_SHARED_MODEL": "gemini-2.5-flash",
+            },
+            clear=False,
+        ):
+            with mock.patch.object(server, "_provider_runtime_ready", return_value=True):
+                status = server._base_runtime_status()
+        self.assertEqual(status["provider"], "gemini")
+        self.assertEqual(status["model"], "gemini-2.5-flash")
+        self.assertIn("gemini-2.5-flash", status["name"])
 
     def test_apply_parameter_changes_returns_before_after_snapshots(self):
         params = mock.Mock()

@@ -19,6 +19,9 @@ import threading
 import urllib.parse
 import tempfile
 import uuid
+import time
+import shutil
+from collections import deque
 from io import BytesIO
 
 # Re-exec under project venv if available (skipped in Docker / production)
@@ -59,6 +62,11 @@ from src.llm_client import detect_provider
 
 PORT = 8080
 WEB_DIR = os.path.join(os.path.dirname(__file__), "web")
+README_PATH = os.path.join(os.path.dirname(__file__), "README.md")
+BASE_LLM_RATE_WINDOW_SEC = max(1, int(os.environ.get("BASE_LLM_RATE_WINDOW_SEC", "60")))
+BASE_LLM_RATE_MAX_REQUESTS = max(1, int(os.environ.get("BASE_LLM_RATE_MAX_REQUESTS", "8")))
+_base_llm_request_log = {}
+_base_llm_rate_lock = threading.Lock()
 
 # Session state: last simulation info (for modification requests)
 _session = {
@@ -126,6 +134,124 @@ def _ft_runtime_status():
         "ready": bool(ft_model and api_key and openai_ready),
         "ft_model": ft_model,
     }
+
+
+def _provider_label(provider_name: str) -> str:
+    return {
+        "gpt": "OpenAI",
+        "gemini": "Gemini",
+        "claude": "Claude",
+    }.get(provider_name, provider_name.title() if provider_name else "")
+
+
+def _default_base_model(provider_name: str) -> str:
+    if provider_name == "gpt":
+        return os.environ.get("BASE_LLM_OPENAI_MODEL") or os.environ.get("BASE_LLM_MODEL", "gpt-5.4")
+    if provider_name == "gemini":
+        return os.environ.get("BASE_LLM_GEMINI_MODEL", "gemini-2.5-flash")
+    if provider_name == "claude":
+        return os.environ.get("BASE_LLM_CLAUDE_MODEL", "claude-sonnet-4-5")
+    return ""
+
+
+def _shared_base_llm_settings():
+    provider = os.environ.get("BASE_LLM_SHARED_PROVIDER") or os.environ.get("BASE_LLM_CUSTOM_PROVIDER", "")
+    api_key = os.environ.get("BASE_LLM_SHARED_KEY") or os.environ.get("BASE_LLM_CUSTOM_KEY", "")
+    model = (
+        os.environ.get("BASE_LLM_SHARED_MODEL")
+        or os.environ.get("BASE_LLM_CUSTOM_MODEL")
+        or _default_base_model(provider)
+    )
+    return provider, api_key, model
+
+
+def _provider_runtime_ready(provider_name: str) -> bool:
+    if provider_name == "gpt":
+        return importlib.util.find_spec("openai") is not None
+    if provider_name == "claude":
+        return importlib.util.find_spec("anthropic") is not None
+    if provider_name == "gemini":
+        try:
+            return importlib.util.find_spec("google.genai") is not None
+        except ModuleNotFoundError:
+            return False
+    return False
+
+
+def _base_runtime_status():
+    mode = os.environ.get("BASE_LLM_MODE", "api")
+    shared_provider, shared_key, shared_model = _shared_base_llm_settings()
+    available_clis = [n for n in ["gemini", "claude", "codex"] if shutil.which(n)]
+
+    if shared_key and shared_provider:
+        return {
+            "provider": shared_provider,
+            "model": shared_model,
+            "name": f"{_provider_label(shared_provider)} API ({shared_model}, shared server key)",
+            "ready": _provider_runtime_ready(shared_provider),
+            "shared": True,
+            "mode": "api",
+            "rate_limit_window_sec": BASE_LLM_RATE_WINDOW_SEC,
+            "rate_limit_max_requests": BASE_LLM_RATE_MAX_REQUESTS,
+            "available_cli": available_clis,
+        }
+
+    if mode == "cli" and available_clis:
+        preferred_cli = os.environ.get("BASE_LLM_CLI", "") or available_clis[0]
+        return {
+            "provider": preferred_cli,
+            "model": preferred_cli,
+            "name": f"{preferred_cli} CLI",
+            "ready": True,
+            "shared": False,
+            "mode": "cli",
+            "rate_limit_window_sec": BASE_LLM_RATE_WINDOW_SEC,
+            "rate_limit_max_requests": BASE_LLM_RATE_MAX_REQUESTS,
+            "available_cli": available_clis,
+        }
+
+    if os.environ.get("OPENAI_API_KEY"):
+        model = _default_base_model("gpt")
+        return {
+            "provider": "gpt",
+            "model": model,
+            "name": f"OpenAI API ({model})",
+            "ready": _provider_runtime_ready("gpt"),
+            "shared": True,
+            "mode": "api",
+            "rate_limit_window_sec": BASE_LLM_RATE_WINDOW_SEC,
+            "rate_limit_max_requests": BASE_LLM_RATE_MAX_REQUESTS,
+            "available_cli": available_clis,
+        }
+
+    return {
+        "provider": "",
+        "model": "",
+        "name": "Unavailable",
+        "ready": bool(available_clis),
+        "shared": False,
+        "mode": mode,
+        "rate_limit_window_sec": BASE_LLM_RATE_WINDOW_SEC,
+        "rate_limit_max_requests": BASE_LLM_RATE_MAX_REQUESTS,
+        "available_cli": available_clis,
+    }
+
+
+def _check_base_llm_rate_limit(client_ip: str, base_llm: str):
+    """Limit shared server-side base LLM usage, but not user-provided keys or local CLI."""
+    if base_llm != "default":
+        return None
+
+    now = time.time()
+    with _base_llm_rate_lock:
+        bucket = _base_llm_request_log.setdefault(client_ip, deque())
+        while bucket and now - bucket[0] > BASE_LLM_RATE_WINDOW_SEC:
+            bucket.popleft()
+        if len(bucket) >= BASE_LLM_RATE_MAX_REQUESTS:
+            retry_after = max(1, int(BASE_LLM_RATE_WINDOW_SEC - (now - bucket[0])))
+            return retry_after
+        bucket.append(now)
+    return None
 
 
 def _snapshot_xml_state():
@@ -307,6 +433,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.path = "/about.html"
             super().do_GET()
 
+        elif parsed.path == "/readme":
+            self._handle_readme()
+
         elif parsed.path == "/" or parsed.path == "/index.html":
             # Prevent caching: no-cache header
             self.path = "/index.html"
@@ -340,31 +469,54 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _handle_readme(self):
+        if not os.path.exists(README_PATH):
+            self.send_error(404, "README not found")
+            return
+        with open(README_PATH, "rb") as f:
+            body = f.read()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/markdown; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def send_sse(self, event_data):
         line = f"data: {json.dumps(event_data, ensure_ascii=False)}\n\n"
         self.wfile.write(line.encode())
         self.wfile.flush()
 
     def _get_status(self):
-        import shutil
         provider, key = detect_provider()
         clis = [n for n in ["gemini", "claude", "codex"] if shutil.which(n)]
         mode = "API" if key and key != "CLI" else ("CLI" if clis else "")
 
         ft_status = _ft_runtime_status()
+        base_status = _base_runtime_status()
         ft_model = ft_status["ft_model"]
         has_ft = ft_status["ready"]
+        ft_name = f"OpenAI FT ({ft_model.split(':')[-1]})" if has_ft else "Rule-based"
+        base_name = base_status["name"]
 
         return {
             "sumo": bool(SUMO_BIN and os.path.isfile(SUMO_BIN)),
-            "llm": has_ft or bool(provider),
-            "llm_name": f"Fine-tuned ({ft_model.split(':')[-1]})" if has_ft else (f"{provider} ({mode})" if provider else "Rule-based"),
+            "llm": has_ft or base_status["ready"] or bool(provider),
+            "llm_name": f"FT: {ft_name} / Base: {base_name}",
             "llm_provider": "openai-ft" if has_ft else (provider or ""),
             "llm_mode": "Fine-tuned" if has_ft else mode,
             "available_cli": clis,
             "traffic_data": bool(os.environ.get("TOPIS_API_KEY")),
             "ft_configured": ft_status["configured"],
             "ft_ready": ft_status["ready"],
+            "ft_name": ft_name,
+            "base_name": base_name,
+            "base_ready": base_status["ready"],
+            "base_provider": base_status["provider"],
+            "base_model": base_status["model"],
+            "base_mode": base_status["mode"],
+            "base_shared_key": base_status["shared"],
+            "base_rate_limit_window_sec": base_status["rate_limit_window_sec"],
+            "base_rate_limit_max_requests": base_status["rate_limit_max_requests"],
             "python_executable": sys.executable,
         }
 
@@ -575,6 +727,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_header("Connection", "keep-alive")
         self.end_headers()
 
+        retry_after = _check_base_llm_rate_limit(self.client_address[0], base_llm)
+        if retry_after is not None:
+            base_status = _base_runtime_status()
+            provider_label = _provider_label(base_status["provider"] or "gemini")
+            self.send_sse({
+                "type": "error",
+                "text": f"Shared server {provider_label} limit reached. Please wait about {retry_after}s or use your own API key."
+            })
+            self.send_sse({"type": "done"})
+            return
+
         try:
             self._run_simulation(user_input, provider=provider, modify_intent=modify_intent, api_key=api_key, base_llm=base_llm)
         except Exception as e:
@@ -590,26 +753,36 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         """
         from src.llm_parser import parse_user_input, SimulationParams, get_prompt_metadata
         from tools.osm_network import build_network
-        from src.base_llm import generate_network_xml, modify_network_xml
+        from src.base_llm import (
+            clear_request_base_llm_override,
+            generate_network_xml,
+            modify_network_xml,
+            set_request_base_llm_override,
+        )
         from tools.sumo_generator import generate_all, TrafficDemand, SimulationConfig
         from src.validator import validate
         from datetime import datetime
 
-        # Set base LLM mode (reflect the value selected from the frontend)
+        # Configure per-request base LLM override from the frontend selection.
+        clear_request_base_llm_override()
         if base_llm.startswith("cli:"):
-            os.environ["BASE_LLM_MODE"] = "cli"
-            os.environ["BASE_LLM_CLI"] = base_llm.split(":")[1]
+            set_request_base_llm_override(mode="cli", cli=base_llm.split(":", 1)[1])
         elif base_llm.startswith("api:"):
-            parts = base_llm.split(":")
-            os.environ["BASE_LLM_MODE"] = "api"
-            # Temporarily set user-provided key
-            if len(parts) >= 3:
-                provider_name = parts[1]
-                key = ":".join(parts[2:])
-                os.environ["BASE_LLM_CUSTOM_KEY"] = key
-                os.environ["BASE_LLM_CUSTOM_PROVIDER"] = provider_name
-        else:
-            os.environ["BASE_LLM_MODE"] = "api"
+            parts = base_llm.split(":", 3)
+            if len(parts) >= 4:
+                set_request_base_llm_override(
+                    mode="api",
+                    provider=parts[1],
+                    model=parts[2],
+                    api_key=parts[3],
+                )
+            elif len(parts) >= 3:
+                set_request_base_llm_override(
+                    mode="api",
+                    provider=parts[1],
+                    model=_default_base_model(parts[1]),
+                    api_key=parts[2],
+                )
 
         # -- Modification mode: frontend sends provider="modify" --
         is_modify = False
@@ -1090,8 +1263,11 @@ def main():
     print(f"  http://localhost:{PORT}")
     print(f"{'='*50}")
 
-    provider, _ = detect_provider()
-    print(f"  LLM: {provider.upper() if provider else 'Rule-based'}")
+    ft_status = _ft_runtime_status()
+    base_status = _base_runtime_status()
+    ft_name = f"OpenAI FT ({ft_status['ft_model'].split(':')[-1]})" if ft_status["ready"] else "Rule-based"
+    print(f"  FT: {ft_name}")
+    print(f"  Base: {base_status['name']}")
     print(f"  SUMO: {SUMO_BIN or 'Not installed'}")
     print(f"  Data: {'✓ Seoul API' if os.environ.get('TOPIS_API_KEY') else 'Stats only'}")
     print(f"  Python: {sys.executable}")
