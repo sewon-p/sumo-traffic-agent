@@ -269,7 +269,7 @@
   .hero-panel-title {
     font: 800 15px/1.2 var(--sans);
     margin-bottom: 16px;
-    color: var(--dark);
+    color: var(--accent);
   }
 
   .hero-metrics {
@@ -434,6 +434,9 @@
     background: rgba(255, 255, 255, 0.92);
     border: 1px solid var(--surface-border);
     box-shadow: 0 8px 24px rgba(43, 45, 66, 0.06);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
 
   .result-metric-label {
@@ -445,7 +448,7 @@
   }
 
   .result-metric-value {
-    font: 800 28px/1.05 var(--sans);
+    font: 800 28px/1.05 var(--mono);
     margin-bottom: 8px;
     color: var(--dark);
   }
@@ -479,7 +482,7 @@
   }
 
   .results-table th {
-    color: var(--muted);
+    color: var(--dark);
     font: 700 11px/1 var(--mono);
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -491,7 +494,8 @@
   }
 
   .results-table td strong {
-    color: var(--dark);
+    color: var(--accent);
+    font-weight: 800;
   }
 
   .results-note {
@@ -836,17 +840,17 @@
     <ul class="nav-links">
       <li><a href="#hero">Hero</a></li>
       <li><a href="#overview">Overview</a></li>
-      <li><a href="#built">What I Built</a></li>
+      <li><a href="#built">Components</a></li>
       <li><a href="#results">Results</a></li>
       <li><a href="#data-paths">Data Paths</a></li>
       <li><a href="#workflow">Workflow</a></li>
       <li><a href="#explore">Explore</a></li>
-      <li><a href="#limits">Limits</a></li>
+      <li><a href="#lessons">Lessons</a></li>
     </ul>
     <div class="nav-actions">
       <a class="nav-btn btn-secondary" href="https://github.com/ParkSewon-PM/sumo-traffic-agent" target="_blank">GitHub</a>
-      <a class="nav-btn btn-secondary" href="/admin">Open Admin</a>
-      <a class="nav-btn btn-primary" href="/">Open Demo</a>
+      <a class="nav-btn btn-secondary" href="/admin">Admin Dashboard</a>
+      <a class="nav-btn btn-primary" href="/">View Live System</a>
     </div>
   </nav>
 
@@ -865,15 +869,19 @@
             scenario execution, evaluation, and correction-derived export in one connected loop.
           </p>
           <div class="hero-actions">
-            <a class="btn btn-primary" href="/">Open Demo</a>
+            <a class="btn btn-primary" href="/">View Live System</a>
             <a class="btn btn-secondary" href="https://github.com/ParkSewon-PM/sumo-traffic-agent" target="_blank">GitHub</a>
             <a class="btn btn-secondary" href="/readme">Read README</a>
           </div>
       <div class="highlights">
-            <div class="highlight-pill">Fine-Tuned Extraction</div>
-            <div class="highlight-pill">Correction vs Tuning</div>
-            <div class="highlight-pill">Retraining Export</div>
-            <div class="highlight-pill">Docker / CI/CD / GCP</div>
+            <div class="highlight-pill">Python</div>
+            <div class="highlight-pill">SUMO</div>
+            <div class="highlight-pill">OpenAI Fine-Tuning</div>
+            <div class="highlight-pill">Claude API</div>
+            <div class="highlight-pill">Gemini API</div>
+            <div class="highlight-pill">Docker</div>
+            <div class="highlight-pill">GitHub Actions</div>
+            <div class="highlight-pill">GCP Cloud Run</div>
           </div>
         </div>
 
@@ -938,7 +946,7 @@
     </section>
 
     <section id="built">
-      <div class="eyebrow">What I Built</div>
+      <div class="eyebrow">System Components</div>
       <h2 class="section-title">A Workflow, Not a Single Prompt</h2>
       <p class="section-copy">
         Each layer has a clear role in generation, refinement, evaluation, and future dataset improvement.
@@ -949,7 +957,7 @@
           <div class="card-icon">FT</div>
           <h3 class="card-title">Fine-Tuned Extraction</h3>
           <p class="card-copy">
-            A fine-tuned <code>gpt-4.1-mini</code> converts traffic requests into structured parameters (speed, volume, lanes, sigma, tau, avg_block_m). Trained on ~70 road segments from real Seoul traffic surveys with driver parameters reverse-estimated via the Greenshields model.
+            A fine-tuned <code>gpt-4.1-mini</code> converts traffic requests into structured parameters (speed, volume, lanes, sigma, tau, avg_block_m). Trained on ~70 road segments from real Seoul traffic surveys. Ground truth uses BPR speed-flow functions, V/C ratio estimation, and Greenshields-based reverse estimation of driver behavior parameters.
           </p>
         </article>
 
@@ -1046,7 +1054,7 @@
               <tr><td>sigma</td><td><strong>4.5%</strong></td><td>21.3%</td></tr>
               <tr><td>tau</td><td><strong>4.6%</strong></td><td>11.4%</td></tr>
               <tr><td>avg_block_m</td><td><strong>14.5%</strong></td><td>167.6%</td></tr>
-              <tr><td><strong>Overall</strong></td><td><strong>10.6%</strong></td><td><strong>51.5%</strong></td></tr>
+              <tr><td><strong>Overall</strong></td><td><strong>10.6%</strong></td><td>51.5%</td></tr>
             </tbody>
           </table>
           <div class="results-note">
@@ -1071,7 +1079,7 @@
           <div class="path-label">Synthetic</div>
           <h3 class="path-title">Prompt-Target Scenario Generation</h3>
           <p class="path-copy">
-            10 Seoul roads x 6 time periods x 4 weather conditions. Ground truth computed via BPR speed-flow model, road-type capacity tables (arterial 1800, expressway 2000 veh/h/lane), and congestion-calibrated driver parameters.
+            10 Seoul roads x 6 time periods x 4 weather conditions. Ground truth computed via BPR speed-flow model with road-type capacity (1800-2200 veh/h/lane by class), peak V/C ratios (0.75-0.95), and congestion-calibrated driver parameters (sigma 0.2-0.8, tau 0.8-2.5s).
           </p>
           <div class="path-meta">~70 samples. Used to bootstrap structured extraction before live correction data accumulates.</div>
         </article>
@@ -1186,7 +1194,7 @@ flowchart TD
 
     <section id="explore">
       <div class="eyebrow">Explore the System</div>
-      <h2 class="section-title">Demo on One Side, Evidence on the Other</h2>
+      <h2 class="section-title">Interactive Interface Backed by an Evaluation Layer</h2>
       <p class="section-copy">
         The project is split into a user-facing generation flow and an evidence layer for evaluation, export, and analysis.
       </p>
@@ -1203,7 +1211,7 @@ flowchart TD
               A shared server Gemini fallback is available. Using your own base-model API key lets you choose the provider model directly and avoids shared quota limits.
             </p>
           </div>
-          <a class="btn btn-primary" href="/">Open Demo</a>
+          <a class="btn btn-primary" href="/">View Live System</a>
         </article>
 
         <article class="card explore-card">
@@ -1214,7 +1222,7 @@ flowchart TD
               Inspect correction logs, evaluation summaries, field error counts, geometry categories, and downloadable retraining exports.
             </p>
           </div>
-          <a class="btn btn-secondary" href="/admin">Open Admin</a>
+          <a class="btn btn-secondary" href="/admin">Admin Dashboard</a>
         </article>
 
         <article class="card explore-card">
@@ -1230,30 +1238,30 @@ flowchart TD
       </div>
     </section>
 
-    <section id="limits">
-      <div class="eyebrow">Current Limits</div>
-      <h2 class="section-title">What Is Strong Today, and What Still Needs Work</h2>
+    <section id="lessons">
+      <div class="eyebrow">Lessons Learned</div>
+      <h2 class="section-title">What Worked, What Didn't, and What Comes Next</h2>
       <p class="section-copy">
-        The project is strongest in workflow design, correction logging, and retraining structure. The current limits are mostly around robustness and evaluation breadth rather than missing pipeline pieces.
+        The strongest parts are workflow design, correction logging, and retraining structure. The remaining gaps are around robustness and evaluation breadth rather than missing pipeline pieces.
       </p>
 
       <div class="limits">
-        <div class="limit-item">Geometry editing remains more fragile than parameter extraction, especially under more open-ended or mixed modification requests.</div>
-        <div class="limit-item">Some external dependencies such as OSM and public traffic APIs can fail, which affects runtime reliability more than workflow design.</div>
-        <div class="limit-item">The project is more mature in LLM workflow design and data logging than in frontend polish.</div>
-        <div class="limit-item">Evaluation is currently stronger for correction-driven analysis than for a large held-out benchmark suite.</div>
+        <div class="limit-item"><strong>Structured extraction is a better fine-tuning target than open-ended generation.</strong> Parameter extraction with constrained JSON output converged quickly (~70 samples), while geometry/XML generation remains fragile and better suited to a base LLM.</div>
+        <div class="limit-item"><strong>Correction vs tuning separation matters for data quality.</strong> Without this split, preference-driven edits would pollute the retraining signal. Simple to implement, large effect on exported dataset quality.</div>
+        <div class="limit-item"><strong>External dependencies need graceful fallback.</strong> OSM lookups and public traffic APIs fail often enough that the LLM-generated XML fallback path is not optional — it is a core part of the pipeline.</div>
+        <div class="limit-item"><strong>Volume is the hardest field to predict.</strong> At 34.8% MAPE it is the model's weakest point — the most context-dependent parameter that would benefit most from additional training data.</div>
       </div>
     </section>
 
     <section id="cta" class="cta">
-      <div class="eyebrow">Final CTA</div>
-      <h2 class="section-title">See the Workflow in Action</h2>
+      <div class="eyebrow">Try It</div>
+      <h2 class="section-title">Run the Full Pipeline</h2>
       <p class="section-copy">
-        Start with the generation interface, then inspect the same system through the admin view to see how scenario execution, correction logging, and retraining export connect into one workflow.
+        The generation interface runs the end-to-end pipeline from prompt to SUMO execution. The admin dashboard exposes the evaluation layer, correction logs, and retraining exports behind it.
       </p>
       <div class="cta-actions">
-        <a class="btn btn-primary" href="/">Open Demo</a>
-        <a class="btn btn-secondary" href="/admin">Open Admin</a>
+        <a class="btn btn-primary" href="/">View Live System</a>
+        <a class="btn btn-secondary" href="/admin">Admin Dashboard</a>
         <a class="btn btn-secondary" href="https://github.com/ParkSewon-PM/sumo-traffic-agent" target="_blank">GitHub</a>
       </div>
     </section>

@@ -1,15 +1,12 @@
 # LLM-Guided Synthetic Driving Scenario Generation
 
-Converts natural-language traffic descriptions into structured SUMO driving scenarios, with fine-tuned parameter extraction, human-in-the-loop correction logging, and retraining export.
+A role-separated LLM workflow that converts natural-language traffic descriptions into structured SUMO driving scenarios. A fine-tuned model handles parameter extraction (overall MAPE 10.6% vs 51.5% base model, 0% JSON parsing failures), a base LLM handles geometry reasoning, and an 11-tool agent orchestrates execution. Human corrections are logged with trainability metadata and exported as retraining data.
 
-- Fine-tuned on real Seoul traffic data (~70 road segments, observed speed/volume)
-- Role-separated LLM design: fine-tuned extractor + base LLM geometry reasoning + 11-tool agent
-- Human-in-the-loop correction/tuning split with retraining export pipeline
-- Deployed via Docker, GitHub Actions CI/CD, and GCP Cloud Run
+**[Live Demo](https://sumo-traffic-agent-66pav72ktq-an.a.run.app/about)** · **[GitHub](https://github.com/sewon-p/sumo-traffic-agent)**
 
 ## Overview
 
-Building realistic synthetic driving scenarios is tedious and domain-heavy. This project addresses that through a role-separated LLM workflow:
+This project addresses the cost of building realistic synthetic driving scenarios through a role-separated LLM workflow:
 
 1. A user describes a traffic scene in natural language.
 2. A **fine-tuned model** extracts structured simulation parameters.
@@ -18,6 +15,14 @@ Building realistic synthetic driving scenarios is tedious and domain-heavy. This
 5. Results are validated, and human corrections are logged for future dataset improvement.
 
 The key design choice is **responsibility split** rather than a single model doing everything.
+
+## Problem
+
+Generating realistic traffic scenarios for simulation requires domain knowledge that general-purpose LLMs lack. A single model asked to produce SUMO-compatible parameters tends to default to free-flow speeds, ignore road-type-specific capacity constraints, and hallucinate intersection geometry. The base model in this project overpredicts speed by +68.3% on average and intersection spacing by +165% — errors large enough to make the resulting simulations useless for calibration or testing.
+
+Manual scenario creation is expensive because it requires a traffic engineer to translate each scene description into a consistent set of interrelated parameters: speed depends on V/C ratio, which depends on capacity per lane, which depends on road functional class. Driver behavior parameters like sigma (imperfection) and tau (headway) must be calibrated to the congestion level implied by the scenario, not set independently. Getting any one parameter wrong cascades into unrealistic simulation behavior.
+
+The alternative — fine-tuning a model on domain-specific data and splitting responsibilities across specialized components — is what this project implements. The fine-tuned model learns the parameter interdependencies from real traffic data, while a separate base LLM handles the open-ended geometry reasoning that fine-tuning cannot cover.
 
 ## Architecture
 
@@ -391,7 +396,7 @@ Database-backed evaluation workflow with auditable, reusable results.
 
 Admin dashboard at `/admin` provides simulation history, modification logs, correction export, and downloadable reports.
 
-## Repository Structure
+## Project Structure
 
 ```text
 .
@@ -483,13 +488,13 @@ pytest tests/ -v
 
 Covers configuration loading, validation logic, correction storage/export, and chat session parsing.
 
-## Current Limitations
+## Lessons Learned
 
-- Geometry editing is more fragile than parameter extraction
-- External dependencies (OSM, public APIs) can fail
-- Some SUMO behavior parameters are not yet fully calibrated
-- The fine-tuned model was trained on ~70 samples; accuracy is expected to improve with more data
-- Evaluation covers accuracy and consistency but not cross-domain generalization
+- **Structured extraction is a better fine-tuning target than open-ended generation.** Parameter extraction with constrained JSON output converged quickly (~70 samples), while geometry/XML generation remains fragile and better suited to a base LLM with in-context examples.
+- **Correction vs tuning separation matters for data quality.** Without this split, preference-driven edits would pollute the retraining signal. The distinction is simple to implement but has a large effect on exported dataset quality.
+- **Volume is the hardest field to predict.** At 34.8% MAPE it is the FT model's weakest point — volume is the most context-dependent parameter and would benefit most from additional training data covering a wider range of scenarios.
+- **External dependencies need graceful fallback.** OSM lookups and public APIs fail often enough that the LLM-generated XML fallback path is not optional — it is a core part of the pipeline.
+- **Evaluation should include cross-domain generalization.** The current benchmark covers Seoul roads; testing on unseen cities or road types would reveal how much the model has learned general traffic engineering vs Seoul-specific patterns.
 
 ## License
 
