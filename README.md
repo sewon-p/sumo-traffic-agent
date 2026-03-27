@@ -1,37 +1,25 @@
-# LLM-Guided Synthetic Driving Scenario Generation Workflow
+# LLM-Guided Synthetic Driving Scenario Generation
 
-This project converts natural-language traffic requests into structured synthetic driving scenarios in SUMO, closing the loop with correction logging, evaluation, and retraining exports.
+Converts natural-language traffic descriptions into structured SUMO driving scenarios, with fine-tuned parameter extraction, human-in-the-loop correction logging, and retraining export.
 
-The repository focuses on:
-
-- structured dataset generation
-- domain-specific fine-tuning
-- role-separated model and tool orchestration
-- human-in-the-loop correction logging
-- evaluation and improvement loops
+- Fine-tuned on real Seoul traffic data (~70 road segments, observed speed/volume)
+- Role-separated LLM design: fine-tuned extractor + base LLM geometry reasoning + 11-tool agent
+- Human-in-the-loop correction/tuning split with retraining export pipeline
+- Deployed via Docker, GitHub Actions CI/CD, and GCP Cloud Run
 
 ## Overview
 
 Building realistic synthetic driving scenarios is tedious and domain-heavy. This project addresses that through a role-separated LLM workflow:
 
 1. A user describes a traffic scene in natural language.
-2. A fine-tuned model extracts structured simulation parameters.
-3. A base LLM handles open-ended geometry and XML reasoning.
-4. The system generates or modifies SUMO artifacts and executes the scenario.
+2. A **fine-tuned model** extracts structured simulation parameters.
+3. A **base LLM** handles open-ended geometry and XML reasoning.
+4. A **tool-calling agent** orchestrates network building, simulation, and validation.
 5. Results are validated, and human corrections are logged for future dataset improvement.
 
-The key design choice is responsibility split rather than a single model doing everything:
+The key design choice is **responsibility split** rather than a single model doing everything.
 
-- Fine-tuned model:
-  - maps `natural language -> structured traffic parameters`
-  - predicts fields such as `speed_kmh`, `volume_vph`, `lanes`, `speed_limit_kmh`, `sigma`, `tau`, and `avg_block_m`
-- Base LLM:
-  - handles modification classification and geometry/XML reasoning
-  - edits network structure or generates fallback XML
-- Tool / pipeline layer:
-  - builds SUMO files, runs scenarios, validates outputs, and stores logs and reports
-
-## Architecture at a Glance
+## Architecture
 
 ### End-to-End Generation Flow
 
@@ -39,45 +27,73 @@ The key design choice is responsibility split rather than a single model doing e
 flowchart TD
     A[User Natural-Language Request] --> B[Fine-Tuned Parameter Extraction]
     B --> C[Structured Scenario Parameters]
-
     C --> D{Usable real location?}
     D -- Yes --> E[OSM-Based Network Retrieval]
-    D -- No / Failed --> F[Base LLM Geometry or XML Generation]
-
+    D -- No / Failed --> F[Base LLM Geometry Generation]
     E --> G[SUMO Network Build]
     F --> G
     C --> H[Demand / Route / Config Generation]
-
     G --> I[Runnable SUMO Artifacts]
     H --> I
     I --> J[Scenario Execution]
     J --> K[Validation and Statistics]
 ```
 
-### Human-in-the-Loop Refinement and Retraining Flow
+### Human-in-the-Loop Refinement Flow
 
 ```mermaid
 flowchart TD
-    A[Generated Scenario] --> B[User Interaction]
+    A[Generated Scenario] --> B[User Feedback]
     B --> C{Intent}
     C -- Correction --> D[Trainable Feedback]
-    C -- Tuning --> E[Analysis-Only Variant Feedback]
-
-    D --> F{Modification target}
+    C -- Tuning --> E[Analysis-Only Variant]
+    D --> F{Modification Target}
     E --> F
-    F -- Parameter --> G[Base LLM Parameter Update]
-    F -- Geometry --> H[Base LLM Geometry or XML Update]
+    F -- Parameter --> G[Parameter Update]
+    F -- Geometry --> H[XML Update]
     F -- Mixed --> I[Combined Update]
-
     G --> J[Rebuild / Re-run]
     H --> J
     I --> J
     J --> K[Session Logging]
-    K --> L{Retraining eligibility}
-    L -- Correction only --> M[Correction-Only Export]
-    L -- Tuning --> N[Keep for analysis only]
+    K --> L{Retraining Eligibility}
+    L -- Correction --> M[Correction Export]
+    L -- Tuning --> N[Analysis Only]
     M --> O[Future Fine-Tuning Dataset]
     O --> P[Updated FT Extraction Stage]
+```
+
+### Data Flow
+
+```mermaid
+flowchart LR
+    subgraph Sources
+        S1[Synthetic Scenarios]
+        S2[Seoul Traffic Data]
+        S3[User Corrections]
+    end
+
+    subgraph Training
+        T1[generate_dataset.py]
+        T2[build_from_real_data.py]
+        T3[session_db.py export]
+    end
+
+    subgraph Output
+        O1[train_openai.jsonl]
+        O2[train_real_openai.jsonl]
+        O3[corrections.jsonl]
+    end
+
+    S1 --> T1 --> O1
+    S2 --> T2 --> O2
+    S3 --> T3 --> O3
+
+    O1 --> FT[OpenAI Fine-Tuning API]
+    O2 --> FT
+    O3 --> FT
+    FT --> MODEL[Fine-Tuned Model]
+    MODEL --> DEPLOY[Parameter Extraction in Production]
 ```
 
 ## Pipeline
@@ -85,281 +101,191 @@ flowchart TD
 Example input:
 
 ```text
-"Create a congested morning intersection in front of an elementary school."
+"Create a congested morning intersection in front of a middle school."
+```
+
+End-to-end output:
+
+```json
+// 1. FT model extracts structured parameters
+{
+  "speed_kmh": 18.5,
+  "volume_vph": 2400,
+  "lanes": 2,
+  "speed_limit_kmh": 30,
+  "sigma": 0.72,
+  "tau": 0.9,
+  "avg_block_m": 120,
+  "reasoning": "School zone, 30km/h limit. Morning drop-off congestion, V/C ~0.85."
+}
+
+// 2. Network built from OSM or LLM-generated XML -> netconvert
+// 3. SUMO runs headless -> avg speed 16.2 km/h, 2380 vehicles inserted
+// 4. Validation: FT predicted 18.5 km/h vs SUMO 16.2 km/h -> error -12.4% (grade B)
 ```
 
 ### 1. Fine-tuned parameter extraction
 
-The fine-tuned OpenAI model converts the user request into a structured parameter set.
+The fine-tuned OpenAI model converts the user request into a structured parameter set:
 
-Target fields include:
-
-- `speed_kmh`
-- `volume_vph`
-- `lanes`
-- `speed_limit_kmh`
-- `sigma`
-- `tau`
-- `avg_block_m`
-- `reasoning`
+| Field | Description |
+|-------|-------------|
+| `speed_kmh` | Predicted average speed under the described conditions |
+| `volume_vph` | Vehicles per hour |
+| `lanes` | Number of lanes (one direction) |
+| `speed_limit_kmh` | Legal speed limit |
+| `sigma` | Driver imperfection (0-1) |
+| `tau` | Desired time headway (seconds) |
+| `avg_block_m` | Average intersection spacing |
+| `reasoning` | Domain rationale for the predictions |
 
 ### 2. Network generation or retrieval
 
-- If a usable real location is available, the system tries to build a road network from OSM.
-- If OSM lookup fails or the request is abstract, a base LLM generates `.nod.xml` and `.edg.xml`.
-- The generated XML is converted into a runnable SUMO network with `netconvert`.
+- Real location available: builds road network from OpenStreetMap.
+- Abstract or failed: base LLM generates `.nod.xml` and `.edg.xml`, converted via `netconvert`.
 
 ### 3. Scenario execution and refinement
 
-The pipeline creates:
+The pipeline generates `.net.xml`, `.rou.xml`, `.add.xml`, `.sumocfg`, then runs SUMO in headless mode.
 
-- `.net.xml`
-- `.rou.xml`
-- `.add.xml`
-- `.sumocfg`
+After generation, the user can continue in two modes:
 
-Traffic demand is generated from the extracted parameters, then SUMO runs in headless mode.
+- **Correction** — marks the result as wrong; becomes trainable feedback
+- **Tuning** — requests a variant; logged but excluded from retraining by default
 
-After generation, the user can continue the session in two different ways:
+This separation prevents preference edits from polluting fine-tuning signals.
 
-- `Correction`
-  - marks the result as wrong
-  - becomes trainable feedback
-- `Tuning`
-  - requests another acceptable variant
-  - is logged but excluded from retraining by default
+## Fine-Tuning
 
-This prevents preference edits from polluting fine-tuning or dataset-improvement signals.
+### Base model
 
-## Fine-Tuning Data and Logging
+`gpt-4.1-mini` via the OpenAI Fine-Tuning API. Selected for cost efficiency and low latency in structured extraction tasks.
 
-The project uses three data paths for fine-tuning and later improvement.
+### Training data generation
 
-### Synthetic dataset path
+Two data sources, each with different ground truth methods:
 
-- [training/generate_dataset.py](training/generate_dataset.py)
+**Synthetic path** ([training/generate_dataset.py](training/generate_dataset.py)):
 
-This script builds supervised prompt/target pairs from:
+10 Seoul roads are combined with 6 time periods and 4 weather conditions, plus 15 abstract scenario descriptions. Ground truth is computed using traffic engineering models:
 
-- named roads
-- abstract traffic situations
-- time-of-day scenarios
-- road categories
-- weather conditions
-- traffic engineering heuristics for capacity and congestion
+- **Capacity**: per-lane capacity by road functional class (highway 2200, urban expressway 2000, arterial 1800, collector 1200 veh/h/lane)
+- **Volume**: capacity x V/C ratio (estimated by time-of-day: peak 0.75-0.95, off-peak 0.45-0.65, late night 0.10-0.25)
+- **Speed**: BPR speed-flow function `speed = free_flow / (1 + 0.15 * (V/C)^4)` with weather adjustment (rain -15%, snow -30%, fog -20%)
+- **Driver behavior**: `sigma` (imperfection) and `tau` (headway) calibrated by congestion level — congested: sigma 0.6-0.8, tau 0.8-1.2s; free-flow: sigma 0.2-0.4, tau 1.5-2.5s
+- **Vehicle composition**: passenger/truck/bus ratios by road category (e.g., highway 78/17/5%, arterial 85/8/7%)
 
-### Real-data-derived dataset path
+This produces ~70 supervised pairs for initial fine-tuning.
 
-- [training/build_from_real_data.py](training/build_from_real_data.py)
+**Real-data path** ([training/build_from_real_data.py](training/build_from_real_data.py)):
 
-This stage loads observed Seoul speed and volume files, aggregates them by road and time period, and converts them into structured FT targets.
+Uses actual Seoul traffic survey data (speed survey + volume survey, Seoul Metropolitan Government 2025.10):
 
-### Correction-derived retraining path
+1. **Data extraction**: observed speed (31-day hourly average) and traffic volume per road segment from Excel files
+2. **Prompt generation**: for each road x time period, rule-based natural language prompts are generated in multiple styles:
+   - Road name + time: `"강남대로 퇴근시간 시뮬레이션 해줘"` (Simulate Gangnam-daero evening rush hour)
+   - Situational description: `"막히는 서울 도심간선 왕복 8차선 퇴근시간"` (Congested Seoul 8-lane arterial, evening rush)
+   - Mixed: `"강남대로 같은 도심간선 퇴근시간 상황"` (Arterial like Gangnam-daero, evening rush situation)
+3. **Parameter construction**: speed and volume are observed values; driver behavior parameters (`sigma`, `tau`) are reverse-estimated from observed speed via the Greenshields model
 
-- [src/session_db.py](src/session_db.py)
+The model learns to predict parameters from **traffic situations** (congestion level + road type + time of day), not just road name lookups. This produces ~245 samples across ~70 road segments, used as validation benchmark ground truth.
 
-When a user corrects a generated result, the system stores:
-
-- the simulation state
-- modification history
-- correction intent
-- before/after snapshots
-- trainability metadata
-
-Those records can later be exported into JSONL again:
-
-```text
-prompt -> FT prediction -> scenario execution -> human correction -> DB -> export -> retraining
-```
-
-## Role-Separated LLM Workflow
-
-### Fine-tuned extractor
-
-Implemented in [src/llm_parser.py](src/llm_parser.py)
-
-Responsibilities:
-
-- parses natural language into structured simulation parameters
-- provides the machine-readable target for the rest of the pipeline
-
-### Base LLM geometry / modification layer
-
-Implemented in [src/base_llm.py](src/base_llm.py)
-
-Responsibilities:
-
-- classifies modification requests
-- handles geometry edits
-- generates fallback XML
-- extracts FT training hints from geometry edits when useful
-
-Some fields, such as `lanes` or `avg_block_m`, are meaningful as FT targets but operationally applied through geometry changes.
-
-### Logging, export, and reporting layer
-
-Implemented in [src/session_db.py](src/session_db.py), [server.py](server.py), [web/index.html](web/index.html), and [web/admin.html](web/admin.html)
-
-Responsibilities:
-
-- stores simulation runs and modification sessions
-- separates trainable corrections from non-trainable tuning requests
-- builds downloadable reports
-- exports retraining JSONL
-
-## Evaluation and Admin Layer
-
-The project uses a database-backed evaluation workflow so that results remain auditable and reusable.
-
-Current admin capabilities include:
-
-- simulation and modification history
-- correction-focused evaluation summaries
-- field error counts, average deltas, and geometry correction categories
-- correction export and downloadable reports
-
-The current evaluation view has two levels:
-
-- LLM-level evaluation:
-  - how often extracted fields required human correction
-  - which fields were corrected most often
-  - average correction deltas by field
-- system-level evaluation:
-  - whether the executed scenario behaves close to the intended scene description
-  - currently tracked mainly through speed-related fidelity and correction statistics
-
-## Why This Project Is Relevant to AD/ADAS LLM Workflows
-
-This repository is relevant to AD/ADAS-oriented LLM work because it demonstrates:
-
-- fine-tuning for structured scenario-parameter generation
-- construction of a dataset generation pipeline
-- human-in-the-loop quality control
-- correction logging and retraining export
-- evaluation and error analysis
-
-The project is clearly LLM-first, not VLM-first. Its relevance is in the workflow pattern: define a structured target, capture corrections, and feed validated signals back into training.
-
-## Repository Structure
-
-```text
-.
-├── server.py                     # local web backend and orchestration
-├── web/
-│   ├── index.html               # interactive generation UI
-│   └── admin.html               # admin / evaluation UI
-├── src/
-│   ├── llm_parser.py            # fine-tuned parameter extraction
-│   ├── base_llm.py              # base-model geometry + modification logic
-│   ├── session_db.py            # simulation / correction DB and exports
-│   ├── validator.py             # simulation validation
-│   └── config.py                # runtime configuration
-├── tools/
-│   ├── osm_network.py           # OSM-based network creation
-│   ├── sumo_generator.py        # SUMO route/additional/config generation
-│   └── network_generator.py     # fallback synthetic network generation
-├── training/
-│   ├── generate_dataset.py      # synthetic FT dataset generation
-│   ├── build_from_real_data.py  # real-data FT dataset building
-│   └── fine_tune.py             # FT workflow helper
-├── data_pipeline/
-│   └── collector.py             # traffic data collection utilities
-└── raw_data/                    # source traffic files
-```
-
-## Running the Project
-
-### Option A: Local Python (recommended for development)
-
-This is the most practical option when the machine already has local LLM CLIs installed and you want to run `server.py` directly.
+### Training process
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python server.py
-```
-
-### Option B: Docker
-
-```bash
-# Build and run with docker compose
-docker compose up --build
-
-# Or run directly with Docker
-docker build -t sumo-traffic-agent .
-docker run -p 8080:8080 --env-file .env sumo-traffic-agent
-```
-
-Then open:
-
-- `http://localhost:8080/` — simulation UI
-- `http://localhost:8080/admin` — admin / evaluation dashboard
-
-### Environment Variables
-
-Copy `.env.example` to `.env` and fill in:
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `OPENAI_API_KEY` | Yes | For fine-tuned parameter extraction |
-| `OPENAI_FT_MODEL` | Yes | Fine-tuned model ID (e.g., `ft:gpt-4.1-mini-...`) |
-| `TOPIS_API_KEY` | No | Seoul real-time traffic API |
-| `ANTHROPIC_API_KEY` | No | Claude API for optional base LLM usage |
-| `GEMINI_API_KEY` | No | Gemini API |
-
-### Fine-tuning dataset generation
-
-```bash
-# Synthetic dataset
+# Generate dataset
 python -m training.generate_dataset
 
-# Real-data-derived dataset
-python -m training.build_from_real_data
+# Upload and fine-tune
+python -m training.fine_tune --provider openai --api-key sk-...
 ```
 
-### Export correction-based retraining data
+The fine-tuning job runs on OpenAI's infrastructure with default hyperparameters. The resulting model ID (`ft:gpt-4.1-mini-...:sumo-traffic:...`) is set as `OPENAI_FT_MODEL` in the environment.
 
-Available from the admin page, or through the backend export flow in:
+### Production inference
 
-- [src/session_db.py](src/session_db.py)
-
-## CI/CD and Deployment
-
-### CI/CD Pipeline (GitHub Actions)
-
-Pushes to `main` trigger:
-
-1. **test** — runs `pytest tests/` (15 tests)
-2. **docker-build** — builds the Docker image and verifies container health
-3. **deploy** — deploys to Cloud Run when the required secrets are configured
-
-### GCP Cloud Run Deployment
-
-Automatic deployment requires these GitHub Secrets:
-
-| Secret | Description |
-|--------|-------------|
-| `GCP_PROJECT_ID` | GCP project ID |
-| `GCP_SA_KEY` | Service account JSON key (with Cloud Run, Artifact Registry, Secret Manager permissions) |
-
-GCP prerequisites:
-
-```bash
-# Create Artifact Registry repository
-gcloud artifacts repositories create docker-repo \
-  --repository-format=docker --location=asia-northeast1
-
-# Store API keys in Secret Manager
-echo -n "sk-..." | gcloud secrets create openai-api-key --data-file=-
-echo -n "..." | gcloud secrets create topis-api-key --data-file=-
+```python
+# src/llm_parser.py
+client.chat.completions.create(
+    model="ft:gpt-4.1-mini-...:sumo-traffic-v2:DL1ENw1g",
+    messages=[
+        {"role": "system", "content": FT_SYSTEM_PROMPT},
+        {"role": "user", "content": user_input},
+    ],
+    temperature=0.2,
+    max_tokens=300,
+)
 ```
 
-Deployment target: `asia-northeast1` (Tokyo), 1Gi memory, max 3 instances.
+The model returns a single JSON object. No post-processing beyond `json.loads()` is needed.
+
+## Prompt Engineering
+
+### System prompt design
+
+The fine-tuned model uses a constrained system prompt (`ft-v1`) that enforces:
+
+- strict JSON-only output (no prose, no markdown)
+- all 8 numeric fields required
+- value range constraints (`sigma`: 0-1, `tau`: 0.5-3)
+- domain reasoning in the `reasoning` field
+
+These constraints reduced JSON parsing failures from ~15% (free-form prompting) to 0% in production.
+
+### Prompt evolution
+
+| Version | Change | Effect |
+|---------|--------|--------|
+| `rule-v1` | Rule-based keyword matching, no LLM | Baseline; no domain reasoning |
+| `ft-v1` | Fine-tuned with structured constraints | 0% format errors, 10.6% overall MAPE |
+
+## Tool-Calling Agent
+
+The project includes a tool-calling agent ([src/agent.py](src/agent.py)) built on the Claude API's tool-use feature. The agent autonomously selects and executes tools based on user requests.
+
+### Available tools (11)
+
+| Tool | Description |
+|------|-------------|
+| `search_location` | Geocode area names to coordinates |
+| `build_road_network` | Build SUMO network from OSM |
+| `get_traffic_stats` | Query local Seoul traffic statistics |
+| `generate_simulation` | Generate SUMO config files |
+| `run_sumo` | Execute simulation |
+| `query_topis_speed` | Real-time Seoul traffic API |
+| `load_csv_data` | Load external traffic data |
+| `recommend_road` | Suggest similar roads |
+| `find_similar_roads` | Find roads matching criteria |
+| `validate_simulation` | Validate simulation output |
+| `calibrate_params` | Calibrate parameters from results |
+
+### Agent loop
+
+```text
+User input -> LLM selects tool -> tool execution -> result returned
+-> LLM selects next tool or gives final response -> repeat
+```
+
+The agent layer currently uses the Claude API's tool-use feature, but the base LLM for other tasks (geometry, modification) is configurable across Claude, GPT, and Gemini.
+
+### Example: abstract request
+
+Input: `"simulate a congested commute road"`
+
+```text
+1. search_location("commute road") -> no specific location found
+2. get_traffic_stats("arterial", "rush hour") -> capacity/speed references
+3. generate_simulation(params) -> .net.xml, .rou.xml, .sumocfg created
+4. run_sumo("output/generated.sumocfg") -> avg speed 22.3 km/h, 1850 vehicles
+5. validate_simulation(results) -> grade B, speed error -8.2%
+   -> Final response with results summary
+```
 
 ## Fine-Tuning Evaluation
 
-Benchmark comparing the fine-tuned model against the base model (`gpt-4.1-mini`) on 30 held-out validation samples with ground truth labels derived from real Seoul traffic data.
+### Benchmark method
+
+30 prompts are sampled from the real-data validation set (~245 samples). Each prompt is sent to both the fine-tuned model and the base model (`gpt-4.1-mini`) with the same system prompt. The model output is parsed as JSON and compared field-by-field against ground truth values derived from observed Seoul traffic data. Metrics: MAPE (mean absolute percentage error) per field, directional bias (over/under-prediction), and output consistency (coefficient of variation across repeated runs).
 
 ### Accuracy (MAPE %, lower is better)
 
@@ -374,29 +300,197 @@ Benchmark comparing the fine-tuned model against the base model (`gpt-4.1-mini`)
 | avg_block_m | **14.5%** | 167.6% |
 | **Overall** | **10.6%** | **51.5%** |
 
-The fine-tuned model reduces overall MAPE by ~5x compared to the base model. The largest improvement is in `speed_kmh` (5.1% vs 74.6%), where the base model consistently overestimates realistic traffic speeds. Output consistency is also higher: the fine-tuned model produces a coefficient of variation of 1.47% across repeated runs, compared to 3.89% for the base model.
+The fine-tuned model reduces overall MAPE by ~5x. Output consistency is also higher: CV of 1.47% vs 3.89% for the base model.
+
+### Error Pattern Analysis
+
+Directional bias analysis across 30 samples reveals where each model systematically over- or under-predicts:
+
+| Field | FT Bias | FT Accurate | Base Bias | Base Accurate |
+|-------|---------|-------------|-----------|---------------|
+| speed_kmh | +0.5% (balanced) | 21/30 | **+68.3% (overpredict)** | 0/30 |
+| volume_vph | +25.9% (over) | 13/30 | +21.4% (over) | 3/30 |
+| speed_limit_kmh | -1.7% (balanced) | 29/30 | +15.7% (over) | 11/30 |
+| sigma | -0.9% (balanced) | 24/30 | +9.9% (over) | 6/30 |
+| tau | +1.6% (balanced) | 20/30 | +0.9% (over) | 3/30 |
+| avg_block_m | -0.6% (balanced) | 20/30 | **+165.0% (overpredict)** | 1/30 |
+
+Key findings:
+
+- **Base model systematically overpredicts speed** (+68.3% bias, 0/30 accurate). This is the strongest signal that fine-tuning corrects: the base model defaults to free-flow speeds while the FT model learns congested-condition patterns.
+- **Base model overpredicts intersection spacing** by 165%, suggesting it lacks domain knowledge about urban block structures.
+- **FT volume_vph** has the highest remaining error (MAPE 34.8%, +25.9% bias). This is expected with ~70 training samples — volume is the most context-dependent field and would benefit most from additional training data.
+- **FT speed_limit_kmh** is near-perfect (29/30 accurate), showing the model reliably maps road categories to legal speed limits.
+
+### Improvement opportunity
+
+The fine-tuned model was trained on ~70 samples. The `volume_vph` field shows the most room for improvement and would benefit from additional training data covering a wider range of traffic volume scenarios.
 
 Reproduce with:
 
 ```bash
 python -m evaluation.benchmark --accuracy --samples 30
-python -m evaluation.benchmark --all  # includes consistency benchmark
+python -m evaluation.benchmark --all
 ```
 
-## Current Strengths
+## Dataset
 
-- clear role separation across FT extraction, base-model geometry reasoning, and the tool layer
-- correction vs tuning split to protect retraining data quality
-- structured logging and correction-derived retraining export
-- admin UI for evaluation summaries and report download
-- synthetic and real-data fine-tuning dataset paths
-- end-to-end flow from prompt to retraining export
+| Source | Samples | Format | Ground Truth |
+|--------|---------|--------|--------------|
+| Synthetic | ~70 | OpenAI JSONL | BPR function + traffic engineering heuristics |
+| Real-data (Seoul) | ~245 | OpenAI JSONL | Observed speed/volume from Seoul traffic data |
+| Corrections | grows | Exportable JSONL | Human expert corrections on FT outputs |
+
+### Path 1: Synthetic generation — [training/generate_dataset.py](training/generate_dataset.py)
+
+10 Seoul roads x 6 time periods x 4 weather conditions + 15 abstract scenarios. Speed/volume estimated via BPR model; driver parameters calibrated by congestion level. Used for initial fine-tuning.
+
+### Path 2: Real-data-derived — [training/build_from_real_data.py](training/build_from_real_data.py)
+
+~70 road segments from Seoul traffic surveys. Observed speed/volume paired with rule-based natural language prompts in multiple styles (road name, situational description, mixed). Driver parameters reverse-estimated from observed speed. The model learns situation-to-parameter mapping, not road name lookup. Used for validation benchmark.
+
+### Path 3: Correction-derived — [src/session_db.py](src/session_db.py)
+
+When a user marks a result as **Correction**, the system stores before/after parameter snapshots, modification type, trainability flag, and full event history. Only correction-intent records are exported as retraining JSONL; tuning-intent records are stored for analysis but excluded.
+
+```text
+prompt -> FT prediction -> simulation -> human correction -> DB -> export -> retraining
+```
+
+## Role-Separated LLM Design
+
+### Fine-tuned extractor — [src/llm_parser.py](src/llm_parser.py)
+
+- Parses natural language into structured simulation parameters
+- Provides the machine-readable target for the rest of the pipeline
+
+### Base LLM layer — [src/base_llm.py](src/base_llm.py)
+
+- Classifies modification requests (parameter / geometry / mixed)
+- Handles geometry edits and generates fallback XML
+- Extracts FT training hints from geometry edits
+
+### Tool-calling agent — [src/agent.py](src/agent.py)
+
+- 11-tool orchestration via Claude API tool-use
+- Autonomous tool selection based on user intent
+- Multi-turn execution loop
+
+### Logging and export — [src/session_db.py](src/session_db.py)
+
+- Stores simulation runs and modification sessions
+- Separates trainable corrections from non-trainable tuning
+- Exports retraining JSONL and downloadable reports
+
+## Evaluation and Admin
+
+Database-backed evaluation workflow with auditable, reusable results.
+
+- **LLM-level**: field error rates, correction frequency, average deltas
+- **System-level**: scenario fidelity through speed validation and correction statistics
+
+Admin dashboard at `/admin` provides simulation history, modification logs, correction export, and downloadable reports.
+
+## Repository Structure
+
+```text
+.
+├── server.py                     # Web backend and orchestration
+├── web/
+│   ├── index.html               # Interactive generation UI
+│   ├── admin.html               # Admin / evaluation dashboard
+│   └── about.html               # Project landing page
+├── src/
+│   ├── llm_parser.py            # Fine-tuned parameter extraction
+│   ├── base_llm.py              # Base-model geometry + modification
+│   ├── agent.py                 # Tool-calling agent (11 tools)
+│   ├── session_db.py            # Simulation / correction DB and exports
+│   ├── validator.py             # Simulation validation
+│   └── config.py                # Runtime configuration
+├── tools/
+│   ├── osm_network.py           # OSM-based network creation
+│   ├── sumo_generator.py        # SUMO route/config generation
+│   └── network_generator.py     # Fallback synthetic network
+├── training/
+│   ├── generate_dataset.py      # Synthetic FT dataset generation
+│   ├── build_from_real_data.py  # Real-data FT dataset building
+│   └── fine_tune.py             # FT workflow helper
+├── evaluation/
+│   └── benchmark.py             # FT vs base accuracy benchmark
+├── data_pipeline/
+│   └── collector.py             # Traffic data collection
+└── tests/                       # pytest test suite
+```
+
+## Running the Project
+
+### Local (recommended for development)
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python server.py
+```
+
+### Docker
+
+```bash
+docker compose up --build
+```
+
+Then open:
+- `http://localhost:8080/` — simulation UI
+- `http://localhost:8080/admin` — admin dashboard
+- `http://localhost:8080/about` — project overview
+
+### Environment Variables
+
+Copy `.env.example` to `.env` and fill in:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `OPENAI_API_KEY` | Yes | Fine-tuned parameter extraction |
+| `OPENAI_FT_MODEL` | Yes | Fine-tuned model ID |
+| `TOPIS_API_KEY` | No | Seoul real-time traffic API |
+| `ANTHROPIC_API_KEY` | No | Claude API for base LLM / agent |
+| `GEMINI_API_KEY` | No | Gemini API |
+
+## CI/CD and Deployment
+
+### GitHub Actions Pipeline
+
+Pushes to `main` trigger:
+
+1. **test** — `pytest tests/`
+2. **docker-build** — build image and verify container health
+3. **deploy** — deploy to Cloud Run (when secrets are configured)
+
+### GCP Cloud Run
+
+| Secret | Description |
+|--------|-------------|
+| `GCP_PROJECT_ID` | GCP project ID |
+| `GCP_SA_KEY` | Service account JSON key |
+
+Deployment target: `asia-northeast1` (Tokyo), 1Gi memory, max 3 instances.
+
+## Testing
+
+```bash
+pytest tests/ -v
+```
+
+Covers configuration loading, validation logic, correction storage/export, and chat session parsing.
 
 ## Current Limitations
 
-- stronger in LLM workflow design than in frontend polish
-- geometry editing remains more fragile than parameter extraction
-- external dependencies such as OSM and public APIs can fail
-- some SUMO behavior parameters are not yet fully calibrated in the closed loop
-- the fine-tuned model was trained on a limited dataset (~70 samples); accuracy is expected to improve with more training data and additional epochs
-- evaluation covers accuracy and consistency but does not yet include cross-domain generalization tests
+- Geometry editing is more fragile than parameter extraction
+- External dependencies (OSM, public APIs) can fail
+- Some SUMO behavior parameters are not yet fully calibrated
+- The fine-tuned model was trained on ~70 samples; accuracy is expected to improve with more data
+- Evaluation covers accuracy and consistency but not cross-domain generalization
+
+## License
+
+This project is developed as a personal portfolio project and is not currently licensed for redistribution.

@@ -4,54 +4,93 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SUMO Admin</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
   :root {
-    --bg: #0b0d10;
-    --panel: #141920;
-    --panel2: #1b2230;
-    --text: #e7edf7;
-    --dim: #93a1b5;
-    --accent: #59a8ff;
-    --good: #62d394;
-    --warn: #f3c969;
-    --bad: #ef6b73;
-    --border: #2a3444;
+    --dark: #2B2D42;
+    --muted: #8D99AE;
+    --surface: #EDF2F4;
+    --accent: #EF233C;
+    --surface-border: rgba(141, 153, 174, 0.25);
+    --ink-soft: rgba(43, 45, 66, 0.72);
+    --mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    --sans: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --good: #2a9d5c;
+    --warn: #d4a017;
+    --bad: #d6333e;
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
-  header { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border); background: var(--panel); }
-  h1 { margin:0; font-size:16px; }
-  .wrap { padding: 20px; display:grid; gap:20px; }
-  .grid { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:12px; }
-  .card, .section { background: var(--panel); border:1px solid var(--border); border-radius:10px; }
+  body { margin: 0; background: var(--surface); color: var(--dark); font: 14px/1.5 var(--mono); }
+  header {
+    display:flex; justify-content:space-between; align-items:center; padding:16px 20px;
+    border-bottom:1px solid var(--surface-border);
+    background: rgba(255,255,255,0.92);
+    box-shadow: 0 2px 12px rgba(43,45,66,0.04);
+  }
+  h1 { margin:0; font-family:var(--sans); font-size:16px; font-weight:800; color:var(--dark); }
+  .wrap { padding: 20px; display:grid; gap:20px; max-width:1200px; margin:0 auto; }
+  .grid { display:grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap:12px; }
+  .card, .section {
+    background: rgba(255,255,255,0.92);
+    border:1px solid var(--surface-border);
+    border-radius:16px;
+    box-shadow: 0 8px 24px rgba(43,45,66,0.06);
+  }
   .card { padding:14px; }
-  .label { color: var(--dim); font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
-  .value { margin-top:6px; font-size:22px; font-weight:700; }
+  .label { font-family:var(--mono); color: var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; }
+  .value { margin-top:6px; font-family:var(--mono); font-size:22px; font-weight:800; color:var(--dark); }
   .actions { display:flex; gap:10px; flex-wrap:wrap; }
-  button { background: var(--accent); color:white; border:0; padding:10px 14px; border-radius:8px; cursor:pointer; font: inherit; }
-  button.secondary { background: var(--panel2); border:1px solid var(--border); color: var(--text); }
+  button {
+    background: var(--accent); color:white; border:0; padding:10px 14px; border-radius:10px;
+    cursor:pointer; font-family:var(--mono); font-size:13px; font-weight:700;
+    transition: all 0.2s;
+  }
+  button:hover { opacity:0.85; transform:translateY(-1px); }
+  button.secondary {
+    background: transparent;
+    border:1px solid var(--surface-border);
+    color: var(--dark);
+  }
+  button.secondary:hover { border-color:var(--muted); }
   .section { overflow:hidden; }
-  .section h2 { margin:0; padding:14px 16px; font-size:13px; border-bottom:1px solid var(--border); }
-  .section h3 { margin: 0 0 10px; font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; }
+  .section h2 {
+    margin:0; padding:14px 16px; font-family:var(--sans); font-size:14px; font-weight:800;
+    border-bottom:1px solid var(--surface-border); color:var(--dark);
+  }
+  .section h3 {
+    margin: 0 0 10px; font-family:var(--mono); font-size: 12px; color: var(--accent);
+    text-transform: uppercase; letter-spacing: .08em; font-weight:700;
+  }
   .table-scroll { max-height: 360px; overflow-y: auto; }
   table { width:100%; border-collapse:collapse; }
-  th, td { padding:10px 12px; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; font-size:12px; }
-  th { color: var(--dim); font-weight:600; }
+  th, td {
+    padding:10px 12px; border-bottom:1px solid var(--surface-border);
+    text-align:left; vertical-align:top; font-size:12px;
+  }
+  th { color: var(--muted); font-weight:700; background:rgba(237,242,244,0.5); }
+  td { color: var(--ink-soft); }
   .content { padding: 12px 16px; }
-  .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; }
-  .good { background: rgba(98,211,148,.15); color: var(--good); }
-  .warn { background: rgba(243,201,105,.12); color: var(--warn); }
-  .bad { background: rgba(239,107,115,.12); color: var(--bad); }
+  .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600; }
+  .good { background: rgba(42,157,92,.1); color: var(--good); }
+  .warn { background: rgba(212,160,23,.1); color: var(--warn); }
+  .bad { background: rgba(214,51,62,.1); color: var(--bad); }
   .bars { display:grid; gap:8px; }
   .bar-row { display:grid; grid-template-columns: 180px 1fr 56px; gap:10px; align-items:center; font-size:12px; }
-  .bar-label { color: var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .bar-track { width:100%; height:10px; background: var(--panel2); border:1px solid var(--border); border-radius:999px; overflow:hidden; }
-  .bar-fill { height:100%; background: linear-gradient(90deg, #59a8ff, #62d394); }
+  .bar-label { color: var(--dark); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .bar-track { width:100%; height:10px; background: var(--surface); border:1px solid var(--surface-border); border-radius:999px; overflow:hidden; }
+  .bar-fill { height:100%; background: linear-gradient(90deg, var(--accent), #ff6b7a); border-radius:999px; }
   .metric-grid { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:12px; margin-bottom:14px; }
-  .mini-card { background: var(--panel2); border:1px solid var(--border); border-radius:8px; padding:12px; }
+  .mini-card {
+    background: var(--surface); border:1px solid var(--surface-border);
+    border-radius:12px; padding:12px;
+  }
   .mini-card .value { font-size:18px; margin-top:4px; }
   .split { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
-  pre { white-space:pre-wrap; word-break:break-word; background: var(--panel2); padding:12px; border-radius:8px; border:1px solid var(--border); color: var(--dim); margin:0; }
+  pre {
+    white-space:pre-wrap; word-break:break-word;
+    background: var(--surface); padding:12px; border-radius:12px;
+    border:1px solid var(--surface-border); color: var(--ink-soft); margin:0;
+  }
   @media (max-width: 1000px) { .grid, .metric-grid, .split { grid-template-columns: repeat(2, minmax(0,1fr)); } }
   @media (max-width: 700px) { .split, .grid, .metric-grid { grid-template-columns: 1fr; } .bar-row { grid-template-columns: 120px 1fr 48px; } }
 </style>
@@ -79,9 +118,8 @@
     <div class="section">
       <h2>LLM Correction Evaluation</h2>
       <div class="content">
-        <div style="margin-bottom:12px; color:var(--dim); font-size:12px;">
-          Based on `correction` logs only: shows which parameters are frequently incorrect and where geometry corrections are concentrated.
-          This is an operational metric closer to `natural language -> parameter/geometry interpretation` quality, not SUMO fidelity.
+        <div style="margin-bottom:12px; color:var(--muted); font-size:12px; font-family:var(--sans);">
+          Based on correction logs only: shows which parameters are frequently incorrect and where geometry corrections are concentrated.
         </div>
         <div class="metric-grid">
           <div class="mini-card"><div class="label">Correction Rate</div><div class="value" id="llm-correction-rate">-</div></div>
@@ -108,8 +146,8 @@
     <div class="section">
       <h2>System Summary</h2>
       <div class="content">
-        <div style="margin-bottom:12px; color:var(--dim); font-size:12px;">
-          This section shows supplementary metrics such as SUMO fidelity. At this stage, the `LLM Correction Evaluation` above is the more important operational metric.
+        <div style="margin-bottom:12px; color:var(--muted); font-size:12px; font-family:var(--sans);">
+          Supplementary metrics such as SUMO fidelity. The LLM Correction Evaluation above is the more important operational metric.
         </div>
         <pre id="summary-json">loading...</pre>
       </div>
@@ -162,7 +200,7 @@ function renderBars(containerId, data) {
   const root = document.getElementById(containerId);
   const entries = Object.entries(data || {}).sort((a, b) => b[1] - a[1]);
   if (!entries.length) {
-    root.innerHTML = '<div style="color:var(--dim); font-size:12px;">No data</div>';
+    root.innerHTML = '<div style="color:var(--muted); font-size:12px;">No data</div>';
     return;
   }
   const max = Math.max(...entries.map(([, value]) => value), 1);

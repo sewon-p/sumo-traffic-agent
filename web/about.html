@@ -4,52 +4,50 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LLM-Guided Synthetic Driving Scenario Generation</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script type="module">
   import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
   mermaid.initialize({
-    startOnLoad: true,
+    startOnLoad: false,
     theme: 'base',
     securityLevel: 'loose',
     themeVariables: {
-      background: '#0a1117',
-      primaryColor: '#18242f',
-      primaryTextColor: '#f5f7fb',
-      primaryBorderColor: '#36506a',
-      lineColor: '#7fd6d4',
-      secondaryColor: '#121b23',
-      tertiaryColor: '#0f151c',
-      fontFamily: 'IBM Plex Mono'
+      background: '#EDF2F4',
+      primaryColor: '#ffffff',
+      primaryTextColor: '#2B2D42',
+      primaryBorderColor: '#8D99AE',
+      lineColor: '#8D99AE',
+      secondaryColor: '#ffffff',
+      tertiaryColor: '#ffffff',
+      fontFamily: 'SF Mono, Fira Code, monospace',
+      fontSize: '13px',
+      edgeLabelBackground: '#EDF2F4',
+      nodeTextColor: '#2B2D42',
+      clusterBkg: '#ffffff',
+      clusterBorder: '#8D99AE'
     },
     flowchart: {
       curve: 'basis',
-      htmlLabels: true
+      htmlLabels: true,
+      nodeSpacing: 30,
+      rankSpacing: 40
     }
   });
   window.mermaid = mermaid;
+  await mermaid.run();
+  document.getElementById('refinement-flow')?.classList.add('hidden');
 </script>
 <style>
   :root {
-    --bg: #061018;
-    --bg2: #091621;
-    --panel: rgba(13, 24, 34, 0.9);
-    --panel-2: rgba(18, 31, 43, 0.92);
-    --panel-3: rgba(23, 38, 52, 0.96);
-    --border: rgba(130, 176, 212, 0.18);
-    --border-strong: rgba(130, 176, 212, 0.28);
-    --text: #f3f7fb;
-    --text-dim: #9fb2c4;
-    --text-soft: #c7d4e1;
-    --accent: #8ce3df;
-    --accent-2: #7ab6ff;
-    --accent-glow: rgba(140, 227, 223, 0.18);
-    --warn: #f5cf77;
-    --good: #87e2a5;
+    --dark: #2B2D42;
+    --muted: #8D99AE;
+    --surface: #EDF2F4;
+    --accent: #EF233C;
+    --surface-border: rgba(141, 153, 174, 0.25);
+    --ink-soft: rgba(43, 45, 66, 0.72);
     --hero-max: 1180px;
-    --mono: 'IBM Plex Mono', ui-monospace, monospace;
-    --display: 'Space Grotesk', system-ui, sans-serif;
+    --sans: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -57,17 +55,14 @@
   html {
     scroll-behavior: smooth;
     scrollbar-width: thin;
-    scrollbar-color: rgba(127, 214, 212, 0.28) var(--bg);
+    scrollbar-color: rgba(239, 35, 60, 0.18) var(--surface);
   }
 
   body {
     min-height: 100vh;
-    background:
-      radial-gradient(circle at top left, rgba(122, 182, 255, 0.12), transparent 34%),
-      radial-gradient(circle at 82% 18%, rgba(140, 227, 223, 0.12), transparent 26%),
-      linear-gradient(180deg, #07111a 0%, #08121b 34%, #071019 100%);
-    color: var(--text);
-    font: 15px/1.7 var(--mono);
+    background: var(--surface);
+    color: var(--dark);
+    font: 500 1.06rem/1.68 var(--sans);
     -webkit-font-smoothing: antialiased;
   }
 
@@ -75,19 +70,6 @@
 
   .shell {
     position: relative;
-  }
-
-  .shell::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    background-image:
-      linear-gradient(rgba(140, 227, 223, 0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(140, 227, 223, 0.03) 1px, transparent 1px);
-    background-size: 44px 44px;
-    mask-image: radial-gradient(circle at center, black 30%, transparent 78%);
-    opacity: 0.7;
   }
 
   nav {
@@ -100,14 +82,15 @@
     gap: 24px;
     padding: 18px 28px;
     backdrop-filter: blur(14px);
-    background: rgba(5, 13, 20, 0.74);
-    border-bottom: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.88);
+    border-bottom: 1px solid var(--surface-border);
   }
 
   .brand {
-    font: 700 14px/1 var(--display);
+    font: 700 14px/1 var(--mono);
     letter-spacing: 0.06em;
     text-transform: uppercase;
+    color: var(--dark);
   }
 
   .brand span { color: var(--accent); }
@@ -121,9 +104,9 @@
   }
 
   .nav-links a {
-    font-size: 12px;
+    font: 500 12px/1 var(--mono);
     text-decoration: none;
-    color: var(--text-dim);
+    color: var(--muted);
     transition: color 0.18s ease;
   }
 
@@ -143,42 +126,43 @@
     gap: 8px;
     min-height: 42px;
     padding: 0 18px;
-    border-radius: 999px;
-    border: 1px solid var(--border);
+    border-radius: 14px;
+    border: 1px solid var(--surface-border);
     text-decoration: none;
-    font: 600 12px/1 var(--mono);
+    font: 700 12px/1 var(--mono);
     letter-spacing: 0.02em;
-    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
   }
 
   .nav-btn:hover,
   .btn:hover {
     transform: translateY(-1px);
-    border-color: var(--border-strong);
+    border-color: rgba(239, 35, 60, 0.38);
   }
 
   .btn-primary {
-    background: linear-gradient(135deg, var(--accent), #a6f6e4);
-    color: #061018;
+    background: var(--accent);
+    color: #ffffff;
     border-color: transparent;
-    box-shadow: 0 12px 40px var(--accent-glow);
+    box-shadow: 0 8px 24px rgba(239, 35, 60, 0.16);
   }
 
   .btn-primary:visited,
   .btn-primary:hover,
   .btn-primary:focus {
-    color: #061018;
+    color: #ffffff;
   }
 
   .btn-secondary {
-    background: rgba(15, 26, 37, 0.88);
-    color: var(--text);
+    background: transparent;
+    color: var(--dark);
+    border: 1px solid var(--surface-border);
   }
 
   .btn-secondary:visited,
   .btn-secondary:hover,
   .btn-secondary:focus {
-    color: var(--text);
+    color: var(--dark);
   }
 
   main {
@@ -194,21 +178,23 @@
   .eyebrow {
     margin-bottom: 14px;
     color: var(--accent);
-    font-size: 12px;
-    letter-spacing: 0.12em;
+    font: 700 0.78rem/1 var(--mono);
+    letter-spacing: 0.08em;
     text-transform: uppercase;
   }
 
   .section-title {
-    font: 700 clamp(28px, 4vw, 46px)/1.1 var(--display);
+    font: 800 clamp(28px, 4vw, 46px)/1.1 var(--sans);
+    letter-spacing: -0.04em;
     margin-bottom: 16px;
     max-width: 760px;
+    color: var(--dark);
   }
 
   .section-copy {
     max-width: 760px;
-    color: var(--text-soft);
-    font-size: 14px;
+    color: var(--ink-soft);
+    font-size: 1.06rem;
   }
 
   #hero {
@@ -231,18 +217,20 @@
     padding: 8px 14px;
     border-radius: 999px;
     margin-bottom: 26px;
-    background: rgba(140, 227, 223, 0.1);
-    border: 1px solid rgba(140, 227, 223, 0.22);
+    background: rgba(239, 35, 60, 0.06);
+    border: 1px solid rgba(239, 35, 60, 0.18);
     color: var(--accent);
-    font-size: 11px;
+    font: 700 11px/1 var(--mono);
     letter-spacing: 0.1em;
     text-transform: uppercase;
   }
 
   .hero-title {
-    font: 700 clamp(40px, 7vw, 76px)/0.98 var(--display);
+    font: 900 clamp(40px, 7vw, 76px)/0.98 var(--sans);
+    letter-spacing: -0.04em;
     max-width: 760px;
     margin-bottom: 20px;
+    color: var(--dark);
   }
 
   .hero-title em {
@@ -252,15 +240,15 @@
 
   .hero-sub {
     max-width: 690px;
-    color: var(--text-soft);
-    font-size: 16px;
+    color: var(--ink-soft);
+    font-size: 1.06rem;
     margin-bottom: 24px;
   }
 
   .hero-detail {
     max-width: 660px;
-    color: var(--text-dim);
-    font-size: 13px;
+    color: var(--muted);
+    font-size: 0.92rem;
   }
 
   .hero-actions {
@@ -271,16 +259,17 @@
   }
 
   .hero-panel {
-    background: linear-gradient(180deg, rgba(15, 28, 39, 0.94), rgba(12, 22, 32, 0.94));
-    border: 1px solid var(--border);
-    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--surface-border);
+    border-radius: 22px;
     padding: 24px;
-    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.28);
+    box-shadow: 0 8px 24px rgba(43, 45, 66, 0.06);
   }
 
   .hero-panel-title {
-    font: 700 15px/1.2 var(--display);
+    font: 800 15px/1.2 var(--sans);
     margin-bottom: 16px;
+    color: var(--dark);
   }
 
   .hero-metrics {
@@ -291,26 +280,27 @@
   .metric {
     padding: 14px 16px;
     border-radius: 16px;
-    background: rgba(23, 39, 54, 0.72);
-    border: 1px solid rgba(130, 176, 212, 0.12);
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--surface-border);
   }
 
   .metric-label {
-    color: var(--text-dim);
-    font-size: 11px;
+    color: var(--muted);
+    font: 700 11px/1 var(--mono);
     text-transform: uppercase;
     letter-spacing: 0.08em;
     margin-bottom: 6px;
   }
 
   .metric-value {
-    font: 700 18px/1.2 var(--display);
+    font: 800 18px/1.2 var(--sans);
     margin-bottom: 6px;
+    color: var(--dark);
   }
 
   .metric-copy {
-    color: var(--text-soft);
-    font-size: 12px;
+    color: var(--ink-soft);
+    font-size: 0.82rem;
   }
 
   .highlights {
@@ -323,10 +313,10 @@
   .highlight-pill {
     padding: 10px 14px;
     border-radius: 999px;
-    border: 1px solid var(--border);
-    background: rgba(14, 26, 37, 0.76);
-    color: var(--text-soft);
-    font-size: 12px;
+    border: 1px solid var(--surface-border);
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--ink-soft);
+    font: 500 12px/1 var(--mono);
   }
 
   .overview-grid,
@@ -338,10 +328,11 @@
   }
 
   .panel {
-    background: var(--panel);
-    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--surface-border);
     border-radius: 22px;
     padding: 24px;
+    box-shadow: 0 8px 24px rgba(43, 45, 66, 0.06);
   }
 
   .panel p + p {
@@ -349,8 +340,8 @@
   }
 
   .panel-note {
-    color: var(--text-dim);
-    font-size: 13px;
+    color: var(--muted);
+    font-size: 0.88rem;
   }
 
   .mini-list {
@@ -361,20 +352,21 @@
   .mini-item {
     padding: 14px 16px;
     border-radius: 16px;
-    background: rgba(20, 34, 46, 0.72);
-    border: 1px solid rgba(130, 176, 212, 0.12);
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--surface-border);
+    box-shadow: 0 8px 24px rgba(43, 45, 66, 0.06);
   }
 
   .mini-item strong {
     display: block;
     margin-bottom: 4px;
-    color: var(--text);
-    font-size: 13px;
+    color: var(--dark);
+    font: 700 13px/1.3 var(--sans);
   }
 
   .mini-item span {
-    color: var(--text-dim);
-    font-size: 12px;
+    color: var(--muted);
+    font-size: 0.82rem;
   }
 
   .cards {
@@ -384,18 +376,143 @@
     margin-top: 28px;
   }
 
-  .card {
-    background: var(--panel-2);
-    border: 1px solid var(--border);
+  .data-paths {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+    margin-top: 28px;
+  }
+
+  .path-card {
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--surface-border);
     border-radius: 22px;
     padding: 22px;
+    box-shadow: 0 8px 24px rgba(43, 45, 66, 0.06);
+  }
+
+  .path-label {
+    color: var(--accent);
+    font: 700 11px/1 var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 10px;
+  }
+
+  .path-title {
+    font: 800 18px/1.15 var(--sans);
+    margin-bottom: 10px;
+    color: var(--dark);
+  }
+
+  .path-copy {
+    color: var(--ink-soft);
+    font-size: 0.88rem;
+    margin-bottom: 12px;
+  }
+
+  .path-meta {
+    color: var(--muted);
+    font-size: 0.82rem;
+  }
+
+  .results-grid {
+    display: grid;
+    grid-template-columns: 0.95fr 1.05fr;
+    gap: 22px;
+    margin-top: 28px;
+  }
+
+  .results-metrics {
+    display: grid;
+    gap: 14px;
+  }
+
+  .result-metric {
+    padding: 18px 20px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--surface-border);
+    box-shadow: 0 8px 24px rgba(43, 45, 66, 0.06);
+  }
+
+  .result-metric-label {
+    color: var(--muted);
+    font: 700 11px/1 var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+
+  .result-metric-value {
+    font: 800 28px/1.05 var(--sans);
+    margin-bottom: 8px;
+    color: var(--dark);
+  }
+
+  .result-metric-copy {
+    color: var(--ink-soft);
+    font-size: 0.88rem;
+  }
+
+  .results-table-wrap {
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--surface-border);
+    border-radius: 22px;
+    padding: 18px;
+    overflow-x: auto;
+    box-shadow: 0 8px 24px rgba(43, 45, 66, 0.06);
+  }
+
+  .results-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 420px;
+  }
+
+  .results-table th,
+  .results-table td {
+    padding: 11px 10px;
+    border-bottom: 1px solid var(--surface-border);
+    text-align: left;
+    font-size: 0.82rem;
+  }
+
+  .results-table th {
+    color: var(--muted);
+    font: 700 11px/1 var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .results-table td {
+    color: var(--ink-soft);
+    font-family: var(--mono);
+  }
+
+  .results-table td strong {
+    color: var(--dark);
+  }
+
+  .results-note {
+    margin-top: 12px;
+    color: var(--muted);
+    font-size: 0.78rem;
+  }
+
+  .card {
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--surface-border);
+    border-radius: 22px;
+    padding: 22px;
+    box-shadow: 0 8px 24px rgba(43, 45, 66, 0.06);
     transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
   }
 
   .card:hover {
     transform: translateY(-3px);
-    border-color: var(--border-strong);
-    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+    border-color: rgba(239, 35, 60, 0.38);
+    box-shadow: 0 24px 44px rgba(43, 45, 66, 0.09);
   }
 
   .card-icon {
@@ -407,19 +524,20 @@
     border-radius: 14px;
     margin-bottom: 14px;
     color: var(--accent);
-    background: rgba(140, 227, 223, 0.1);
-    border: 1px solid rgba(140, 227, 223, 0.18);
-    font-size: 16px;
+    background: rgba(239, 35, 60, 0.06);
+    border: 1px solid rgba(239, 35, 60, 0.15);
+    font: 700 14px/1 var(--mono);
   }
 
   .card-title {
-    font: 700 18px/1.2 var(--display);
+    font: 800 18px/1.2 var(--sans);
     margin-bottom: 10px;
+    color: var(--dark);
   }
 
   .card-copy {
-    color: var(--text-soft);
-    font-size: 13px;
+    color: var(--ink-soft);
+    font-size: 0.88rem;
   }
 
   .workflow-grid {
@@ -434,8 +552,8 @@
     padding: 6px;
     margin-top: 28px;
     border-radius: 999px;
-    background: rgba(14, 26, 37, 0.82);
-    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--surface-border);
   }
 
   .workflow-tab {
@@ -444,37 +562,39 @@
     border-radius: 999px;
     border: 1px solid transparent;
     background: transparent;
-    color: var(--text-dim);
-    font: 600 12px/1 var(--mono);
+    color: var(--muted);
+    font: 700 12px/1 var(--mono);
     cursor: pointer;
     transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
   }
 
   .workflow-tab.active {
-    background: rgba(140, 227, 223, 0.12);
-    border-color: rgba(140, 227, 223, 0.2);
-    color: var(--text);
+    background: rgba(239, 35, 60, 0.08);
+    border-color: rgba(239, 35, 60, 0.18);
+    color: var(--dark);
   }
 
   .workflow-card {
-    background: linear-gradient(180deg, rgba(12, 24, 34, 0.95), rgba(15, 28, 40, 0.95));
-    border: 1px solid var(--border);
-    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--surface-border);
+    border-radius: 22px;
     padding: 24px;
+    box-shadow: 0 8px 24px rgba(43, 45, 66, 0.06);
   }
 
-  .workflow-card[hidden] {
+  .workflow-card.hidden {
     display: none;
   }
 
   .workflow-title {
-    font: 700 20px/1.2 var(--display);
+    font: 800 20px/1.2 var(--sans);
     margin-bottom: 8px;
+    color: var(--dark);
   }
 
   .workflow-copy {
-    color: var(--text-dim);
-    font-size: 13px;
+    color: var(--muted);
+    font-size: 0.88rem;
     margin-bottom: 18px;
     max-width: 760px;
   }
@@ -483,8 +603,8 @@
     overflow-x: auto;
     padding: 12px;
     border-radius: 18px;
-    background: rgba(6, 13, 19, 0.58);
-    border: 1px solid rgba(130, 176, 212, 0.1);
+    background: rgba(237, 242, 244, 0.6);
+    border: 1px solid var(--surface-border);
   }
 
   .mermaid {
@@ -501,24 +621,43 @@
   .signal {
     padding: 14px 16px;
     border-radius: 16px;
-    background: rgba(18, 34, 47, 0.8);
-    border: 1px solid rgba(130, 176, 212, 0.12);
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--surface-border);
   }
 
   .signal strong {
     display: block;
     margin-bottom: 5px;
-    font-size: 13px;
+    font: 700 13px/1.3 var(--sans);
   }
 
   .signal span {
-    color: var(--text-dim);
-    font-size: 12px;
+    color: var(--muted);
+    font-size: 0.82rem;
   }
 
-  .signal.correction strong { color: var(--good); }
-  .signal.tuning strong { color: var(--warn); }
+  .signal.correction strong { color: var(--dark); }
+  .signal.tuning strong { color: var(--dark); }
   .signal.export strong { color: var(--accent); }
+
+  .quality-note {
+    margin-top: 22px;
+    padding: 18px 20px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(239, 35, 60, 0.18);
+  }
+
+  .quality-note-title {
+    font: 800 16px/1.2 var(--sans);
+    margin-bottom: 8px;
+    color: var(--dark);
+  }
+
+  .quality-note-copy {
+    color: var(--ink-soft);
+    font-size: 0.88rem;
+  }
 
   .explore-card {
     display: flex;
@@ -530,20 +669,21 @@
 
   .explore-meta {
     color: var(--accent);
-    font-size: 11px;
+    font: 700 11px/1 var(--mono);
     text-transform: uppercase;
     letter-spacing: 0.12em;
     margin-bottom: 10px;
   }
 
   .explore-title {
-    font: 700 20px/1.15 var(--display);
+    font: 800 20px/1.15 var(--sans);
     margin-bottom: 10px;
+    color: var(--dark);
   }
 
   .explore-copy {
-    color: var(--text-soft);
-    font-size: 13px;
+    color: var(--ink-soft);
+    font-size: 0.88rem;
   }
 
   .limits {
@@ -556,10 +696,11 @@
   .limit-item {
     padding: 18px 20px;
     border-radius: 18px;
-    background: rgba(15, 27, 38, 0.82);
-    border: 1px solid var(--border);
-    color: var(--text-soft);
-    font-size: 13px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--surface-border);
+    color: var(--ink-soft);
+    font-size: 0.88rem;
+    box-shadow: 0 8px 24px rgba(43, 45, 66, 0.06);
   }
 
   .cta {
@@ -585,8 +726,8 @@
     max-width: var(--hero-max);
     margin: 0 auto;
     padding: 0 28px 48px;
-    color: var(--text-dim);
-    font-size: 12px;
+    color: var(--muted);
+    font-size: 0.78rem;
     display: flex;
     justify-content: space-between;
     gap: 16px;
@@ -595,14 +736,15 @@
 
   footer a {
     text-decoration: none;
-    color: var(--text-dim);
+    color: var(--muted);
   }
 
   footer a:hover { color: var(--accent); }
 
-  @media (max-width: 1100px) {
+  @media (max-width: 980px) {
     .hero-layout,
     .overview-grid,
+    .results-grid,
     .explore-grid,
     .limits {
       grid-template-columns: 1fr;
@@ -611,9 +753,13 @@
     .cards {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
+    .data-paths {
+      grid-template-columns: 1fr;
+    }
   }
 
-  @media (max-width: 780px) {
+  @media (max-width: 640px) {
     nav {
       flex-direction: column;
       align-items: flex-start;
@@ -663,9 +809,7 @@
     .workflow-tab {
       width: 100%;
     }
-  }
 
-  @media (max-width: 560px) {
     .section-title {
       font-size: 30px;
     }
@@ -693,11 +837,14 @@
       <li><a href="#hero">Hero</a></li>
       <li><a href="#overview">Overview</a></li>
       <li><a href="#built">What I Built</a></li>
+      <li><a href="#results">Results</a></li>
+      <li><a href="#data-paths">Data Paths</a></li>
       <li><a href="#workflow">Workflow</a></li>
       <li><a href="#explore">Explore</a></li>
       <li><a href="#limits">Limits</a></li>
     </ul>
     <div class="nav-actions">
+      <a class="nav-btn btn-secondary" href="https://github.com/ParkSewon-PM/sumo-traffic-agent" target="_blank">GitHub</a>
       <a class="nav-btn btn-secondary" href="/admin">Open Admin</a>
       <a class="nav-btn btn-primary" href="/">Open Demo</a>
     </div>
@@ -719,7 +866,7 @@
           </p>
           <div class="hero-actions">
             <a class="btn btn-primary" href="/">Open Demo</a>
-            <a class="btn btn-secondary" href="/admin">Open Admin</a>
+            <a class="btn btn-secondary" href="https://github.com/ParkSewon-PM/sumo-traffic-agent" target="_blank">GitHub</a>
             <a class="btn btn-secondary" href="/readme">Read README</a>
           </div>
       <div class="highlights">
@@ -848,6 +995,96 @@
       </div>
     </section>
 
+    <section id="results">
+      <div class="eyebrow">Results</div>
+      <h2 class="section-title">Fine-Tuning Delivers the Largest Gains Where Structure Matters Most</h2>
+      <p class="section-copy">
+        On 30 held-out validation samples derived from real Seoul traffic data, the fine-tuned extractor reduced overall MAPE from 51.5% to 10.6% against the base model.
+      </p>
+
+      <div class="results-grid">
+        <div class="results-metrics">
+          <div class="result-metric">
+            <div class="result-metric-label">Overall Accuracy</div>
+            <div class="result-metric-value">10.6% MAPE</div>
+            <div class="result-metric-copy">Overall error dropped by about 5x compared with the base model on the held-out benchmark.</div>
+          </div>
+          <div class="result-metric">
+            <div class="result-metric-label">Largest Improvement</div>
+            <div class="result-metric-value">Speed: 5.1%</div>
+            <div class="result-metric-copy">The biggest gain appeared in <code>speed_kmh</code>, where the base model tended to overestimate realistic traffic speeds.</div>
+          </div>
+          <div class="result-metric">
+            <div class="result-metric-label">Output Stability</div>
+            <div class="result-metric-value">1.47% CV</div>
+            <div class="result-metric-copy">Repeated runs were more consistent after fine-tuning than the base model baseline.</div>
+          </div>
+        </div>
+
+        <div class="results-table-wrap">
+          <table class="results-table">
+            <thead>
+              <tr>
+                <th>Field</th>
+                <th>Fine-Tuned</th>
+                <th>Base</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>speed_kmh</td><td><strong>5.1%</strong></td><td>74.6%</td></tr>
+              <tr><td>volume_vph</td><td><strong>34.8%</strong></td><td>48.1%</td></tr>
+              <tr><td>lanes</td><td><strong>8.9%</strong></td><td>13.9%</td></tr>
+              <tr><td>speed_limit_kmh</td><td><strong>1.7%</strong></td><td>23.8%</td></tr>
+              <tr><td>sigma</td><td><strong>4.5%</strong></td><td>21.3%</td></tr>
+              <tr><td>tau</td><td><strong>4.6%</strong></td><td>11.4%</td></tr>
+              <tr><td>avg_block_m</td><td><strong>14.5%</strong></td><td>167.6%</td></tr>
+              <tr><td><strong>Overall</strong></td><td><strong>10.6%</strong></td><td><strong>51.5%</strong></td></tr>
+            </tbody>
+          </table>
+          <div class="results-note">
+            Benchmark: 30 held-out samples with labels derived from real Seoul traffic data.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="data-paths">
+      <div class="eyebrow">Training Data Paths</div>
+      <h2 class="section-title">Three Data Sources Feed the Same Improvement Loop</h2>
+      <p class="section-copy">
+        Fine-tuning in this project is not based on a single source. The workflow combines synthetic supervision, real-data-derived targets, and correction-derived retraining signals.
+      </p>
+
+      <div class="data-paths">
+        <article class="path-card">
+          <div class="path-label">Synthetic</div>
+          <h3 class="path-title">Prompt-Target Scenario Generation</h3>
+          <p class="path-copy">
+            Synthetic prompt/target pairs are built from road priors, time-of-day patterns, weather conditions, and traffic engineering heuristics.
+          </p>
+          <div class="path-meta">Used to bootstrap structured parameter extraction before live correction data accumulates.</div>
+        </article>
+
+        <article class="path-card">
+          <div class="path-label">Real Data</div>
+          <h3 class="path-title">Observed Seoul Traffic Targets</h3>
+          <p class="path-copy">
+            Real speed and volume files are aggregated by road and time period, then converted into fine-tuning targets for structured scenario fields.
+          </p>
+          <div class="path-meta">Used to anchor the model to observed road behavior instead of synthetic priors alone.</div>
+        </article>
+
+        <article class="path-card">
+          <div class="path-label">Corrections</div>
+          <h3 class="path-title">Human-in-the-Loop Retraining Signals</h3>
+          <p class="path-copy">
+            Session logs preserve before/after states, correction intent, field deltas, and trainability metadata so validated errors can flow back into future datasets.
+          </p>
+          <div class="path-meta">Used to turn interactive usage into reusable fine-tuning data while keeping tuning requests out by default.</div>
+        </article>
+      </div>
+    </section>
+
     <section id="workflow">
       <div class="eyebrow">How the Workflow Runs</div>
       <h2 class="section-title">Generation and Refinement Are Part of the Same Loop</h2>
@@ -871,8 +1108,8 @@ flowchart TD
     A[User Natural-Language Request] --> B[Fine-Tuned Parameter Extraction]
     B --> C[Structured Scenario Parameters]
     C --> D{Usable real location?}
-    D -- Yes --> E[OSM-Based Network Retrieval]
-    D -- No / Failed --> F[Base LLM Geometry or XML Generation]
+    D -->|Yes| E[OSM-Based Network Retrieval]
+    D -->|No or Failed| F[Base LLM Geometry or XML Generation]
     E --> G[SUMO Network Build]
     F --> G
     C --> H[Demand / Route / Config Generation]
@@ -884,7 +1121,7 @@ flowchart TD
           </div>
         </article>
 
-        <article class="workflow-card" id="refinement-flow" hidden>
+        <article class="workflow-card" id="refinement-flow">
           <h3 class="workflow-title">Refinement and Retraining Flow</h3>
           <p class="workflow-copy">
             After execution, users continue with either Correction or Tuning. Only correction paths become retraining exports; tuning remains available for analysis.
@@ -892,24 +1129,24 @@ flowchart TD
           <div class="mermaid-wrap">
             <div class="mermaid">
 flowchart TD
-    A[Generated Scenario] --> B[User Interaction]
+    A[Generated Scenario] --> B[User Feedback]
     B --> C{Intent}
-    C -- Correction --> D[Trainable Feedback]
-    C -- Tuning --> E[Analysis-Only Variant Feedback]
-    D --> F{Modification target}
+    C -->|Correction| D[Trainable Signal]
+    C -->|Tuning| E[Analysis Only]
+    D --> F{Target}
     E --> F
-    F -- Parameter --> G[Base LLM Parameter Update]
-    F -- Geometry --> H[Base LLM Geometry or XML Update]
-    F -- Mixed --> I[Combined Update]
-    G --> J[Rebuild / Re-run]
+    F -->|Parameter| G[Parameter Update]
+    F -->|Geometry| H[Geometry or XML Update]
+    F -->|Mixed| I[Combined Update]
+    G --> J[Rebuild and Rerun]
     H --> J
     I --> J
     J --> K[Session Logging]
-    K --> L{Retraining eligibility}
-    L -- Correction only --> M[Correction-Only Export]
-    L -- Tuning --> N[Keep for analysis only]
-    M --> O[Future Fine-Tuning Dataset]
-    O --> P[Updated FT Extraction Stage]
+    K --> L{Trainable}
+    L -->|Correction| M[Correction Export]
+    L -->|Tuning| N[Analysis Store]
+    M --> O[Future Fine-Tuning Data]
+    O --> P[Updated Extraction Stage]
             </div>
           </div>
           <div class="signal-band">
@@ -924,6 +1161,12 @@ flowchart TD
             <div class="signal export">
               <strong>Correction export -> FT dataset</strong>
               <span>The system closes the loop by turning validated corrections back into structured training data.</span>
+            </div>
+          </div>
+          <div class="quality-note">
+            <div class="quality-note-title">Why this split matters</div>
+            <div class="quality-note-copy">
+              Separating Correction from Tuning keeps preference edits out of the retraining path. That makes the exported dataset cleaner, easier to trust, and more useful for future fine-tuning.
             </div>
           </div>
         </article>
@@ -1000,7 +1243,7 @@ flowchart TD
       <div class="cta-actions">
         <a class="btn btn-primary" href="/">Open Demo</a>
         <a class="btn btn-secondary" href="/admin">Open Admin</a>
-        <a class="btn btn-secondary" href="/readme">Read README</a>
+        <a class="btn btn-secondary" href="https://github.com/ParkSewon-PM/sumo-traffic-agent" target="_blank">GitHub</a>
       </div>
     </section>
   </main>
@@ -1010,7 +1253,7 @@ flowchart TD
     <div>
       <a href="/">Demo</a> /
       <a href="/admin">Admin</a> /
-      <a href="/readme">README</a>
+      <a href="https://github.com/ParkSewon-PM/sumo-traffic-agent" target="_blank">GitHub</a>
     </div>
   </footer>
 </div>
@@ -1027,7 +1270,7 @@ flowchart TD
         btn.setAttribute('aria-selected', active ? 'true' : 'false');
       });
       workflowCards.forEach((card) => {
-        card.hidden = card.id !== targetId;
+        card.classList.toggle('hidden', card.id !== targetId);
       });
     });
   });

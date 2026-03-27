@@ -4,29 +4,29 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SUMO Traffic Simulation Agent</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <style>
   :root {
-    --bg: #0a0a0f;
-    --surface: #12121a;
-    --surface2: #1a1a26;
-    --border: #2a2a3a;
-    --text: #e0e0e8;
-    --text-dim: #8888a0;
-    --accent: #6c8cff;
-    --accent-dim: #3a4a80;
-    --green: #4ade80;
-    --yellow: #facc15;
-    --red: #f87171;
-    --font: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+    --dark: #2B2D42;
+    --muted: #8D99AE;
+    --surface: #EDF2F4;
+    --accent: #EF233C;
+    --surface-border: rgba(141, 153, 174, 0.25);
+    --ink-soft: rgba(43, 45, 66, 0.72);
+    --mono: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+    --sans: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --green: #2ecc71;
+    --yellow: #f39c12;
+    --red: #EF233C;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
-    font-family: var(--font);
-    background: var(--bg);
-    color: var(--text);
+    font-family: var(--sans);
+    background: var(--surface);
+    color: var(--dark);
     height: 100vh;
     display: flex;
     flex-direction: column;
@@ -34,20 +34,22 @@
 
   /* Header */
   header {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.92);
+    border-bottom: 1px solid var(--surface-border);
     padding: 12px 24px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-shrink: 0;
+    box-shadow: 0 2px 12px rgba(43, 45, 66, 0.04);
   }
 
   header h1 {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text);
-    letter-spacing: 0.5px;
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--dark);
+    letter-spacing: -0.02em;
   }
 
   header h1 span { color: var(--accent); }
@@ -55,8 +57,9 @@
   .status-bar {
     display: flex;
     gap: 16px;
+    font-family: var(--mono);
     font-size: 11px;
-    color: var(--text-dim);
+    color: var(--muted);
   }
 
   .status-item {
@@ -88,6 +91,9 @@
     display: flex;
     flex-direction: column;
     min-width: 0;
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
   }
 
   .messages {
@@ -99,7 +105,7 @@
 
   .messages::-webkit-scrollbar { width: 4px; }
   .messages::-webkit-scrollbar-track { background: transparent; }
-  .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .messages::-webkit-scrollbar-thumb { background: var(--surface-border); border-radius: 2px; }
 
   .message {
     margin-bottom: 16px;
@@ -117,47 +123,53 @@
   }
 
   .msg-label {
+    font-family: var(--mono);
     font-size: 10px;
-    color: var(--text-dim);
+    color: var(--muted);
     margin-bottom: 4px;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.08em;
+    font-weight: 700;
   }
 
   .msg-body {
     padding: 10px 14px;
-    border-radius: 8px;
+    border-radius: 12px;
     font-size: 13px;
     line-height: 1.6;
     white-space: pre-wrap;
     word-break: break-word;
+    font-family: var(--mono);
+    font-weight: 500;
   }
 
   .message.user .msg-body {
-    background: var(--accent-dim);
-    border: 1px solid var(--accent);
-    color: #fff;
+    background: rgba(239, 35, 60, 0.06);
+    border: 1px solid rgba(239, 35, 60, 0.2);
+    color: var(--dark);
   }
 
   .message.agent .msg-body {
-    background: var(--surface2);
-    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid var(--surface-border);
+    color: var(--ink-soft);
+    box-shadow: 0 2px 8px rgba(43, 45, 66, 0.04);
   }
 
   .message.system .msg-body {
     background: transparent;
-    border: 1px solid var(--border);
-    color: var(--text-dim);
+    border: 1px solid var(--surface-border);
+    color: var(--muted);
     font-size: 11px;
     text-align: center;
     max-width: 100%;
   }
 
   .message.tool .msg-body {
-    background: var(--surface);
+    background: rgba(255, 255, 255, 0.6);
     border-left: 3px solid var(--accent);
     font-size: 11px;
-    color: var(--text-dim);
+    color: var(--muted);
     padding: 8px 12px;
   }
 
@@ -168,10 +180,11 @@
 
   /* Input area */
   .input-area {
-    background: var(--surface);
-    border-top: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.92);
+    border-top: 1px solid var(--surface-border);
     padding: 16px 24px;
     flex-shrink: 0;
+    box-shadow: 0 -2px 12px rgba(43, 45, 66, 0.04);
   }
 
   .input-row {
@@ -182,13 +195,13 @@
 
   .input-row input {
     flex: 1;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: var(--font);
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    color: var(--dark);
+    font-family: var(--mono);
     font-size: 13px;
     padding: 10px 14px;
-    border-radius: 6px;
+    border-radius: 10px;
     outline: none;
     transition: border-color 0.2s;
   }
@@ -197,133 +210,39 @@
     border-color: var(--accent);
   }
 
-  .input-row input::placeholder { color: var(--text-dim); }
+  .input-row input::placeholder { color: var(--muted); }
 
   .btn {
     background: var(--accent);
     color: #fff;
     border: none;
-    font-family: var(--font);
+    font-family: var(--mono);
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 700;
     padding: 10px 20px;
-    border-radius: 6px;
+    border-radius: 10px;
     cursor: pointer;
-    transition: opacity 0.2s;
+    transition: all 0.2s;
     white-space: nowrap;
   }
 
-  .btn:hover { opacity: 0.85; }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn:hover { opacity: 0.85; transform: translateY(-1px); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
   .btn-secondary {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--text-dim);
+    background: transparent;
+    border: 1px solid var(--surface-border);
+    color: var(--muted);
     padding: 10px 14px;
   }
 
+  .btn-secondary:hover { border-color: var(--muted); color: var(--dark); }
+
   .input-hint {
     font-size: 10px;
-    color: var(--text-dim);
+    color: var(--muted);
     margin-top: 6px;
-  }
-
-  /* Side panel */
-  .side-panel {
-    width: 320px;
-    background: var(--surface);
-    border-left: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-    overflow: hidden;
-  }
-
-  .panel-header {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--text-dim);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .panel-tabs {
-    display: flex;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .panel-tab {
-    flex: 1;
-    padding: 8px;
-    text-align: center;
-    font-size: 10px;
-    color: var(--text-dim);
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  .panel-tab.active {
-    color: var(--accent);
-    border-bottom-color: var(--accent);
-  }
-
-  .panel-content {
-    flex: 1;
-    overflow-y: auto;
-    padding: 12px 16px;
-    font-size: 11px;
-    line-height: 1.8;
-  }
-
-  .panel-content::-webkit-scrollbar { width: 3px; }
-  .panel-content::-webkit-scrollbar-thumb { background: var(--border); }
-
-  .param-group {
-    margin-bottom: 14px;
-  }
-
-  .param-group-title {
-    color: var(--accent);
-    font-weight: 600;
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 6px;
-    padding-bottom: 4px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .param-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 2px 0;
-  }
-
-  .param-key { color: var(--text-dim); }
-  .param-val { color: var(--text); font-weight: 500; }
-  .param-val.good { color: var(--green); }
-  .param-val.warn { color: var(--yellow); }
-  .param-val.bad { color: var(--red); }
-
-  /* Network ASCII art */
-  .network-view {
-    font-size: 10px;
-    line-height: 1.4;
-    color: var(--text-dim);
-    background: var(--bg);
-    padding: 10px;
-    border-radius: 4px;
-    border: 1px solid var(--border);
-    overflow-x: auto;
-    white-space: pre;
+    font-family: var(--mono);
   }
 
   /* Loading spinner */
@@ -349,8 +268,11 @@
   }
 
   /* Responsive */
-  @media (max-width: 900px) {
-    .side-panel { display: none; }
+  @media (max-width: 640px) {
+    .chat-container { max-width: 100%; }
+    header { padding: 10px 16px; }
+    .messages { padding: 16px; }
+    .input-area { padding: 12px 16px; }
   }
 </style>
 </head>
@@ -359,42 +281,44 @@
 <!-- ========== Setup Screen ========== -->
 <div id="setup-screen" style="
   position:fixed; inset:0; z-index:100;
-  background:var(--bg);
+  background:var(--surface);
   display:none; align-items:center; justify-content:center;
 ">
   <div style="width:440px; padding:32px;">
-    <h1 style="font-size:16px; font-weight:600; margin-bottom:4px;">
+    <h1 style="font-family:var(--sans); font-size:18px; font-weight:900; margin-bottom:4px; letter-spacing:-0.03em;">
       <span style="color:var(--accent);">SUMO</span> Traffic Simulation Agent
     </h1>
-    <p style="font-size:11px; color:var(--text-dim); margin-bottom:8px;">Generate traffic simulations using natural language.</p>
-    <div style="font-size:10px; color:var(--green); margin-bottom:6px;" id="setup-ft-status"></div>
-    <div style="font-size:10px; color:var(--text-dim); margin-bottom:24px;" id="setup-base-status"></div>
+    <p style="font-size:12px; color:var(--muted); margin-bottom:8px; font-family:var(--sans);">Generate traffic simulations using natural language.</p>
+    <div style="font-family:var(--mono); font-size:10px; color:var(--green); margin-bottom:6px;" id="setup-ft-status"></div>
+    <div style="font-family:var(--mono); font-size:10px; color:var(--muted); margin-bottom:24px;" id="setup-base-status"></div>
 
     <!-- Base LLM selection -->
-    <div style="font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px;">Select Base LLM</div>
+    <div style="font-family:var(--mono); font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:12px; font-weight:700;">Select Base LLM</div>
 
     <div class="setup-option" onclick="selectBaseLLM('default')" id="opt-default" style="
-      padding:14px 16px; border:2px solid var(--accent); border-radius:8px;
-      margin-bottom:8px; cursor:pointer; background:rgba(108,140,255,0.05);
+      padding:14px 16px; border:2px solid var(--accent); border-radius:12px;
+      margin-bottom:8px; cursor:pointer; background:rgba(239,35,60,0.04);
     ">
-      <div style="font-size:13px; font-weight:600;">Default (Server Gemini API)</div>
-      <div style="font-size:11px; color:var(--text-dim); margin-top:4px;" id="default-base-desc">Use the shared server Gemini setup as the Base LLM for geometry generation and modification</div>
+      <div style="font-family:var(--sans); font-size:13px; font-weight:700; color:var(--dark);">Default (Server Gemini API)</div>
+      <div style="font-family:var(--sans); font-size:11px; color:var(--muted); margin-top:4px;" id="default-base-desc">Use the shared server Gemini setup as the Base LLM for geometry generation and modification</div>
     </div>
 
     <div class="setup-option" onclick="selectBaseLLM('cli')" id="opt-cli" style="
-      padding:14px 16px; border:1px solid var(--border); border-radius:8px;
+      padding:14px 16px; border:1px solid var(--surface-border); border-radius:12px;
       margin-bottom:8px; cursor:pointer; transition: border-color 0.2s;
+      background: rgba(255,255,255,0.92);
     ">
-      <div style="font-size:13px; font-weight:600;">Local CLI</div>
-      <div style="font-size:11px; color:var(--text-dim); margin-top:4px;" id="cli-desc"></div>
+      <div style="font-family:var(--sans); font-size:13px; font-weight:700; color:var(--dark);">Local CLI</div>
+      <div style="font-family:var(--sans); font-size:11px; color:var(--muted); margin-top:4px;" id="cli-desc"></div>
     </div>
 
     <div class="setup-option" onclick="selectBaseLLM('custom-api')" id="opt-custom" style="
-      padding:14px 16px; border:1px solid var(--border); border-radius:8px;
+      padding:14px 16px; border:1px solid var(--surface-border); border-radius:12px;
       cursor:pointer; transition: border-color 0.2s;
+      background: rgba(255,255,255,0.92);
     ">
-      <div style="font-size:13px; font-weight:600;">Use Custom API Key</div>
-      <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">Use your own Gemini, Claude, or OpenAI key for the Base LLM</div>
+      <div style="font-family:var(--sans); font-size:13px; font-weight:700; color:var(--dark);">Use Custom API Key</div>
+      <div style="font-family:var(--sans); font-size:11px; color:var(--muted); margin-top:4px;">Use your own Gemini, Claude, or OpenAI key for the Base LLM</div>
     </div>
 
     <!-- CLI selection -->
@@ -405,31 +329,31 @@
     <!-- API key input -->
     <div id="setup-api-input" style="display:none; margin-top:12px;">
       <div id="setup-api-key-step">
-        <div style="font-size:10px; color:var(--text-dim); margin-bottom:8px;">Enter one provider key. The model selector appears in the next step for that provider.</div>
+        <div style="font-family:var(--mono); font-size:10px; color:var(--muted); margin-bottom:8px;">Enter one provider key. The model selector appears in the next step for that provider.</div>
         <div style="margin-bottom:8px;">
-          <label style="font-size:10px; color:var(--text-dim);">Gemini</label>
-          <input type="password" id="setup-key-gemini" placeholder="AIzaSy..." style="width:100%; margin-top:4px; background:var(--surface2); border:1px solid var(--border); color:var(--text); font-family:var(--font); font-size:12px; padding:8px 10px; border-radius:6px;">
+          <label style="font-family:var(--mono); font-size:10px; color:var(--muted); font-weight:700;">Gemini</label>
+          <input type="password" id="setup-key-gemini" placeholder="AIzaSy..." style="width:100%; margin-top:4px; background:var(--surface); border:1px solid var(--surface-border); color:var(--dark); font-family:var(--mono); font-size:12px; padding:8px 10px; border-radius:8px;">
         </div>
         <div style="margin-bottom:8px;">
-          <label style="font-size:10px; color:var(--text-dim);">Claude</label>
-          <input type="password" id="setup-key-claude" placeholder="sk-ant-..." style="width:100%; margin-top:4px; background:var(--surface2); border:1px solid var(--border); color:var(--text); font-family:var(--font); font-size:12px; padding:8px 10px; border-radius:6px;">
+          <label style="font-family:var(--mono); font-size:10px; color:var(--muted); font-weight:700;">Claude</label>
+          <input type="password" id="setup-key-claude" placeholder="sk-ant-..." style="width:100%; margin-top:4px; background:var(--surface); border:1px solid var(--surface-border); color:var(--dark); font-family:var(--mono); font-size:12px; padding:8px 10px; border-radius:8px;">
         </div>
         <div style="margin-bottom:12px;">
-          <label style="font-size:10px; color:var(--text-dim);">OpenAI</label>
-          <input type="password" id="setup-key-gpt" placeholder="sk-..." style="width:100%; margin-top:4px; background:var(--surface2); border:1px solid var(--border); color:var(--text); font-family:var(--font); font-size:12px; padding:8px 10px; border-radius:6px;">
+          <label style="font-family:var(--mono); font-size:10px; color:var(--muted); font-weight:700;">OpenAI</label>
+          <input type="password" id="setup-key-gpt" placeholder="sk-..." style="width:100%; margin-top:4px; background:var(--surface); border:1px solid var(--surface-border); color:var(--dark); font-family:var(--mono); font-size:12px; padding:8px 10px; border-radius:8px;">
         </div>
         <button class="btn" style="width:100%;" onclick="continueCustomApiSelection()">Continue to Model Selection</button>
       </div>
 
       <div id="setup-api-model-step" style="display:none;">
-        <div style="font-size:10px; color:var(--text-dim); margin-bottom:8px;">Select the Base LLM model for the provider you entered.</div>
+        <div style="font-family:var(--mono); font-size:10px; color:var(--muted); margin-bottom:8px;">Select the Base LLM model for the provider you entered.</div>
         <div style="margin-bottom:8px;">
-          <label style="font-size:10px; color:var(--text-dim);">Selected Provider</label>
-          <div id="setup-selected-provider" style="margin-top:4px; padding:8px 10px; background:var(--surface2); border:1px solid var(--border); color:var(--text); font-size:12px; border-radius:6px;">-</div>
+          <label style="font-family:var(--mono); font-size:10px; color:var(--muted); font-weight:700;">Selected Provider</label>
+          <div id="setup-selected-provider" style="margin-top:4px; padding:8px 10px; background:var(--surface); border:1px solid var(--surface-border); color:var(--dark); font-family:var(--mono); font-size:12px; border-radius:8px;">-</div>
         </div>
         <div style="margin-bottom:12px;">
-          <label style="font-size:10px; color:var(--text-dim);">Model</label>
-          <select id="setup-model-selected" style="width:100%; margin-top:4px; background:var(--surface2); border:1px solid var(--border); color:var(--text); font-family:var(--font); font-size:12px; padding:8px 10px; border-radius:6px;"></select>
+          <label style="font-family:var(--mono); font-size:10px; color:var(--muted); font-weight:700;">Model</label>
+          <select id="setup-model-selected" style="width:100%; margin-top:4px; background:var(--surface); border:1px solid var(--surface-border); color:var(--dark); font-family:var(--mono); font-size:12px; padding:8px 10px; border-radius:8px;"></select>
         </div>
         <div style="display:flex; gap:8px;">
           <button class="btn btn-secondary" style="flex:1;" onclick="backToCustomApiKeys()">Back</button>
@@ -439,9 +363,9 @@
     </div>
 
     <!-- Bottom note -->
-    <div style="margin-top:16px; font-size:9px; color:var(--text-dim); line-height:1.6;">
-      <div><strong style="color:var(--text);">Fine-Tuning LLM</strong> handles structured traffic parameter extraction.</div>
-      <div><strong style="color:var(--text);">Base LLM</strong> handles road geometry generation and modification.</div>
+    <div style="margin-top:16px; font-family:var(--sans); font-size:10px; color:var(--muted); line-height:1.6;">
+      <div><strong style="color:var(--dark);">Fine-Tuning LLM</strong> handles structured traffic parameter extraction.</div>
+      <div><strong style="color:var(--dark);">Base LLM</strong> handles road geometry generation and modification.</div>
     </div>
   </div>
 </div>
@@ -470,104 +394,40 @@
                autocomplete="off" autofocus style="flex:1;">
         <button class="btn" id="send-btn" onclick="send()">Run</button>
       </div>
-      <div id="mode-banner" style="display:none; margin-top:8px; font-size:11px; color:var(--accent);"></div>
-      <div id="input-lock-banner" style="display:none; margin-top:8px; font-size:11px; color:var(--yellow);">
+      <div id="mode-banner" style="display:none; margin-top:8px; font-family:var(--mono); font-size:11px; color:var(--accent);"></div>
+      <div id="input-lock-banner" style="display:none; margin-top:8px; font-family:var(--mono); font-size:11px; color:var(--yellow);">
         Simulation complete. Please select the next action from the buttons above.
       </div>
       <div class="input-hint">
         <span>Press Enter to send - "A moderately congested evening commute" - "Create a single intersection"</span>
       </div>
-      <div id="api-key-panel" style="display:none; margin-top:8px; padding:8px; background:var(--surface2); border-radius:6px; border:1px solid var(--border);">
-        <div style="font-size:10px; color:var(--text-dim); margin-bottom:6px;">Enter an API key to use the corresponding LLM agent mode.</div>
+      <div id="api-key-panel" style="display:none; margin-top:8px; padding:8px; background:rgba(255,255,255,0.92); border-radius:10px; border:1px solid var(--surface-border);">
+        <div style="font-family:var(--mono); font-size:10px; color:var(--muted); margin-bottom:6px;">Enter an API key to use the corresponding LLM agent mode.</div>
         <div style="display:flex; gap:6px; margin-bottom:4px;">
-          <input type="password" id="key-gemini" placeholder="Gemini API Key" style="flex:1; background:var(--bg); border:1px solid var(--border); color:var(--text); font-family:var(--font); font-size:11px; padding:5px 8px; border-radius:4px;">
+          <input type="password" id="key-gemini" placeholder="Gemini API Key" style="flex:1; background:var(--surface); border:1px solid var(--surface-border); color:var(--dark); font-family:var(--mono); font-size:11px; padding:5px 8px; border-radius:6px;">
           <button class="btn btn-secondary" style="padding:5px 10px; font-size:10px;" onclick="saveKey('gemini')">Save</button>
         </div>
         <div style="display:flex; gap:6px; margin-bottom:4px;">
-          <input type="password" id="key-claude" placeholder="Claude API Key" style="flex:1; background:var(--bg); border:1px solid var(--border); color:var(--text); font-family:var(--font); font-size:11px; padding:5px 8px; border-radius:4px;">
+          <input type="password" id="key-claude" placeholder="Claude API Key" style="flex:1; background:var(--surface); border:1px solid var(--surface-border); color:var(--dark); font-family:var(--mono); font-size:11px; padding:5px 8px; border-radius:6px;">
           <button class="btn btn-secondary" style="padding:5px 10px; font-size:10px;" onclick="saveKey('claude')">Save</button>
         </div>
         <div style="display:flex; gap:6px;">
-          <input type="password" id="key-gpt" placeholder="OpenAI API Key" style="flex:1; background:var(--bg); border:1px solid var(--border); color:var(--text); font-family:var(--font); font-size:11px; padding:5px 8px; border-radius:4px;">
+          <input type="password" id="key-gpt" placeholder="OpenAI API Key" style="flex:1; background:var(--surface); border:1px solid var(--surface-border); color:var(--dark); font-family:var(--mono); font-size:11px; padding:5px 8px; border-radius:6px;">
           <button class="btn btn-secondary" style="padding:5px 10px; font-size:10px;" onclick="saveKey('gpt')">Save</button>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="side-panel">
-    <div class="panel-tabs">
-      <div class="panel-tab active" onclick="switchTab('params')">Parameters</div>
-      <div class="panel-tab" onclick="switchTab('network')">Network</div>
-      <div class="panel-tab" onclick="switchTab('result')">Result</div>
-    </div>
-
-    <div class="panel-content" id="panel-params">
-      <div class="param-group">
-        <div class="param-group-title">Location</div>
-        <div class="param-row"><span class="param-key">Location</span><span class="param-val" id="p-location">-</span></div>
-        <div class="param-row"><span class="param-key">Road Type</span><span class="param-val" id="p-roadtype">-</span></div>
-        <div class="param-row"><span class="param-key">Radius</span><span class="param-val" id="p-radius">-</span></div>
-      </div>
-      <div class="param-group">
-        <div class="param-group-title">Traffic Demand</div>
-        <div class="param-row"><span class="param-key">Time Period</span><span class="param-val" id="p-time">-</span></div>
-        <div class="param-row"><span class="param-key">Volume</span><span class="param-val" id="p-volume">-</span></div>
-        <div class="param-row"><span class="param-key">Avg Speed</span><span class="param-val" id="p-speed">-</span></div>
-        <div class="param-row"><span class="param-key">V/C Ratio</span><span class="param-val" id="p-vc">-</span></div>
-      </div>
-      <div class="param-group">
-        <div class="param-group-title">Vehicle Composition</div>
-        <div class="param-row"><span class="param-key">Passenger</span><span class="param-val" id="p-car">-</span></div>
-        <div class="param-row"><span class="param-key">Truck</span><span class="param-val" id="p-truck">-</span></div>
-        <div class="param-row"><span class="param-key">Bus</span><span class="param-val" id="p-bus">-</span></div>
-      </div>
-      <div class="param-group">
-        <div class="param-group-title">Data Source</div>
-        <div class="param-row"><span class="param-val" id="p-source" style="font-size:10px; color:var(--text-dim)">-</span></div>
-      </div>
-    </div>
-
-    <div class="panel-content" id="panel-network" style="display:none; padding:0;">
-      <canvas id="network-canvas" style="width:100%; background:var(--bg); cursor:grab;"></canvas>
-      <div style="padding:8px 12px; border-top:1px solid var(--border); font-size:10px; color:var(--text-dim);">
-        <span id="net-stats">Network will be displayed after generation.</span>
-        <div style="float:right;">
-          <button class="btn btn-secondary" style="padding:3px 8px; font-size:9px;" onclick="launchSumoGui()">SUMO-GUI</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="panel-content" id="panel-result" style="display:none">
-      <div class="param-group">
-        <div class="param-group-title">Simulation Result</div>
-        <div class="param-row"><span class="param-key">Vehicles Inserted</span><span class="param-val" id="r-vehicles">-</span></div>
-        <div class="param-row"><span class="param-key">Avg Speed</span><span class="param-val" id="r-speed">-</span></div>
-        <div class="param-row"><span class="param-key">Waiting Time</span><span class="param-val" id="r-wait">-</span></div>
-        <div class="param-row"><span class="param-key">Time Loss</span><span class="param-val" id="r-loss">-</span></div>
-      </div>
-      <div class="param-group">
-        <div class="param-group-title">Validation</div>
-        <div class="param-row"><span class="param-key">Grade</span><span class="param-val" id="r-grade">-</span></div>
-        <div class="param-row"><span class="param-key">Speed Error</span><span class="param-val" id="r-error">-</span></div>
-      </div>
-      <div class="param-group">
-        <div class="param-group-title">Output Files</div>
-        <div id="r-files" style="color:var(--text-dim); font-size:10px">-</div>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-const API = '';  // same origin
+const API = '';
 const messagesEl = document.getElementById('messages');
 const inputEl = document.getElementById('input');
 const sendBtn = document.getElementById('send-btn');
 let _isComposing = false;
 let _sending = false;
 
-// Enter to send
 inputEl.addEventListener('keydown', e => {
   if (e.isComposing || _isComposing) return;
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
@@ -575,7 +435,6 @@ inputEl.addEventListener('keydown', e => {
 inputEl.addEventListener('compositionstart', () => { _isComposing = true; });
 inputEl.addEventListener('compositionend', () => { _isComposing = false; });
 
-// Init: check status and update setup screen
 let _setupData = {};
 let _selectedMode = '';
 let _selectedProvider = '';
@@ -677,7 +536,7 @@ fetch('/api/status')
       ? ` · shared limit ${data.base_rate_limit_max_requests}/${data.base_rate_limit_window_sec}s`
       : '';
     baseEl.textContent = `${data.base_ready ? '✓' : '✗'} Base LLM: ${data.base_name}${rateLimit} · geometry generation and modification`;
-    baseEl.style.color = data.base_ready ? 'var(--text-dim)' : 'var(--yellow)';
+    baseEl.style.color = data.base_ready ? 'var(--muted)' : 'var(--yellow)';
     const defaultDesc = document.getElementById('default-base-desc');
     if (defaultDesc && data.base_model) {
       defaultDesc.textContent = `Use the shared server ${providerDisplayName(data.base_provider)} setup (${data.base_model}) for geometry generation and modification`;
@@ -708,10 +567,9 @@ fetch('/api/status')
 function selectBaseLLM(mode) {
   _baseLLMMode = mode;
 
-  // Update selection indicator
   document.querySelectorAll('.setup-option').forEach(el => {
-    el.style.borderColor = 'var(--border)';
-    el.style.background = 'transparent';
+    el.style.borderColor = 'var(--surface-border)';
+    el.style.background = 'rgba(255,255,255,0.92)';
   });
 
   document.getElementById('setup-cli-select').style.display = 'none';
@@ -719,13 +577,11 @@ function selectBaseLLM(mode) {
 
   if (mode === 'default') {
     document.getElementById('opt-default').style.borderColor = 'var(--accent)';
-    document.getElementById('opt-default').style.background = 'rgba(108,140,255,0.05)';
-    // Start immediately
+    document.getElementById('opt-default').style.background = 'rgba(239,35,60,0.04)';
     startApp('default');
   } else if (mode === 'cli') {
     document.getElementById('opt-cli').style.borderColor = 'var(--accent)';
-    document.getElementById('opt-cli').style.background = 'rgba(108,140,255,0.05)';
-    // Show CLI list
+    document.getElementById('opt-cli').style.background = 'rgba(239,35,60,0.04)';
     const clis = _setupData.available_cli || [];
     if (clis.length === 1) {
       startApp('cli:' + clis[0]);
@@ -733,15 +589,16 @@ function selectBaseLLM(mode) {
       const optDiv = document.getElementById('cli-options');
       optDiv.innerHTML = clis.map(c => `
         <div onclick="startApp('cli:${c}')" style="
-          padding:10px 14px; border:1px solid var(--border); border-radius:6px;
-          margin-bottom:6px; cursor:pointer; font-size:12px;
+          padding:10px 14px; border:1px solid var(--surface-border); border-radius:10px;
+          margin-bottom:6px; cursor:pointer; font-family:var(--mono); font-size:12px;
+          background:rgba(255,255,255,0.92); color:var(--dark);
         ">${c}</div>
       `).join('');
       document.getElementById('setup-cli-select').style.display = 'block';
     }
   } else if (mode === 'custom-api') {
     document.getElementById('opt-custom').style.borderColor = 'var(--accent)';
-    document.getElementById('opt-custom').style.background = 'rgba(108,140,255,0.05)';
+    document.getElementById('opt-custom').style.background = 'rgba(239,35,60,0.04)';
     backToCustomApiKeys();
     document.getElementById('setup-api-input').style.display = 'block';
   }
@@ -749,28 +606,13 @@ function selectBaseLLM(mode) {
 
 function continueCustomApiSelection() {
   const configs = [
-    {
-      provider: 'gemini',
-      key: document.getElementById('setup-key-gemini').value.trim(),
-    },
-    {
-      provider: 'claude',
-      key: document.getElementById('setup-key-claude').value.trim(),
-    },
-    {
-      provider: 'gpt',
-      key: document.getElementById('setup-key-gpt').value.trim(),
-    },
+    { provider: 'gemini', key: document.getElementById('setup-key-gemini').value.trim() },
+    { provider: 'claude', key: document.getElementById('setup-key-claude').value.trim() },
+    { provider: 'gpt', key: document.getElementById('setup-key-gpt').value.trim() },
   ];
   const filled = configs.filter(config => config.key);
-  if (!filled.length) {
-    alert('Please enter one API key.');
-    return;
-  }
-  if (filled.length > 1) {
-    alert('Please enter only one provider key at a time.');
-    return;
-  }
+  if (!filled.length) { alert('Please enter one API key.'); return; }
+  if (filled.length > 1) { alert('Please enter only one provider key at a time.'); return; }
   _pendingCustomApi = filled[0];
   const provider = _pendingCustomApi.provider;
   const options = CUSTOM_MODEL_OPTIONS[provider] || [];
@@ -790,10 +632,7 @@ function backToCustomApiKeys() {
 }
 
 function confirmCustomApi() {
-  if (!_pendingCustomApi) {
-    alert('Please enter an API key first.');
-    return;
-  }
+  if (!_pendingCustomApi) { alert('Please enter an API key first.'); return; }
   const model = document.getElementById('setup-model-selected').value;
   startApp(`api:${_pendingCustomApi.provider}:${model}:${_pendingCustomApi.key}`);
 }
@@ -880,7 +719,6 @@ async function send() {
   sendBtn.disabled = true;
   addMessage('user', text);
 
-  // /traffic command
   if (text.startsWith('/traffic')) {
     const loc = text.split(/\s+/).slice(1).join(' ') || 'Gangnam Station';
     addLoading();
@@ -911,7 +749,6 @@ async function send() {
     return;
   }
 
-  // Simulation request
   addLoading();
 
   try {
@@ -964,7 +801,6 @@ async function send() {
 function handleEvent(event) {
   switch (event.type) {
     case 'params':
-      updateParams(event.data);
       const p = event.data;
       addMessage('agent', `Parameters determined:\n  Location: ${p.location || '(virtual road)'}\n  Time: ${p.time || '-'}\n  Volume: ${p.volume_vph || '-'} veh/h\n  Predicted speed: ${p.speed_kmh || '-'} km/h\n  Lanes (per direction): ${p.lanes || '-'}\n  Speed limit: ${p.speed_limit_kmh || '-'} km/h\n  sigma=${p.sigma || '-'} tau=${p.tau || '-'} block=${p.avg_block_m || '-'}m\n  Source: ${p.source || '-'}`);
       break;
@@ -974,17 +810,18 @@ function handleEvent(event) {
       break;
 
     case 'network':
-      updateNetwork(event.data);
       addNetworkToChat(event.data);
       break;
 
     case 'result':
-      updateResult(event.data);
       addMessage('agent', formatResult(event.data));
       break;
 
     case 'validation':
-      updateValidation(event.data);
+      const v = event.data;
+      if (v.grade) {
+        addMessage('agent', `Validation: Grade ${v.grade} (speed error ${v.speed_error_pct != null ? v.speed_error_pct.toFixed(1) + '%' : '-'})`);
+      }
       break;
 
     case 'message':
@@ -1001,29 +838,6 @@ function handleEvent(event) {
   }
 }
 
-function updateParams(p) {
-  document.getElementById('p-location').textContent = p.location || '(virtual road)';
-  document.getElementById('p-roadtype').textContent = p.source || '-';
-  document.getElementById('p-radius').textContent = p.avg_block_m ? p.avg_block_m + 'm block' : '-';
-  document.getElementById('p-time').textContent = p.time || '-';
-  document.getElementById('p-volume').textContent = p.volume_vph ? p.volume_vph + ' veh/h' : '-';
-  document.getElementById('p-speed').textContent = p.speed_kmh ? p.speed_kmh + ' km/h' : '-';
-  document.getElementById('p-vc').textContent = p.v_c_ratio || '-';
-
-  const comp = p.vehicle_composition || {};
-  document.getElementById('p-car').textContent = comp.passenger ? (comp.passenger * 100).toFixed(0) + '%' : '-';
-  document.getElementById('p-truck').textContent = comp.truck ? (comp.truck * 100).toFixed(0) + '%' : '-';
-  document.getElementById('p-bus').textContent = comp.bus ? (comp.bus * 100).toFixed(0) + '%' : '-';
-  document.getElementById('p-source').textContent = p.source || '-';
-}
-
-function updateNetwork(n) {
-  const statsEl = document.getElementById('net-stats');
-  if (statsEl) {
-    statsEl.textContent = `${n.edge_count || n.edges || '?'} edges, ${n.junction_count || n.nodes || '?'} junctions`;
-  }
-}
-
 function addNetworkToChat(netData) {
   if (!netData.edges || !netData.edges.length) return;
 
@@ -1032,8 +846,8 @@ function addNetworkToChat(netData) {
   const svgId = 'net-d3-' + Date.now();
   div.innerHTML = `
     <div class="msg-label">Network</div>
-    <div class="msg-body" style="padding:0; background:var(--bg); border-radius:6px; overflow:hidden;">
-      <div id="${svgId}" style="width:100%; height:400px;"></div>
+    <div class="msg-body" style="padding:0; background:#1a1a2e; border-radius:12px; overflow:hidden;">
+      <div id="${svgId}" style="width:100%; height:400px; position:relative;"></div>
     </div>`;
   messagesEl.appendChild(div);
   messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -1048,8 +862,6 @@ function renderD3Network(containerId, netData) {
   const W = container.clientWidth;
   const H = 400;
   const bb = netData.bbox;
-  const netW = (bb.x_max - bb.x_min) || 1;
-  const netH = (bb.y_max - bb.y_min) || 1;
   const pad = 40;
 
   const xScale = d3.scaleLinear().domain([bb.x_min, bb.x_max]).range([pad, W - pad]);
@@ -1058,15 +870,13 @@ function renderD3Network(containerId, netData) {
   const svg = d3.select('#' + containerId)
     .append('svg')
     .attr('width', W).attr('height', H)
-    .style('background', '#0a0a0f');
+    .style('background', '#1a1a2e');
 
   const g = svg.append('g');
 
-  // Zoom
   const zoom = d3.zoom().scaleExtent([0.3, 20]).on('zoom', e => g.attr('transform', e.transform));
   svg.call(zoom);
 
-  // Lanes -> color
   const laneColor = lanes => {
     if (lanes >= 5) return '#7b9ef5';
     if (lanes >= 4) return '#5a7ae8';
@@ -1075,7 +885,6 @@ function renderD3Network(containerId, netData) {
     return '#2d3d65';
   };
 
-  // Road background (shadow)
   g.selectAll('.edge-bg')
     .data(netData.edges)
     .enter().append('path')
@@ -1091,7 +900,6 @@ function renderD3Network(containerId, netData) {
     .attr('stroke-linecap', 'round')
     .attr('stroke-linejoin', 'round');
 
-  // Road body
   g.selectAll('.edge')
     .data(netData.edges)
     .enter().append('path')
@@ -1119,7 +927,6 @@ function renderD3Network(containerId, netData) {
       tooltip.style('display', 'none');
     });
 
-  // Lane markings
   g.selectAll('.lane-mark')
     .data(netData.edges.filter(e => (e.lanes || 1) > 1))
     .enter().each(function(e) {
@@ -1146,7 +953,6 @@ function renderD3Network(containerId, netData) {
       }
     });
 
-  // Junctions
   const juncs = netData.junctions || [];
   g.selectAll('.junction')
     .data(juncs)
@@ -1159,7 +965,6 @@ function renderD3Network(containerId, netData) {
     .attr('stroke', j => j.type === 'traffic_light' ? '#a08810' : '#2a3040')
     .attr('stroke-width', 1.5);
 
-  // Traffic light icon (small dot on traffic_light junctions)
   g.selectAll('.tl-inner')
     .data(juncs.filter(j => j.type === 'traffic_light'))
     .enter().append('circle')
@@ -1168,7 +973,6 @@ function renderD3Network(containerId, netData) {
     .attr('r', 2)
     .attr('fill', '#ff6b6b');
 
-  // Tooltip
   const tooltip = d3.select('#' + containerId)
     .append('div')
     .style('position', 'absolute')
@@ -1178,11 +982,10 @@ function renderD3Network(containerId, netData) {
     .style('padding', '4px 8px')
     .style('border-radius', '4px')
     .style('font-size', '10px')
-    .style('font-family', 'var(--font)')
+    .style('font-family', 'var(--mono)')
     .style('pointer-events', 'none')
     .style('z-index', '10');
 
-  // Legend
   svg.append('text')
     .attr('x', 8).attr('y', H - 8)
     .attr('fill', '#6668')
@@ -1190,7 +993,6 @@ function renderD3Network(containerId, netData) {
     .attr('font-family', 'monospace')
     .text(`${netData.edges.length} edges · ${juncs.length} junctions · drag/scroll to navigate`);
 
-  // Lane count legend
   const legend = svg.append('g').attr('transform', `translate(${W - 120}, 16)`);
   [{l:1,c:'#2d3d65'},{l:2,c:'#3d5590'},{l:3,c:'#4a6abc'},{l:4,c:'#5a7ae8'},{l:'5+',c:'#7b9ef5'}].forEach((d,i) => {
     legend.append('line').attr('x1',0).attr('y1',i*14).attr('x2',20).attr('y2',i*14)
@@ -1212,10 +1014,11 @@ function addButtons(buttons) {
   downloadDiv.innerHTML = `
     <div class="msg-body" style="padding:10px 12px; display:flex; justify-content:flex-end;">
       <button onclick="handleAction('download')" style="
-        padding:8px 14px; border-radius:8px; cursor:pointer;
-        font-family:var(--font); font-size:12px; font-weight:600;
-        border:1px solid var(--border);
-        background:var(--surface2); color:var(--text);
+        padding:8px 14px; border-radius:10px; cursor:pointer;
+        font-family:var(--mono); font-size:12px; font-weight:600;
+        border:1px solid var(--surface-border);
+        background:rgba(255,255,255,0.92); color:var(--dark);
+        transition:all 0.2s;
       ">Download</button>
     </div>`;
   messagesEl.appendChild(downloadDiv);
@@ -1228,47 +1031,45 @@ function addButtons(buttons) {
 
   let html = '<div class="msg-body" style="padding:12px; display:flex; flex-direction:column; gap:8px;">';
 
-  // Main actions: Modify / New simulation
   if (primary.length) {
-    html += '<div style="display:flex; gap:8px; font-size:11px; color:var(--text-dim); margin-bottom:2px;">Decide whether to save this session, then choose to modify or start a new simulation</div>';
+    html += '<div style="display:flex; gap:8px; font-family:var(--sans); font-size:11px; color:var(--muted); margin-bottom:2px;">Decide whether to save this session, then choose to modify or start a new simulation</div>';
     html += '<div style="display:flex; gap:8px;">';
     for (const btn of primary) {
       const isModify = btn.action === 'modify-menu';
       html += `<button onclick="handleAction('${btn.action}')" style="
-        flex:1; padding:10px 16px; border-radius:8px; cursor:pointer;
-        font-family:var(--font); font-size:13px; font-weight:600;
-        border:1px solid ${isModify ? 'var(--accent)' : 'var(--border)'};
-        background:${isModify ? 'rgba(89,168,255,0.08)' : 'transparent'};
-        color:${isModify ? 'var(--accent)' : 'var(--text-dim)'};
+        flex:1; padding:10px 16px; border-radius:10px; cursor:pointer;
+        font-family:var(--mono); font-size:13px; font-weight:700;
+        border:1.5px solid ${isModify ? 'var(--accent)' : 'var(--surface-border)'};
+        background:${isModify ? 'rgba(239,35,60,0.04)' : 'rgba(255,255,255,0.92)'};
+        color:${isModify ? 'var(--accent)' : 'var(--muted)'};
         transition:all 0.2s;
-      " onmouseover="this.style.borderColor='${isModify ? 'var(--accent)' : 'var(--text-dim)'}';this.style.color='var(--text)'"
-         onmouseout="this.style.borderColor='${isModify ? 'var(--accent)' : 'var(--border)'}';this.style.color='${isModify ? 'var(--accent)' : 'var(--text-dim)'}'"
+      " onmouseover="this.style.borderColor='${isModify ? 'var(--accent)' : 'var(--muted)'}';this.style.color='var(--dark)'"
+         onmouseout="this.style.borderColor='${isModify ? 'var(--accent)' : 'var(--surface-border)'}';this.style.color='${isModify ? 'var(--accent)' : 'var(--muted)'}'"
       >${btn.label}</button>`;
     }
     html += '</div>';
   }
 
-  // Modify submenu: Error correction / Tuning
   if (_modifySubmenuOpen && modifyOptions.length) {
-    html += '<div style="display:flex; gap:8px; font-size:11px; color:var(--text-dim); margin-top:4px;">Select modification type</div>';
+    html += '<div style="display:flex; gap:8px; font-family:var(--sans); font-size:11px; color:var(--muted); margin-top:4px;">Select modification type</div>';
     html += '<div style="display:flex; gap:8px; margin-top:4px;">';
     for (const btn of modifyOptions) {
       const isCorrection = btn.action === 'modify-correction';
       html += `<button onclick="handleAction('${btn.action}')" style="
-        flex:1; padding:10px 16px; border-radius:8px; cursor:pointer;
-        font-family:var(--font); font-size:13px; font-weight:600;
+        flex:1; padding:10px 16px; border-radius:10px; cursor:pointer;
+        font-family:var(--mono); font-size:13px; font-weight:700;
         border:1.5px solid ${isCorrection ? 'var(--red)' : 'var(--accent)'};
         background:transparent;
         color:${isCorrection ? 'var(--red)' : 'var(--accent)'};
         transition:all 0.2s;
-      " onmouseover="this.style.background='${isCorrection ? 'var(--red)' : 'var(--accent)'}';this.style.color='#000'"
+      " onmouseover="this.style.background='${isCorrection ? 'var(--red)' : 'var(--accent)'}';this.style.color='#fff'"
          onmouseout="this.style.background='transparent';this.style.color='${isCorrection ? 'var(--red)' : 'var(--accent)'}'"
       >${btn.label}</button>`;
     }
     html += `<button onclick="handleAction('modify-cancel')" style="
-      padding:10px 12px; border-radius:8px; cursor:pointer;
-      font-family:var(--font); font-size:12px; font-weight:500;
-      border:1px solid var(--border); background:transparent; color:var(--text-dim);
+      padding:10px 12px; border-radius:10px; cursor:pointer;
+      font-family:var(--mono); font-size:12px; font-weight:600;
+      border:1px solid var(--surface-border); background:transparent; color:var(--muted);
     ">Cancel</button>`;
     html += '</div>';
   }
@@ -1350,24 +1151,6 @@ function setModeBanner() {
   }
 }
 
-function updateResult(r) {
-  document.getElementById('r-vehicles').textContent = r.vehicles_inserted ? r.vehicles_inserted + ' vehicles' : '-';
-  document.getElementById('r-speed').textContent = r.avg_speed_kmh ? r.avg_speed_kmh + ' km/h' : '-';
-  document.getElementById('r-wait').textContent = r.avg_waiting_time_s ? r.avg_waiting_time_s + 's' : '-';
-  document.getElementById('r-loss').textContent = r.avg_time_loss_s ? r.avg_time_loss_s + 's' : '-';
-  switchTab('result');
-}
-
-function updateValidation(v) {
-  const gradeEl = document.getElementById('r-grade');
-  gradeEl.textContent = v.grade || '-';
-  gradeEl.className = 'param-val ' + ({'A':'good','B':'good','C':'warn','D':'bad','F':'bad'}[v.grade] || '');
-
-  const errorEl = document.getElementById('r-error');
-  errorEl.textContent = v.speed_error_pct != null ? v.speed_error_pct.toFixed(1) + '%' : '-';
-  errorEl.className = 'param-val ' + (Math.abs(v.speed_error_pct) <= 15 ? 'good' : Math.abs(v.speed_error_pct) <= 30 ? 'warn' : 'bad');
-}
-
 function formatResult(r) {
   let msg = 'Simulation Complete\n';
   msg += `  Vehicles inserted: ${r.vehicles_inserted || '-'}\n`;
@@ -1377,18 +1160,6 @@ function formatResult(r) {
   return msg;
 }
 
-function switchTab(name) {
-  document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.panel-content').forEach(c => c.style.display = 'none');
-  event.target?.classList?.add('active');
-  document.getElementById('panel-' + name).style.display = 'block';
-  // Fallback: activate correct tab
-  document.querySelectorAll('.panel-tab').forEach(t => {
-    if (t.textContent.toLowerCase().includes(name.slice(0,3))) t.classList.add('active');
-  });
-}
-
-// API Key management
 const _apiKeys = {};
 
 function toggleApiKeyPanel() {
@@ -1404,9 +1175,7 @@ function saveKey(provider) {
     input.value = '';
     input.placeholder = '✓ Saved';
     const select = document.getElementById('llm-select');
-    if (select) {
-      select.value = provider;
-    }
+    if (select) { select.value = provider; }
     addMessage('system', `${provider.toUpperCase()} API key configured`);
   }
 }
@@ -1424,243 +1193,11 @@ async function queryTraffic() {
   send();
 }
 
-// ──────────────────────────────────────────
-// Network Canvas Renderer
-// ──────────────────────────────────────────
-
-let networkData = null;
-let canvasTransform = { x: 0, y: 0, scale: 1 };
-let isDragging = false;
-let dragStart = { x: 0, y: 0 };
 let currentLocation = null;
 
-function loadNetwork(location) {
-  currentLocation = location;
-  const url = '/api/network?location=' + encodeURIComponent(location);
-  fetch(url).then(r => r.json()).then(data => {
-    if (data.status !== 'success') return;
-    networkData = data;
-    initCanvas();
-    renderNetwork();
-    document.getElementById('net-stats').textContent =
-      `${data.stats.edge_count} edges, ${data.junctions.length} junctions`;
-    switchTab('network');
-  }).catch(() => {});
-}
-
-function initCanvas() {
-  const canvas = document.getElementById('network-canvas');
-  const panel = canvas.parentElement;
-  canvas.width = panel.clientWidth;
-  canvas.height = panel.clientHeight - 40;
-
-  // fit to bbox
-  const bb = networkData.bbox;
-  const netW = bb.x_max - bb.x_min;
-  const netH = bb.y_max - bb.y_min;
-  const scaleX = (canvas.width - 40) / netW;
-  const scaleY = (canvas.height - 40) / netH;
-  canvasTransform.scale = Math.min(scaleX, scaleY);
-  canvasTransform.x = 20;
-  canvasTransform.y = canvas.height - 20;
-
-  // mouse events
-  canvas.onmousedown = e => { isDragging = true; dragStart = {x: e.clientX, y: e.clientY}; canvas.style.cursor = 'grabbing'; };
-  canvas.onmousemove = e => {
-    if (!isDragging) return;
-    canvasTransform.x += e.clientX - dragStart.x;
-    canvasTransform.y += e.clientY - dragStart.y;
-    dragStart = {x: e.clientX, y: e.clientY};
-    renderNetwork();
-  };
-  canvas.onmouseup = () => { isDragging = false; canvas.style.cursor = 'grab'; };
-  canvas.onmouseleave = () => { isDragging = false; canvas.style.cursor = 'grab'; };
-  canvas.onwheel = e => {
-    e.preventDefault();
-    const factor = e.deltaY > 0 ? 0.9 : 1.1;
-    const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-    canvasTransform.x = mx - (mx - canvasTransform.x) * factor;
-    canvasTransform.y = my - (my - canvasTransform.y) * factor;
-    canvasTransform.scale *= factor;
-    renderNetwork();
-  };
-}
-
-function renderNetwork() {
-  if (!networkData) return;
-  const canvas = document.getElementById('network-canvas');
-  const ctx = canvas.getContext('2d');
-  const s = canvasTransform.scale;
-  const ox = canvasTransform.x;
-  const oy = canvasTransform.y;
-
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // edges
-  for (const edge of networkData.edges) {
-    const pts = edge.points;
-    if (pts.length < 2) continue;
-
-    // color by lane count
-    const lanes = edge.lanes || 1;
-    if (lanes >= 4) ctx.strokeStyle = '#6c8cff';
-    else if (lanes >= 2) ctx.strokeStyle = '#4a5a80';
-    else ctx.strokeStyle = '#2a3050';
-
-    ctx.lineWidth = Math.max(1, lanes * 0.8);
-    ctx.beginPath();
-    ctx.moveTo(ox + pts[0][0] * s, oy - pts[0][1] * s);
-    for (let i = 1; i < pts.length; i++) {
-      ctx.lineTo(ox + pts[i][0] * s, oy - pts[i][1] * s);
-    }
-    ctx.stroke();
-  }
-
-  // junctions (signal = circle, priority = dot)
-  for (const j of networkData.junctions) {
-    const x = ox + j.x * s;
-    const y = oy - j.y * s;
-    if (j.type === 'traffic_light') {
-      ctx.fillStyle = '#facc15';
-      ctx.beginPath();
-      ctx.arc(x, y, 3, 0, Math.PI * 2);
-      ctx.fill();
-    } else {
-      ctx.fillStyle = '#3a3a50';
-      ctx.beginPath();
-      ctx.arc(x, y, 1.5, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-}
-
-async function launchSumoGui() {
-  if (!currentLocation) {
-    alert('Please run a simulation first.');
-    return;
-  }
-  const r = await fetch('/api/view?location=' + encodeURIComponent(currentLocation));
-  const data = await r.json();
-  if (data.status === 'launched') {
-    addMessage('agent', 'SUMO-GUI launched: ' + data.path);
-  } else {
-    addMessage('agent', 'SUMO-GUI launch failed: ' + (data.error || ''));
-  }
-}
-
-// ──────────────────────────────────────────
-// Setup Screen
-// ──────────────────────────────────────────
-
-function selectMode(mode) {
-  _selectedMode = mode;
-
-  // Update selection indicator
-  document.getElementById('opt-cli').style.borderColor = mode === 'cli' ? 'var(--accent)' : 'var(--border)';
-  document.getElementById('opt-api').style.borderColor = mode === 'api' ? 'var(--accent)' : 'var(--border)';
-
-  // Show Step 2
-  document.getElementById('setup-step1').style.display = 'none';
-
-  if (mode === 'cli') {
-    const container = document.getElementById('cli-options');
-    container.innerHTML = '';
-    const clis = _setupData.available_cli || [];
-    clis.forEach((name, i) => {
-      const div = document.createElement('div');
-      div.style.cssText = 'padding:12px 16px; border:1px solid var(--border); border-radius:8px; margin-bottom:8px; cursor:pointer; transition:border-color 0.2s;';
-      div.innerHTML = `<span style="font-size:13px; font-weight:600;">${name}</span> <span style="font-size:11px; color:var(--text-dim);">(CLI)</span>`;
-      div.onclick = () => confirmCliSetup(name);
-      container.appendChild(div);
-    });
-    document.getElementById('setup-step2-cli').style.display = 'block';
-  } else {
-    document.getElementById('setup-step2-api').style.display = 'block';
-  }
-}
-
-function confirmCliSetup(name) {
-  _selectedProvider = name;
-  _selectedMode = 'cli';
-
-  const select = document.getElementById('llm-select');
-  if (select) {
-    select.value = name;
-  }
-
-  // Show Step 3
-  document.getElementById('setup-step2-cli').style.display = 'none';
-  document.getElementById('setup-step3').style.display = 'block';
-  document.getElementById('setup-confirm-text').textContent = `${name} (CLI) setup complete`;
-  document.getElementById('setup-confirm-detail').textContent = 'Running agent with local CLI.';
-
-  setTimeout(() => enterMain(), 1000);
-}
-
-function confirmApiSetup() {
-  const keys = {
-    gemini: document.getElementById('setup-key-gemini').value.trim(),
-    claude: document.getElementById('setup-key-claude').value.trim(),
-    gpt: document.getElementById('setup-key-gpt').value.trim(),
-  };
-
-  let found = null;
-  for (const [name, key] of Object.entries(keys)) {
-    if (key) {
-      _apiKeys[name] = key;
-      if (!found) found = name;
-    }
-  }
-
-  if (!found) {
-    alert('Please enter at least one API key.');
-    return;
-  }
-
-  _selectedProvider = found;
-  _selectedMode = 'api';
-  const select = document.getElementById('llm-select');
-  if (select) {
-    select.value = found;
-  }
-
-  document.getElementById('setup-step2-api').style.display = 'none';
-  document.getElementById('setup-step3').style.display = 'block';
-  document.getElementById('setup-confirm-text').textContent = `${found} (API) setup complete`;
-  document.getElementById('setup-confirm-detail').textContent = 'Running agent with API key.';
-
-  setTimeout(() => enterMain(), 1000);
-}
-
-function skipSetup() {
-  _selectedProvider = '';
-  _selectedMode = '';
-  const select = document.getElementById('llm-select');
-  if (select) {
-    select.value = '';
-  }
-  enterMain();
-}
-
-function enterMain() {
-  const screen = document.getElementById('setup-screen');
-  screen.style.transition = 'opacity 0.3s';
-  screen.style.opacity = '0';
-  setTimeout(() => screen.style.display = 'none', 300);
-}
-
-// Hook into existing network event
 const _origHandleEvent = handleEvent;
 handleEvent = function(event) {
   _origHandleEvent(event);
-  if (event.type === 'network' || event.type === 'result') {
-    // auto-load network after simulation
-    if (event.type === 'result' && currentLocation) {
-      loadNetwork(currentLocation);
-    }
-  }
   if (event.type === 'params' && event.data && event.data.location) {
     currentLocation = event.data.location;
   }
