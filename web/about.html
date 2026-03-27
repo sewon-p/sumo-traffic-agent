@@ -949,7 +949,7 @@
           <div class="card-icon">FT</div>
           <h3 class="card-title">Fine-Tuned Extraction</h3>
           <p class="card-copy">
-            A fine-tuned model converts traffic requests into structured parameters such as speed, volume, lanes, speed limit, sigma, tau, and block length.
+            A fine-tuned <code>gpt-4.1-mini</code> converts traffic requests into structured parameters (speed, volume, lanes, sigma, tau, avg_block_m). Trained on ~70 road segments from real Seoul traffic surveys with driver parameters reverse-estimated via the Greenshields model.
           </p>
         </article>
 
@@ -957,7 +957,7 @@
           <div class="card-icon">XML</div>
           <h3 class="card-title">Base LLM Geometry / XML</h3>
           <p class="card-copy">
-            A separate base model handles geometry edits, XML generation, and modification classification when structured extraction alone is not enough.
+            A separate base model (configurable: Claude, GPT, or Gemini) handles geometry edits, fallback XML generation, and modification classification when structured extraction alone is not enough.
           </p>
         </article>
 
@@ -986,10 +986,18 @@
         </article>
 
         <article class="card">
+          <div class="card-icon">AGT</div>
+          <h3 class="card-title">Tool-Calling Agent</h3>
+          <p class="card-copy">
+            An 11-tool agent autonomously selects and executes tools (geocoding, network building, traffic queries, simulation, validation, calibration) in a multi-turn loop based on user intent.
+          </p>
+        </article>
+
+        <article class="card">
           <div class="card-icon">OPS</div>
           <h3 class="card-title">Deployment Readiness</h3>
           <p class="card-copy">
-            The project includes local execution, Docker support, CI/CD setup, and a Cloud Run deployment path for serving the workflow beyond local development.
+            Docker, GitHub Actions CI/CD (test, build, deploy), and GCP Cloud Run deployment with Secret Manager integration for API keys.
           </p>
         </article>
       </div>
@@ -1044,6 +1052,9 @@
           <div class="results-note">
             Benchmark: 30 held-out samples with labels derived from real Seoul traffic data.
           </div>
+          <div class="results-note" style="margin-top:12px;">
+            <strong>Key error patterns:</strong> The base model systematically overpredicts speed (+68.3% bias, 0/30 accurate) and intersection spacing (+165%). Fine-tuning corrects these domain-specific biases — the FT model achieves near-zero bias on speed (+0.5%) and speed_limit (29/30 accurate). The remaining weakness is volume_vph (MAPE 34.8%), the most context-dependent field.
+          </div>
         </div>
       </div>
     </section>
@@ -1060,18 +1071,18 @@
           <div class="path-label">Synthetic</div>
           <h3 class="path-title">Prompt-Target Scenario Generation</h3>
           <p class="path-copy">
-            Synthetic prompt/target pairs are built from road priors, time-of-day patterns, weather conditions, and traffic engineering heuristics.
+            10 Seoul roads x 6 time periods x 4 weather conditions. Ground truth computed via BPR speed-flow model, road-type capacity tables (arterial 1800, expressway 2000 veh/h/lane), and congestion-calibrated driver parameters.
           </p>
-          <div class="path-meta">Used to bootstrap structured parameter extraction before live correction data accumulates.</div>
+          <div class="path-meta">~70 samples. Used to bootstrap structured extraction before live correction data accumulates.</div>
         </article>
 
         <article class="path-card">
           <div class="path-label">Real Data</div>
           <h3 class="path-title">Observed Seoul Traffic Targets</h3>
           <p class="path-copy">
-            Real speed and volume files are aggregated by road and time period, then converted into fine-tuning targets for structured scenario fields.
+            ~70 road segments from Seoul traffic surveys (2025.10). Observed speed/volume paired with rule-based natural language prompts in multiple styles — road name + time, situational description, mixed. Driver parameters reverse-estimated from observed speed via the Greenshields model.
           </p>
-          <div class="path-meta">Used to anchor the model to observed road behavior instead of synthetic priors alone.</div>
+          <div class="path-meta">~245 samples. The model learns situation-to-parameter mapping, not road name lookup.</div>
         </article>
 
         <article class="path-card">
