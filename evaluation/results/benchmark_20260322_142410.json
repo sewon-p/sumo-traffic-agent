@@ -1,0 +1,42 @@
+{
+  "timestamp": "20260322_142410",
+  "report": {
+    "ft": {
+      "total_calls": 30,
+      "json_compliance_pct": 100.0,
+      "field_completeness_pct": 100.0,
+      "range_validity_pct": 90.0,
+      "avg_latency_ms": 4728,
+      "consistency_avg_cv": 1.47,
+      "common_violations": [
+        [
+          "volume_vph",
+          3
+        ]
+      ],
+      "common_missing": []
+    },
+    "base": {
+      "total_calls": 30,
+      "json_compliance_pct": 100.0,
+      "field_completeness_pct": 100.0,
+      "range_validity_pct": 100.0,
+      "avg_latency_ms": 1444,
+      "consistency_avg_cv": 3.89,
+      "common_violations": [],
+      "common_missing": []
+    }
+  },
+  "prompts": [
+    "강남대로 퇴근시간 시뮬레이션",
+    "테헤란로 출근시간 비오는 날",
+    "올림픽대로 심야 시간대",
+    "홍대입구역 주변 주말 오후",
+    "경부고속도로 서울-수원 금요일 저녁",
+    "서울역 앞 점심시간 눈오는 날",
+    "판교테크노밸리 내부도로 출근시간",
+    "강변북로 퇴근시간 사고 발생",
+    "세종대로 낮 시간대 맑은 날",
+    "이면도로 골목길 등하교 시간"
+  ]
+}

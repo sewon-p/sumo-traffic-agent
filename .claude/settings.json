@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -sf http://localhost:8080/api/status)",
+      "Bash(python server.py)",
+      "Read(//Users/park/**)"
+    ]
+  }
+}

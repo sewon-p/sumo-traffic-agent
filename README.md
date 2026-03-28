@@ -431,6 +431,8 @@ Admin dashboard at `/admin` provides simulation history, modification logs, corr
 
 ### Local (recommended for development)
 
+Recommended when local LLM CLIs (gemini, claude, codex) are installed. Docker containers cannot access host CLI tools due to OAuth authentication requirements, so native execution is preferred for full functionality.
+
 ```bash
 python -m venv .venv
 source .venv/bin/activate

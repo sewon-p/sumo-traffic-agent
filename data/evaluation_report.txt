@@ -1,0 +1,26 @@
+============================================================
+Evaluation Summary
+============================================================
+Total simulations: 11
+Verified simulations: 11
+Average absolute error: 15.79%
+Corrected simulations: 0
+
+Grade distribution:
+  A: 5
+  B: 1
+  C: 4
+  D: 1
+
+Error patterns:
+  speed_overestimate_severe: 1
+  speed_underestimate: 5
+  well_calibrated: 5
+
+Modification intents:
+  unknown: 4
+
+Modification types:
+  modify: 4
+
+Trainable corrections by type:
