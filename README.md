@@ -176,7 +176,9 @@ Two data sources, each with different ground truth methods:
 
 - **Capacity**: per-lane capacity by road functional class (highway 2200, urban expressway 2000, arterial 1800, collector 1200 veh/h/lane)
 - **Volume**: capacity x V/C ratio (estimated by time-of-day: peak 0.75-0.95, off-peak 0.45-0.65, late night 0.10-0.25)
-- **Speed**: BPR speed-flow function `speed = free_flow / (1 + 0.15 * (V/C)^4)` with weather adjustment (rain -15%, snow -30%, fog -20%)
+- **Speed**: BPR speed-flow function with weather adjustment (rain -15%, snow -30%, fog -20%)
+
+$$v = \frac{v_f}{1 + 0.15 \cdot \left(\frac{V}{C}\right)^4}$$
 - **Driver behavior**: `sigma` (imperfection) and `tau` (headway) calibrated by congestion level — congested: sigma 0.6-0.8, tau 0.8-1.2s; free-flow: sigma 0.2-0.4, tau 1.5-2.5s
 - **Vehicle composition**: passenger/truck/bus ratios by road category (e.g., highway 78/17/5%, arterial 85/8/7%)
 
