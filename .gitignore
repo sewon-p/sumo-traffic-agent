@@ -11,8 +11,20 @@ __pycache__/
 data/*.db
 data/*.db-shm
 data/*.db-wal
+data/*.json
+data/*.txt
 traffic_data/*.db
 traffic_data/*.db-shm
 traffic_data/*.db-wal
 raw_data/
 *.tmp.xlsx
+
+# Personal notes / not part of the project
+JD.md
+PROJECT_TODO.md
+PIPELINE_MERMAID.md
+llm_sumo_agent_project.md
+.claude/
+
+# Benchmark results (reproducible, not source)
+evaluation/results/
