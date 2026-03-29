@@ -16,6 +16,25 @@ This project addresses the cost of building realistic synthetic driving scenario
 
 The key design choice is **responsibility split** rather than a single model doing everything.
 
+## Demo
+
+### Simulation Run
+![Simulation demo](docs/RUN.gif)
+
+> **Prompt:** `Simulate a congested 8-lane arterial road during evening rush hour`
+
+### Parameter Correction
+![Parameter correction](docs/parameter_edit.gif)
+
+> **Correction:** `Speed is too high for rush hour, reduce to under 25 km/h`
+
+### Geometry Modification
+![Geometry edit](docs/geometry_edit.gif)
+
+> **Adjust:** `Add an intersection on the right side`
+
+*The fine-tuned model is trained on Korean traffic data from Seoul.*
+
 ## Problem
 
 Generating realistic traffic scenarios for simulation requires domain knowledge that general-purpose LLMs lack. A single model asked to produce SUMO-compatible parameters tends to default to free-flow speeds, ignore road-type-specific capacity constraints, and hallucinate intersection geometry. The base model in this project overpredicts speed by +68.3% on average and intersection spacing by +165% — errors large enough to make the resulting simulations useless for calibration or testing.
