@@ -127,7 +127,7 @@ def _ask_openai(prompt: str, system: str, api_key: str, model_override: str = ""
 
     print(f"[BASE_LLM] OpenAI call: {model}")
     resp = client.chat.completions.create(
-        model=model, messages=messages, temperature=0.2, max_tokens=2000,
+        model=model, messages=messages, temperature=0.2, max_completion_tokens=2000,
     )
     result = resp.choices[0].message.content.strip()
     print(f"[BASE_LLM] response length: {len(result)} chars")
@@ -210,7 +210,7 @@ def classify_modification(user_input: str) -> str:
         if "geometry" in lowered:
             return "geometry"
         return "parameter"
-    except:
+    except (ValueError, Exception):
         # On failure, use keyword heuristics only
         has_geometry = any(token in user_input for token in ["교차로", "사거리", "삼거리", "직선", "곡선", "휘", "로터리", "원형"])
         has_parameter = any(token in user_input for token in ["제한속도", "교통량", "속도", "tau", "sigma", "vph", "블록", "간격", "km", "m"])
@@ -242,13 +242,12 @@ def modify_parameters(user_input: str, params_json: str) -> dict:
     )
     try:
         result = ask_base_llm(user_input, system)
-        import re
         m = re.search(r'\{[\s\S]*\}', result)
         if m:
             return json.loads(m.group())
-    except:
+    except (json.JSONDecodeError, ValueError, Exception):
         pass
-    return hints
+    return {}
 
 
 def extract_ft_training_hints(user_input: str, ft_json: str) -> dict:

@@ -22,7 +22,6 @@ import uuid
 import time
 import shutil
 from collections import deque
-from io import BytesIO
 
 # Re-exec under project venv if available (skipped in Docker / production)
 VENV_PYTHON = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".venv", "bin", "python")

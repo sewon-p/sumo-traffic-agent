@@ -332,10 +332,6 @@ def run_agent_mode(user_input: str, messages: list, provider: str = None):
 def main():
     load_env()
 
-    try:
-        import readline
-    except ImportError:
-        pass
 
     # Initial setup
     provider, mode = setup_wizard()

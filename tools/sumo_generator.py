@@ -9,7 +9,7 @@ to produce a complete simulation set.
 import os
 import subprocess
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass
