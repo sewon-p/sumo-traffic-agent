@@ -18,22 +18,12 @@ The key design choice is **responsibility split** rather than a single model doi
 
 ## Demo
 
-### Simulation Run
 ![Simulation demo](docs/RUN.gif)
 
-> **Prompt:** `Simulate a congested 8-lane arterial road during evening rush hour`
-
-### Parameter Correction
-![Parameter correction](docs/parameter_edit.gif)
-
-> **Correction:** `Speed is too high for rush hour, reduce to under 25 km/h`
-
-### Geometry Modification
-![Geometry edit](docs/geometry_edit.gif)
-
-> **Adjust:** `Add an intersection on the right side`
-
-*The fine-tuned model is trained on Korean traffic data from Seoul.*
+| Parameter Correction | Geometry Modification |
+|:---:|:---:|
+| ![Parameter edit](docs/parameter_edit.gif) | ![Geometry edit](docs/geometry_edit.gif) |
+| `Speed is too high for rush hour, reduce to under 25 km/h` | `Add an intersection on the right side` |
 
 ## Problem
 
