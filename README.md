@@ -23,7 +23,7 @@ The key design choice is **responsibility split** rather than a single model doi
 | Parameter Correction | Geometry Modification |
 |:---:|:---:|
 | ![Parameter edit](docs/parameter_edit.gif) | ![Geometry edit](docs/geometry_edit.gif) |
-| `Speed is too high for rush hour, reduce to under 25 km/h` | `Add an intersection on the right side` |
+| `Speed is too high, reduce to under 20 km/h` | `Add an intersection on the right side` |
 
 ## Problem
 
