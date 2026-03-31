@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SUMO Admin</title>
+<link rel="icon" href="/assets/ssw-favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
   :root {
@@ -11,39 +13,93 @@
     --muted: #8D99AE;
     --surface: #EDF2F4;
     --accent: #EF233C;
+    --accent-soft: rgba(239, 35, 60, 0.08);
     --surface-border: rgba(141, 153, 174, 0.25);
     --ink-soft: rgba(43, 45, 66, 0.72);
-    --mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    --surface-strong: rgba(255, 255, 255, 0.96);
+    --mono: 'SF Mono', 'Fira Code', 'Fira Mono', 'Consolas', monospace;
     --sans: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     --good: #2a9d5c;
     --warn: #d4a017;
     --bad: #d6333e;
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--surface); color: var(--dark); font: 14px/1.5 var(--mono); }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  body { margin: 0; background: var(--surface); color: var(--dark); font: 0.875rem/1.5 var(--sans); }
   header {
-    display:flex; justify-content:space-between; align-items:center; padding:16px 20px;
+    display:grid; gap:14px; padding:18px 20px;
     border-bottom:1px solid var(--surface-border);
     background: rgba(255,255,255,0.92);
     box-shadow: 0 2px 12px rgba(43,45,66,0.04);
   }
-  h1 { margin:0; font-family:var(--sans); font-size:16px; font-weight:800; color:var(--dark); }
+  .header-top { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
+  .header-copy { max-width: 62ch; }
+  .header-kicker {
+    margin-bottom: 6px;
+    color: var(--accent);
+    font: 800 0.6875rem/1 var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  h1 { margin:0; font-family:var(--sans); font-size:1.05rem; font-weight:800; color:var(--dark); }
+  .header-subtitle {
+    margin-top: 6px;
+    color: var(--ink-soft);
+    font-size: 0.875rem;
+    line-height: 1.55;
+  }
+  .toolbar {
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  .toolbar-note {
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--surface-border);
+    background: rgba(255,255,255,0.72);
+    color: var(--muted);
+    font-size: 0.78rem;
+    line-height: 1.5;
+  }
   .wrap { padding: 20px; display:grid; gap:20px; max-width:1200px; margin:0 auto; }
   .grid { display:grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap:12px; }
   .card, .section {
-    background: rgba(255,255,255,0.92);
+    background: var(--surface-strong);
     border:1px solid var(--surface-border);
     border-radius:16px;
     box-shadow: 0 8px 24px rgba(43,45,66,0.06);
   }
   .card { padding:14px; }
-  .label { font-family:var(--mono); color: var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; }
-  .value { margin-top:6px; font-family:var(--mono); font-size:22px; font-weight:800; color:var(--dark); }
+  .card.priority {
+    border-color: rgba(239, 35, 60, 0.18);
+    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(239,35,60,0.04));
+  }
+  .label { font-family:var(--mono); color: var(--muted); font-size:0.6875rem; text-transform:uppercase; letter-spacing:.08em; font-weight:700; }
+  .value { margin-top:6px; font-family:var(--sans); font-size:1.375rem; font-weight:800; color:var(--dark); font-variant-numeric:tabular-nums; }
+  .card-detail {
+    margin-top: 6px;
+    color: var(--ink-soft);
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
   .actions { display:flex; gap:10px; flex-wrap:wrap; }
   button {
     background: var(--accent); color:white; border:0; padding:10px 14px; border-radius:10px;
-    cursor:pointer; font-family:var(--mono); font-size:13px; font-weight:700;
+    cursor:pointer; font-family:var(--mono); font-size:0.8125rem; font-weight:700;
     transition: all 0.2s;
+    min-height: 42px;
   }
   button:hover { opacity:0.85; transform:translateY(-1px); }
   button.secondary {
@@ -54,78 +110,153 @@
   button.secondary:hover { border-color:var(--muted); }
   .section { overflow:hidden; }
   .section h2 {
-    margin:0; padding:14px 16px; font-family:var(--sans); font-size:14px; font-weight:800;
+    margin:0; padding:14px 16px; font-family:var(--sans); font-size:0.875rem; font-weight:800;
     border-bottom:1px solid var(--surface-border); color:var(--dark);
   }
   .section h3 {
-    margin: 0 0 10px; font-family:var(--mono); font-size: 12px; color: var(--accent);
+    margin: 0 0 10px; font-family:var(--mono); font-size: 0.75rem; color: var(--accent);
     text-transform: uppercase; letter-spacing: .08em; font-weight:700;
   }
   .table-scroll { max-height: 360px; overflow-y: auto; }
   table { width:100%; border-collapse:collapse; }
   th, td {
     padding:10px 12px; border-bottom:1px solid var(--surface-border);
-    text-align:left; vertical-align:top; font-size:12px;
+    text-align:left; vertical-align:top; font-size:0.8125rem;
   }
-  th { color: var(--muted); font-weight:700; background:rgba(237,242,244,0.5); }
-  td { color: var(--ink-soft); }
+  th { font-family:var(--mono); color: var(--muted); font-weight:700; letter-spacing: .04em; background:rgba(237,242,244,0.5); }
+  td { font-family:var(--sans); color: var(--ink-soft); }
   .content { padding: 12px 16px; }
-  .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600; }
+  .section-intro {
+    margin-bottom: 14px;
+    color: var(--ink-soft);
+    font-size: 0.8125rem;
+    line-height: 1.55;
+  }
+  .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:0.6875rem; font-weight:600; font-family:var(--mono); }
   .good { background: rgba(42,157,92,.1); color: var(--good); }
   .warn { background: rgba(212,160,23,.1); color: var(--warn); }
   .bad { background: rgba(214,51,62,.1); color: var(--bad); }
   .bars { display:grid; gap:8px; }
-  .bar-row { display:grid; grid-template-columns: 180px 1fr 56px; gap:10px; align-items:center; font-size:12px; }
+  .bar-row { display:grid; grid-template-columns: 180px 1fr 56px; gap:10px; align-items:center; font-size:0.8125rem; font-family:var(--mono); }
   .bar-label { color: var(--dark); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .bar-track { width:100%; height:10px; background: var(--surface); border:1px solid var(--surface-border); border-radius:999px; overflow:hidden; }
-  .bar-fill { height:100%; background: linear-gradient(90deg, var(--accent), #ff6b7a); border-radius:999px; }
-  .metric-grid { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:12px; margin-bottom:14px; }
-  .mini-card {
-    background: var(--surface); border:1px solid var(--surface-border);
-    border-radius:12px; padding:12px;
+  .bar-fill { height:100%; background: var(--accent); border-radius:999px; opacity:0.85; }
+  .table-hint {
+    padding: 0 16px 12px;
+    color: var(--muted);
+    font-size: 0.78rem;
   }
-  .mini-card .value { font-size:18px; margin-top:4px; }
+  details summary { list-style: none; }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::before { content: '▸ '; }
+  details[open] summary::before { content: '▾ '; }
+  .disclosure-summary {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--muted);
+    cursor: pointer;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .disclosure-summary.large {
+    font-size: 0.8125rem;
+  }
   .split { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
   pre {
     white-space:pre-wrap; word-break:break-word;
     background: var(--surface); padding:12px; border-radius:12px;
     border:1px solid var(--surface-border); color: var(--ink-soft); margin:0;
   }
-  @media (max-width: 1000px) { .grid, .metric-grid, .split { grid-template-columns: repeat(2, minmax(0,1fr)); } }
-  @media (max-width: 700px) { .split, .grid, .metric-grid { grid-template-columns: 1fr; } .bar-row { grid-template-columns: 120px 1fr 48px; } }
+  /* Skeleton loading */
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .skeleton {
+    background: linear-gradient(90deg, var(--surface) 25%, rgba(255,255,255,0.6) 50%, var(--surface) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 6px;
+    color: transparent !important;
+  }
+  .skeleton * { visibility: hidden; }
+  /* Error banner */
+  .error-banner {
+    background: rgba(214,51,62,0.06);
+    border: 1px solid rgba(214,51,62,0.2);
+    border-radius: 12px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+    color: var(--bad);
+  }
+  .error-banner button {
+    background: var(--bad);
+    font-size: 0.75rem;
+    padding: 6px 12px;
+    flex-shrink: 0;
+  }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+  @media (max-width: 1000px) {
+    .header-top { flex-direction: column; }
+    .grid, .split { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  }
+  @media (max-width: 700px) {
+    header { padding: 16px; }
+    .wrap { padding: 16px; gap: 16px; }
+    .toolbar { display:grid; grid-template-columns: 1fr; }
+    .toolbar button { width: 100%; }
+    .split, .grid { grid-template-columns: 1fr; }
+    .bar-row { grid-template-columns: minmax(0, 96px) 1fr 40px; gap: 8px; }
+    .table-scroll { max-height: none; }
+    th, td { padding: 10px 8px; }
+  }
 </style>
 </head>
 <body>
   <header>
-    <h1>SUMO Admin</h1>
-    <div class="actions">
-      <button onclick="downloadCorrections()">Correction Export</button>
-      <button class="secondary" onclick="downloadReport()">Evaluation Report</button>
-      <button class="secondary" onclick="downloadLlmReport()">LLM Eval Report</button>
-      <button class="secondary" onclick="refreshAll()">Refresh</button>
+    <div class="header-top">
+      <div class="header-copy">
+        <div class="header-kicker">Admin Overview</div>
+        <h1>SUMO Admin Dashboard</h1>
+        <p class="header-subtitle">Review correction patterns, recent runs, and retraining signals from the live scenario workflow. The top row is the fastest read on current quality.</p>
+      </div>
+      <div class="actions toolbar">
+        <button class="secondary" onclick="refreshAll()">Refresh data</button>
+        <button class="secondary" onclick="downloadCorrections()">Export corrections</button>
+        <button class="secondary" onclick="downloadReport()">Download evaluation report</button>
+        <button class="secondary" onclick="downloadLlmReport()">Download LLM evaluation</button>
+      </div>
     </div>
+    <div class="toolbar-note">Start with correction rate and mixed fail rate, then drill into the field and geometry breakdowns below.</div>
   </header>
 
-  <div class="wrap">
+  <main class="wrap">
+    <div id="error-banner" class="error-banner" style="display:none;" role="alert">
+      <span id="error-msg">Failed to load data.</span>
+      <button onclick="refreshAll()">Retry</button>
+    </div>
     <div class="grid">
-      <div class="card"><div class="label">Simulations</div><div class="value" id="sim-total">-</div></div>
-      <div class="card"><div class="label">Correction Rate</div><div class="value" id="llm-correction-rate-top">-</div></div>
-      <div class="card"><div class="label">Parameter Corr.</div><div class="value" id="llm-parameter-corrections-top">-</div></div>
-      <div class="card"><div class="label">Geometry Corr.</div><div class="value" id="llm-geometry-corrections-top">-</div></div>
-      <div class="card"><div class="label">Mixed Fail Rate</div><div class="value" id="llm-mixed-fail-rate-top">-</div></div>
+      <div class="card priority"><div class="label">Correction Rate</div><div class="value" id="llm-correction-rate-top">-</div><div class="card-detail">Share of reviewed runs that needed a trainable correction.</div></div>
+      <div class="card priority"><div class="label">Mixed Fail Rate</div><div class="value" id="llm-mixed-fail-rate-top">-</div><div class="card-detail">Runs that failed across both parameter and geometry dimensions.</div></div>
+      <div class="card"><div class="label">Simulations</div><div class="value" id="sim-total">-</div><div class="card-detail">Total scenario runs captured in the current dataset.</div></div>
+      <div class="card"><div class="label">Parameter Corr.</div><div class="value" id="llm-parameter-corrections-top">-</div><div class="card-detail">Trainable parameter corrections logged so far.</div></div>
+      <div class="card"><div class="label">Geometry Corr.</div><div class="value" id="llm-geometry-corrections-top">-</div><div class="card-detail">Geometry-level fixes captured from review sessions.</div></div>
     </div>
 
     <div class="section">
       <h2>LLM Correction Evaluation</h2>
       <div class="content">
-        <div style="margin-bottom:12px; color:var(--muted); font-size:12px; font-family:var(--sans);">
-          Based on correction logs only: shows which parameters are frequently incorrect and where geometry corrections are concentrated.
-        </div>
-        <div class="metric-grid">
-          <div class="mini-card"><div class="label">Correction Rate</div><div class="value" id="llm-correction-rate">-</div></div>
-          <div class="mini-card"><div class="label">Parameter Corrections</div><div class="value" id="llm-parameter-corrections">-</div></div>
-          <div class="mini-card"><div class="label">Geometry Corrections</div><div class="value" id="llm-geometry-corrections">-</div></div>
-        </div>
+        <p class="section-intro">
+          Start here when you want to understand where the model is still weak. The charts below show which fields fail most often and which geometry changes cluster together.
+        </p>
         <div class="split">
           <div>
             <h3>Field Error Counts</h3>
@@ -136,25 +267,27 @@
             <div class="bars" id="geometry-bars"></div>
           </div>
         </div>
-        <div style="margin-top:16px;">
-          <h3>Average Parameter Delta</h3>
-          <pre id="param-delta-json">loading...</pre>
-        </div>
+        <details style="margin-top:16px;">
+          <summary class="disclosure-summary">View average parameter delta (raw JSON)</summary>
+          <pre id="param-delta-json" style="margin-top:8px;">loading...</pre>
+        </details>
       </div>
     </div>
 
     <div class="section">
       <h2>System Summary</h2>
       <div class="content">
-        <div style="margin-bottom:12px; color:var(--muted); font-size:12px; font-family:var(--sans);">
-          Supplementary metrics such as SUMO fidelity. The LLM Correction Evaluation above is the more important operational metric.
-        </div>
-        <pre id="summary-json">loading...</pre>
+        <p class="section-intro">Secondary operational context such as grade distribution and overall simulation fidelity.</p>
+        <details>
+          <summary class="disclosure-summary large">Open supplementary metrics</summary>
+          <pre id="summary-json" style="margin-top:8px;">loading...</pre>
+        </details>
       </div>
     </div>
 
     <div class="section">
       <h2>Recent Simulations</h2>
+      <div class="table-hint">Use this table to inspect the latest prompts and compare their resulting grades.</div>
       <div class="table-scroll">
         <table>
           <thead>
@@ -167,6 +300,7 @@
 
     <div class="section">
       <h2>Recent Modifications</h2>
+      <div class="table-hint">Review how users corrected or tuned outputs and whether those edits are reusable for retraining.</div>
       <div class="table-scroll">
         <table>
           <thead>
@@ -176,7 +310,7 @@
         </table>
       </div>
     </div>
-  </div>
+  </main>
 
 <script>
 async function getJson(url) {
@@ -215,9 +349,6 @@ function renderBars(containerId, data) {
 
 async function loadLlmEval() {
   const data = await getJson('/api/admin/llm-eval');
-  document.getElementById('llm-correction-rate').textContent = `${data.overview.correction_rate_pct}%`;
-  document.getElementById('llm-parameter-corrections').textContent = data.overview.parameter_corrections;
-  document.getElementById('llm-geometry-corrections').textContent = data.overview.geometry_corrections;
   document.getElementById('llm-correction-rate-top').textContent = `${data.overview.correction_rate_pct}%`;
   document.getElementById('llm-parameter-corrections-top').textContent = data.overview.parameter_corrections;
   document.getElementById('llm-geometry-corrections-top').textContent = data.overview.geometry_corrections;
@@ -271,13 +402,30 @@ function downloadLlmReport() {
   window.location.href = '/api/admin/report/llm-evaluation/download';
 }
 
-async function refreshAll() {
-  await Promise.all([loadSummary(), loadLlmEval(), loadSimulations(), loadModifications()]);
+function showError(msg) {
+  const banner = document.getElementById('error-banner');
+  document.getElementById('error-msg').textContent = msg;
+  banner.style.display = 'flex';
 }
 
-refreshAll().catch(err => {
-  document.getElementById('summary-json').textContent = String(err);
-});
+function hideError() {
+  document.getElementById('error-banner').style.display = 'none';
+}
+
+async function refreshAll() {
+  hideError();
+  // Add skeleton states
+  document.querySelectorAll('.card').forEach(c => c.classList.add('skeleton'));
+  try {
+    await Promise.all([loadSummary(), loadLlmEval(), loadSimulations(), loadModifications()]);
+  } catch (err) {
+    showError(`Failed to load data: ${err.message || err}`);
+  } finally {
+    document.querySelectorAll('.card').forEach(c => c.classList.remove('skeleton'));
+  }
+}
+
+refreshAll();
 </script>
 </body>
 </html>

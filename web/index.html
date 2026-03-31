@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SUMO Traffic Simulation Agent</title>
+<link rel="icon" href="/assets/ssw-favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <style>
@@ -12,9 +14,12 @@
     --muted: #8D99AE;
     --surface: #EDF2F4;
     --accent: #EF233C;
+    --accent-soft: rgba(239, 35, 60, 0.08);
     --surface-border: rgba(141, 153, 174, 0.25);
     --ink-soft: rgba(43, 45, 66, 0.72);
-    --mono: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
+    --surface-strong: rgba(255, 255, 255, 0.96);
+    --panel-shadow: 0 16px 40px rgba(43, 45, 66, 0.08);
+    --mono: 'SF Mono', 'Fira Code', 'Fira Mono', 'Consolas', monospace;
     --sans: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     --green: #2ecc71;
     --yellow: #f39c12;
@@ -27,9 +32,21 @@
     font-family: var(--sans);
     background: var(--surface);
     color: var(--dark);
-    height: 100vh;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 
   /* Header */
@@ -58,7 +75,8 @@
     display: flex;
     gap: 16px;
     font-family: var(--mono);
-    font-size: 11px;
+    font-size: 0.6875rem;
+    font-weight: 600;
     color: var(--muted);
   }
 
@@ -124,7 +142,7 @@
 
   .msg-label {
     font-family: var(--mono);
-    font-size: 10px;
+    font-size: 0.6875rem;
     color: var(--muted);
     margin-bottom: 4px;
     text-transform: uppercase;
@@ -135,11 +153,11 @@
   .msg-body {
     padding: 10px 14px;
     border-radius: 12px;
-    font-size: 13px;
-    line-height: 1.6;
+    font-size: 0.875rem;
+    line-height: 1.65;
     white-space: pre-wrap;
     word-break: break-word;
-    font-family: var(--mono);
+    font-family: var(--sans);
     font-weight: 500;
   }
 
@@ -160,17 +178,19 @@
     background: transparent;
     border: 1px solid var(--surface-border);
     color: var(--muted);
-    font-size: 11px;
+    font-size: 0.8125rem;
     text-align: center;
     max-width: 100%;
+    font-family: var(--sans);
   }
 
   .message.tool .msg-body {
     background: rgba(255, 255, 255, 0.6);
     border-left: 3px solid var(--accent);
-    font-size: 11px;
+    font-size: 0.6875rem;
     color: var(--muted);
     padding: 8px 12px;
+    font-family: var(--mono);
   }
 
   .tool-name {
@@ -198,8 +218,8 @@
     background: var(--surface);
     border: 1px solid var(--surface-border);
     color: var(--dark);
-    font-family: var(--mono);
-    font-size: 13px;
+    font-family: var(--sans);
+    font-size: 0.875rem;
     padding: 10px 14px;
     border-radius: 10px;
     outline: none;
@@ -216,14 +236,15 @@
     background: var(--accent);
     color: #fff;
     border: none;
-    font-family: var(--mono);
-    font-size: 12px;
+    font-family: var(--sans);
+    font-size: 0.8125rem;
     font-weight: 700;
     padding: 10px 20px;
     border-radius: 10px;
     cursor: pointer;
     transition: all 0.2s;
     white-space: nowrap;
+    min-height: 44px;
   }
 
   .btn:hover { opacity: 0.85; transform: translateY(-1px); }
@@ -239,10 +260,112 @@
   .btn-secondary:hover { border-color: var(--muted); color: var(--dark); }
 
   .input-hint {
-    font-size: 10px;
+    font-size: 0.75rem;
     color: var(--muted);
     margin-top: 6px;
-    font-family: var(--mono);
+    font-family: var(--sans);
+  }
+
+  .status-note,
+  .mode-banner,
+  .input-lock-banner {
+    margin-top: 8px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    font-family: var(--sans);
+    font-size: 0.75rem;
+    line-height: 1.55;
+  }
+
+  .status-note {
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid var(--surface-border);
+    color: var(--ink-soft);
+  }
+
+  .mode-banner {
+    background: var(--accent-soft);
+    border: 1px solid rgba(239, 35, 60, 0.16);
+    color: var(--accent);
+  }
+
+  .input-lock-banner {
+    background: rgba(243, 156, 18, 0.1);
+    border: 1px solid rgba(243, 156, 18, 0.24);
+    color: #9b6200;
+  }
+
+  .messages-inner {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .welcome-card {
+    margin-bottom: 18px;
+    padding: 22px;
+    border-radius: 20px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.84));
+    border: 1px solid var(--surface-border);
+    box-shadow: var(--panel-shadow);
+  }
+
+  .welcome-eyebrow {
+    margin-bottom: 10px;
+    color: var(--accent);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .welcome-title {
+    max-width: 12ch;
+    margin-bottom: 10px;
+    font-size: clamp(1.7rem, 4vw, 2.5rem);
+    line-height: 0.98;
+    font-weight: 900;
+    letter-spacing: -0.05em;
+  }
+
+  .welcome-copy {
+    max-width: 60ch;
+    margin-bottom: 16px;
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+    line-height: 1.65;
+  }
+
+  .welcome-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .welcome-panel {
+    padding: 14px;
+    border-radius: 16px;
+    background: rgba(237, 242, 244, 0.78);
+    border: 1px solid rgba(141, 153, 174, 0.2);
+  }
+
+  .welcome-panel strong {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--dark);
+    font-size: 0.82rem;
+  }
+
+  .welcome-panel span {
+    color: var(--ink-soft);
+    font-size: 0.8rem;
+    line-height: 1.55;
+  }
+
+  .prompt-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
   }
 
   /* Loading spinner */
@@ -267,105 +390,412 @@
     50% { opacity: 1; }
   }
 
+  /* Example prompt chips */
+  .example-chip {
+    background: rgba(255,255,255,0.92);
+    border: 1px solid var(--surface-border);
+    border-radius: 999px;
+    padding: 10px 14px;
+    min-height: 42px;
+    font-family: var(--sans);
+    font-size: 0.8125rem;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s, transform 0.2s;
+  }
+  .example-chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    transform: translateY(-1px);
+  }
+
+  .setup-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background:
+      radial-gradient(circle at top left, rgba(239, 35, 60, 0.08), transparent 30%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(237, 242, 244, 0.96));
+  }
+
+  .setup-panel {
+    width: min(100%, 560px);
+    padding: clamp(24px, 4vw, 36px);
+    border-radius: 24px;
+    border: 1px solid var(--surface-border);
+    background: var(--surface-strong);
+    box-shadow: 0 24px 60px rgba(43, 45, 66, 0.12);
+  }
+
+  .setup-title {
+    margin-bottom: 8px;
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: 900;
+    letter-spacing: -0.04em;
+  }
+
+  .setup-copy {
+    margin-bottom: 14px;
+    max-width: 48ch;
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+
+  .setup-top-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .setup-ghost-btn {
+    min-height: 44px;
+    padding: 0 16px;
+    border-radius: 999px;
+    border: 1px solid var(--surface-border);
+    background: rgba(255, 255, 255, 0.84);
+    color: var(--dark);
+    font: 700 0.8125rem/1 var(--mono);
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s, background 0.2s;
+  }
+
+  .setup-ghost-btn:hover {
+    transform: translateY(-1px);
+    border-color: rgba(239, 35, 60, 0.28);
+  }
+
+  .setup-ghost-btn[aria-expanded="true"] {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-color: rgba(239, 35, 60, 0.22);
+  }
+
+  .setup-status {
+    margin-bottom: 8px;
+    color: var(--ink-soft);
+    font-size: 0.8125rem;
+    line-height: 1.55;
+  }
+
+  .setup-section-label {
+    margin: 24px 0 12px;
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-weight: 800;
+    font-family: var(--mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .setup-options,
+  .setup-grid {
+    display: grid;
+    gap: 10px;
+  }
+
+  .setup-option {
+    width: 100%;
+    padding: 16px 18px;
+    border: 1px solid var(--surface-border);
+    border-radius: 16px;
+    background: rgba(255,255,255,0.92);
+    text-align: left;
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  }
+
+  .setup-option:hover {
+    transform: translateY(-1px);
+    border-color: rgba(239, 35, 60, 0.28);
+    box-shadow: 0 10px 24px rgba(43, 45, 66, 0.06);
+  }
+
+  .setup-option.is-active {
+    border-width: 2px;
+    border-color: var(--accent);
+    background: rgba(239,35,60,0.05);
+  }
+
+  .setup-option:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .setup-option-title {
+    color: var(--dark);
+    font-size: 0.95rem;
+    font-weight: 800;
+  }
+
+  .setup-option-copy,
+  .setup-subcopy {
+    margin-top: 4px;
+    color: var(--ink-soft);
+    font-size: 0.8125rem;
+    line-height: 1.55;
+  }
+
+  .setup-subpanel {
+    margin-top: 12px;
+    padding: 16px;
+    border-radius: 16px;
+    border: 1px solid var(--surface-border);
+    background: rgba(255, 255, 255, 0.74);
+  }
+
+  .setup-field {
+    margin-top: 10px;
+  }
+
+  .setup-field label {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    font-family: var(--mono);
+    letter-spacing: 0.04em;
+  }
+
+  .setup-input,
+  .setup-select {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--surface-border);
+    background: var(--surface);
+    color: var(--dark);
+    font: 0.875rem/1.3 var(--sans);
+  }
+
+  .setup-input.mono,
+  .cli-option {
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+  }
+
+  .setup-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .setup-note {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--surface-border);
+    color: var(--muted);
+    font-size: 0.75rem;
+    line-height: 1.7;
+  }
+
+  .setup-note strong {
+    color: var(--dark);
+  }
+
+  .cli-option {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--surface-border);
+    background: rgba(255,255,255,0.92);
+    color: var(--dark);
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .action-card {
+    width: 100%;
+    padding: 14px;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid var(--surface-border);
+    box-shadow: 0 10px 30px rgba(43, 45, 66, 0.05);
+  }
+
+  .action-card-copy {
+    margin-bottom: 10px;
+    color: var(--ink-soft);
+    font-size: 0.8125rem;
+    line-height: 1.55;
+  }
+
+  .action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .action-btn {
+    min-height: 42px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--surface-border);
+    background: rgba(255,255,255,0.92);
+    color: var(--dark);
+    font: 700 0.8125rem/1 var(--mono);
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s, background 0.2s, color 0.2s;
+  }
+
+  .action-btn:hover,
+  .cli-option:hover {
+    transform: translateY(-1px);
+    border-color: rgba(239, 35, 60, 0.28);
+  }
+
+  .action-btn-primary {
+    border-color: transparent;
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .action-btn-accent {
+    background: rgba(239,35,60,0.05);
+    color: var(--accent);
+    border-color: rgba(239,35,60,0.22);
+  }
+
+  .network-shell {
+    padding: 0;
+    background: #1a1a2e;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  /* Focus & accessibility */
+  .btn:focus-visible,
+  .setup-ghost-btn:focus-visible,
+  .setup-option:focus-visible,
+  .setup-input:focus-visible,
+  .setup-select:focus-visible,
+  .action-btn:focus-visible,
+  .example-chip:focus-visible,
+  .input-row input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+
   /* Responsive */
   @media (max-width: 640px) {
     .chat-container { max-width: 100%; }
-    header { padding: 10px 16px; }
+    header {
+      padding: 12px 16px;
+      align-items: flex-start;
+      gap: 12px;
+      flex-direction: column;
+    }
+    .status-bar {
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      font-size: 0.75rem;
+    }
+    .message { max-width: 100%; }
     .messages { padding: 16px; }
     .input-area { padding: 12px 16px; }
+    .input-row { flex-direction: column; align-items: stretch; }
+    .welcome-grid,
+    .setup-top-actions,
+    .setup-actions,
+    .action-row {
+      grid-template-columns: 1fr;
+      flex-direction: column;
+    }
+    .setup-screen { padding: 12px; align-items: stretch; }
+    .setup-panel { width: 100%; border-radius: 18px; }
+    .example-chip { width: 100%; justify-content: flex-start; }
   }
 </style>
 </head>
 <body>
 
 <!-- ========== Setup Screen ========== -->
-<div id="setup-screen" style="
-  position:fixed; inset:0; z-index:100;
-  background:var(--surface);
-  display:none; align-items:center; justify-content:center;
-">
-  <div style="width:440px; padding:32px;">
-    <h1 style="font-family:var(--sans); font-size:18px; font-weight:900; margin-bottom:4px; letter-spacing:-0.03em;">
-      <span style="color:var(--accent);">SUMO</span> Traffic Simulation Agent
-    </h1>
-    <p style="font-size:12px; color:var(--muted); margin-bottom:8px; font-family:var(--sans);">Generate traffic simulations using natural language.</p>
-    <div style="font-family:var(--mono); font-size:10px; color:var(--green); margin-bottom:6px;" id="setup-ft-status"></div>
-    <div style="font-family:var(--mono); font-size:10px; color:var(--muted); margin-bottom:24px;" id="setup-base-status"></div>
-
-    <!-- Base LLM selection -->
-    <div style="font-family:var(--mono); font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:12px; font-weight:700;">Select Base LLM</div>
-
-    <div class="setup-option" onclick="selectBaseLLM('default')" id="opt-default" style="
-      padding:14px 16px; border:2px solid var(--accent); border-radius:12px;
-      margin-bottom:8px; cursor:pointer; background:rgba(239,35,60,0.04);
-    ">
-      <div style="font-family:var(--sans); font-size:13px; font-weight:700; color:var(--dark);">Default (Server Gemini API)</div>
-      <div style="font-family:var(--sans); font-size:11px; color:var(--muted); margin-top:4px;" id="default-base-desc">Use the shared server Gemini setup as the Base LLM for geometry generation and modification</div>
+<div id="setup-screen" class="setup-screen" role="dialog" aria-modal="true" aria-labelledby="setup-title" aria-describedby="setup-copy">
+  <div class="setup-panel">
+    <h1 id="setup-title" class="setup-title"><span style="color:var(--accent);">SUMO</span> Traffic Simulation Agent</h1>
+    <p id="setup-copy" class="setup-copy">Describe a traffic situation and get a runnable SUMO scenario. Start with the default setup now, or open advanced model options if you want to use your own CLI or API key.</p>
+    <div class="setup-top-actions">
+      <button type="button" class="btn" onclick="startApp('default')">Start with Default Setup</button>
+      <button type="button" class="setup-ghost-btn" id="setup-advanced-toggle" aria-expanded="false" aria-controls="setup-advanced" onclick="toggleAdvancedSetup()">Advanced Model Options</button>
     </div>
+    <div class="setup-status" id="setup-ft-status"></div>
+    <div class="setup-status" id="setup-base-status"></div>
 
-    <div class="setup-option" onclick="selectBaseLLM('cli')" id="opt-cli" style="
-      padding:14px 16px; border:1px solid var(--surface-border); border-radius:12px;
-      margin-bottom:8px; cursor:pointer; transition: border-color 0.2s;
-      background: rgba(255,255,255,0.92);
-    ">
-      <div style="font-family:var(--sans); font-size:13px; font-weight:700; color:var(--dark);">Local CLI</div>
-      <div style="font-family:var(--sans); font-size:11px; color:var(--muted); margin-top:4px;" id="cli-desc"></div>
-    </div>
+    <div id="setup-advanced" style="display:none;">
+      <div class="setup-section-label">Choose Base LLM</div>
+      <div class="setup-options">
+        <button type="button" class="setup-option is-active" onclick="selectBaseLLM('default')" id="opt-default">
+          <div class="setup-option-title">Default Server Model</div>
+          <div class="setup-option-copy" id="default-base-desc">Use the shared server Gemini setup as the Base LLM for geometry generation and modification.</div>
+        </button>
 
-    <div class="setup-option" onclick="selectBaseLLM('custom-api')" id="opt-custom" style="
-      padding:14px 16px; border:1px solid var(--surface-border); border-radius:12px;
-      cursor:pointer; transition: border-color 0.2s;
-      background: rgba(255,255,255,0.92);
-    ">
-      <div style="font-family:var(--sans); font-size:13px; font-weight:700; color:var(--dark);">Use Custom API Key</div>
-      <div style="font-family:var(--sans); font-size:11px; color:var(--muted); margin-top:4px;">Use your own Gemini, Claude, or OpenAI key for the Base LLM</div>
-    </div>
+        <button type="button" class="setup-option" onclick="selectBaseLLM('cli')" id="opt-cli">
+          <div class="setup-option-title">Local CLI</div>
+          <div class="setup-option-copy" id="cli-desc"></div>
+        </button>
 
-    <!-- CLI selection -->
-    <div id="setup-cli-select" style="display:none; margin-top:12px;">
-      <div id="cli-options"></div>
-    </div>
-
-    <!-- API key input -->
-    <div id="setup-api-input" style="display:none; margin-top:12px;">
-      <div id="setup-api-key-step">
-        <div style="font-family:var(--mono); font-size:10px; color:var(--muted); margin-bottom:8px;">Enter one provider key. The model selector appears in the next step for that provider.</div>
-        <div style="margin-bottom:8px;">
-          <label style="font-family:var(--mono); font-size:10px; color:var(--muted); font-weight:700;">Gemini</label>
-          <input type="password" id="setup-key-gemini" placeholder="AIzaSy..." style="width:100%; margin-top:4px; background:var(--surface); border:1px solid var(--surface-border); color:var(--dark); font-family:var(--mono); font-size:12px; padding:8px 10px; border-radius:8px;">
-        </div>
-        <div style="margin-bottom:8px;">
-          <label style="font-family:var(--mono); font-size:10px; color:var(--muted); font-weight:700;">Claude</label>
-          <input type="password" id="setup-key-claude" placeholder="sk-ant-..." style="width:100%; margin-top:4px; background:var(--surface); border:1px solid var(--surface-border); color:var(--dark); font-family:var(--mono); font-size:12px; padding:8px 10px; border-radius:8px;">
-        </div>
-        <div style="margin-bottom:12px;">
-          <label style="font-family:var(--mono); font-size:10px; color:var(--muted); font-weight:700;">OpenAI</label>
-          <input type="password" id="setup-key-gpt" placeholder="sk-..." style="width:100%; margin-top:4px; background:var(--surface); border:1px solid var(--surface-border); color:var(--dark); font-family:var(--mono); font-size:12px; padding:8px 10px; border-radius:8px;">
-        </div>
-        <button class="btn" style="width:100%;" onclick="continueCustomApiSelection()">Continue to Model Selection</button>
+        <button type="button" class="setup-option" onclick="selectBaseLLM('custom-api')" id="opt-custom">
+          <div class="setup-option-title">Your Own API Key</div>
+          <div class="setup-option-copy">Use your own Gemini, Claude, or OpenAI key for geometry generation.</div>
+        </button>
       </div>
 
-      <div id="setup-api-model-step" style="display:none;">
-        <div style="font-family:var(--mono); font-size:10px; color:var(--muted); margin-bottom:8px;">Select the Base LLM model for the provider you entered.</div>
-        <div style="margin-bottom:8px;">
-          <label style="font-family:var(--mono); font-size:10px; color:var(--muted); font-weight:700;">Selected Provider</label>
-          <div id="setup-selected-provider" style="margin-top:4px; padding:8px 10px; background:var(--surface); border:1px solid var(--surface-border); color:var(--dark); font-family:var(--mono); font-size:12px; border-radius:8px;">-</div>
+      <div id="setup-cli-select" class="setup-subpanel" style="display:none;">
+        <div class="setup-subcopy">Multiple CLIs are available. Pick the local client you want to use for geometry reasoning.</div>
+        <div id="cli-options" class="setup-grid"></div>
+      </div>
+
+      <div id="setup-api-input" class="setup-subpanel" style="display:none;">
+        <div id="setup-api-key-step">
+          <div class="setup-subcopy">Enter one provider key. After that, choose a model from the same provider.</div>
+          <div class="setup-field">
+            <label for="setup-key-gemini">Gemini</label>
+            <input class="setup-input mono" type="password" id="setup-key-gemini" placeholder="AIzaSy...">
+          </div>
+          <div class="setup-field">
+            <label for="setup-key-claude">Claude</label>
+            <input class="setup-input mono" type="password" id="setup-key-claude" placeholder="sk-ant-...">
+          </div>
+          <div class="setup-field">
+            <label for="setup-key-gpt">OpenAI</label>
+            <input class="setup-input mono" type="password" id="setup-key-gpt" placeholder="sk-...">
+          </div>
+          <button class="btn" style="width:100%;" onclick="continueCustomApiSelection()">Continue to Model Selection</button>
         </div>
-        <div style="margin-bottom:12px;">
-          <label style="font-family:var(--mono); font-size:10px; color:var(--muted); font-weight:700;">Model</label>
-          <select id="setup-model-selected" style="width:100%; margin-top:4px; background:var(--surface); border:1px solid var(--surface-border); color:var(--dark); font-family:var(--mono); font-size:12px; padding:8px 10px; border-radius:8px;"></select>
-        </div>
-        <div style="display:flex; gap:8px;">
-          <button class="btn btn-secondary" style="flex:1;" onclick="backToCustomApiKeys()">Back</button>
-          <button class="btn" style="flex:1;" onclick="confirmCustomApi()">Connect</button>
+
+        <div id="setup-api-model-step" style="display:none;">
+          <div class="setup-subcopy">Select the Base LLM model for the provider you entered.</div>
+          <div class="setup-field">
+            <label for="setup-selected-provider">Selected Provider</label>
+            <div id="setup-selected-provider" class="setup-input" aria-live="polite">-</div>
+          </div>
+          <div class="setup-field">
+            <label for="setup-model-selected">Model</label>
+            <select id="setup-model-selected" class="setup-select"></select>
+          </div>
+          <div class="setup-actions">
+            <button class="btn btn-secondary" style="flex:1;" onclick="backToCustomApiKeys()">Back</button>
+            <button class="btn" style="flex:1;" onclick="confirmCustomApi()">Connect</button>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Bottom note -->
-    <div style="margin-top:16px; font-family:var(--sans); font-size:10px; color:var(--muted); line-height:1.6;">
-      <div><strong style="color:var(--dark);">Fine-Tuning LLM</strong> handles structured traffic parameter extraction.</div>
-      <div><strong style="color:var(--dark);">Base LLM</strong> handles road geometry generation and modification.</div>
+    <div class="setup-note">
+      <div><strong>Parameter model</strong> extracts traffic attributes from your prompt.</div>
+      <div><strong>Geometry model</strong> builds and edits the road layout.</div>
     </div>
   </div>
 </div>
@@ -380,53 +810,99 @@
   </div>
 </header>
 
-<div class="main">
+<main class="main">
   <div class="chat-container">
-    <div class="messages" id="messages">
-      <div class="message system">
-        <div class="msg-body">Traffic Simulation Agent ready. Describe your simulation in natural language.</div>
+    <div class="messages" id="messages" role="log" aria-live="polite" aria-relevant="additions text">
+      <div class="messages-inner" id="messages-inner">
+        <div class="welcome-card" id="welcome-card">
+          <div class="welcome-eyebrow">Scenario Generation</div>
+          <div class="welcome-title">Natural language to runnable traffic simulations</div>
+          <div class="welcome-copy">Describe a place, road pattern, or congestion condition. We will extract parameters, build geometry, run SUMO, and stream the results back into this workspace.</div>
+          <div class="welcome-grid">
+            <div class="welcome-panel">
+              <strong>1. Describe the scene</strong>
+              <span>Use natural language instead of XML or SUMO config files.</span>
+            </div>
+            <div class="welcome-panel">
+              <strong>2. Review the result</strong>
+              <span>See extracted parameters, tool activity, and a network preview.</span>
+            </div>
+            <div class="welcome-panel">
+              <strong>3. Refine quickly</strong>
+              <span>Switch into correction or tuning mode without leaving the chat.</span>
+            </div>
+          </div>
+          <div class="prompt-suggestions" id="example-prompts">
+            <button type="button" class="example-chip" onclick="useExample(this)">Morning congestion near Gangnam Station with frequent buses</button>
+            <button type="button" class="example-chip" onclick="useExample(this)">Create a single urban intersection with moderate evening traffic</button>
+            <button type="button" class="example-chip" onclick="useExample(this)">School-zone arterial with slow traffic and short blocks</button>
+          </div>
+        </div>
       </div>
     </div>
 
     <div class="input-area">
       <div class="input-row">
+        <label class="sr-only" for="input">Traffic simulation prompt</label>
         <input type="text" id="input" placeholder="Simulate rush hour traffic at Gangnam Station..."
                autocomplete="off" autofocus style="flex:1;">
         <button class="btn" id="send-btn" onclick="send()">Run</button>
       </div>
-      <div id="mode-banner" style="display:none; margin-top:8px; font-family:var(--mono); font-size:11px; color:var(--accent);"></div>
-      <div id="input-lock-banner" style="display:none; margin-top:8px; font-family:var(--mono); font-size:11px; color:var(--yellow);">
-        Simulation complete. Please select the next action from the buttons above.
+      <div id="mode-banner" class="mode-banner" style="display:none;"></div>
+      <div id="input-lock-banner" class="input-lock-banner" style="display:none;">
+        This run is complete. Choose what to do next before entering a new request.
       </div>
-      <div class="input-hint">
-        <span>Press Enter to send - "A moderately congested evening commute" - "Create a single intersection"</span>
+      <div class="status-note">
+        Press Enter to run. Try prompts like “A moderately congested evening commute” or “Create a single intersection near Gangnam Station.”
       </div>
       <div id="api-key-panel" style="display:none; margin-top:8px; padding:8px; background:rgba(255,255,255,0.92); border-radius:10px; border:1px solid var(--surface-border);">
-        <div style="font-family:var(--mono); font-size:10px; color:var(--muted); margin-bottom:6px;">Enter an API key to use the corresponding LLM agent mode.</div>
+        <div style="font-family:var(--sans); font-size:0.6875rem; color:var(--muted); margin-bottom:6px;">Enter an API key to use the corresponding LLM agent mode.</div>
         <div style="display:flex; gap:6px; margin-bottom:4px;">
+          <label class="sr-only" for="key-gemini">Gemini API key</label>
           <input type="password" id="key-gemini" placeholder="Gemini API Key" style="flex:1; background:var(--surface); border:1px solid var(--surface-border); color:var(--dark); font-family:var(--mono); font-size:11px; padding:5px 8px; border-radius:6px;">
           <button class="btn btn-secondary" style="padding:5px 10px; font-size:10px;" onclick="saveKey('gemini')">Save</button>
         </div>
         <div style="display:flex; gap:6px; margin-bottom:4px;">
+          <label class="sr-only" for="key-claude">Claude API key</label>
           <input type="password" id="key-claude" placeholder="Claude API Key" style="flex:1; background:var(--surface); border:1px solid var(--surface-border); color:var(--dark); font-family:var(--mono); font-size:11px; padding:5px 8px; border-radius:6px;">
           <button class="btn btn-secondary" style="padding:5px 10px; font-size:10px;" onclick="saveKey('claude')">Save</button>
         </div>
         <div style="display:flex; gap:6px;">
+          <label class="sr-only" for="key-gpt">OpenAI API key</label>
           <input type="password" id="key-gpt" placeholder="OpenAI API Key" style="flex:1; background:var(--surface); border:1px solid var(--surface-border); color:var(--dark); font-family:var(--mono); font-size:11px; padding:5px 8px; border-radius:6px;">
           <button class="btn btn-secondary" style="padding:5px 10px; font-size:10px;" onclick="saveKey('gpt')">Save</button>
         </div>
       </div>
     </div>
   </div>
-</div>
+</main>
 
 <script>
 const API = '';
-const messagesEl = document.getElementById('messages');
+const messagesEl = document.getElementById('messages-inner');
 const inputEl = document.getElementById('input');
 const sendBtn = document.getElementById('send-btn');
 let _isComposing = false;
 let _sending = false;
+
+function hideWelcomeCard() {
+  const card = document.getElementById('welcome-card');
+  if (card) card.remove();
+}
+
+function toggleAdvancedSetup() {
+  const panel = document.getElementById('setup-advanced');
+  const button = document.getElementById('setup-advanced-toggle');
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  button.setAttribute('aria-expanded', String(!isOpen));
+}
+
+function useExample(el) {
+  inputEl.value = el.textContent;
+  inputEl.focus();
+  send();
+}
 
 inputEl.addEventListener('keydown', e => {
   if (e.isComposing || _isComposing) return;
@@ -468,6 +944,14 @@ function providerDisplayName(provider) {
   return provider === 'gpt' ? 'OpenAI' : provider === 'gemini' ? 'Gemini' : provider === 'claude' ? 'Claude' : provider;
 }
 
+function setActiveSetupOption(mode) {
+  document.querySelectorAll('.setup-option').forEach(el => {
+    const isActive = el.id === `opt-${mode}`;
+    el.classList.toggle('is-active', isActive);
+    el.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+}
+
 function parseBaseLLMConfig(config) {
   if (!config || config === 'default') return {mode: 'default'};
   if (config.startsWith('cli:')) {
@@ -501,7 +985,7 @@ function describeBaseLLMConfig(config) {
 }
 
 function applySelectedBaseStatus(config) {
-  const ftLabel = _setupData.ft_ready ? 'ready' : 'fallback';
+  const ftLabel = _setupData.ft_ready ? 'ready' : 'using fallback rules';
   const parsed = parseBaseLLMConfig(config);
   let baseLabel = _setupData.base_model || _setupData.base_provider || 'off';
   if (parsed.mode === 'cli') {
@@ -509,7 +993,7 @@ function applySelectedBaseStatus(config) {
   } else if (parsed.mode === 'api') {
     baseLabel = parsed.model || providerDisplayName(parsed.provider);
   }
-  document.getElementById('llm-status').textContent = `Fine-Tuning LLM: ${ftLabel} / Base LLM: ${baseLabel}`;
+  document.getElementById('llm-status').textContent = `Parameter model: ${ftLabel} / Geometry model: ${baseLabel}`;
 }
 
 fetch('/api/status')
@@ -526,79 +1010,66 @@ fetch('/api/status')
     const ftEl = document.getElementById('setup-ft-status');
     const baseEl = document.getElementById('setup-base-status');
     if (data.ft_ready) {
-      ftEl.textContent = `✓ Fine-Tuning LLM: ${data.ft_name} · structured parameter extraction`;
+      ftEl.innerHTML = `<strong>Parameter model ready.</strong> ${data.ft_name} will extract structured traffic parameters from your prompt.`;
       ftEl.style.color = 'var(--green)';
     } else {
-      ftEl.textContent = '✗ Fine-Tuning LLM unavailable (using rule-based extraction fallback)';
+      ftEl.innerHTML = '<strong>Parameter model unavailable.</strong> The app will fall back to rule-based extraction for this session.';
       ftEl.style.color = 'var(--yellow)';
     }
     const rateLimit = data.base_shared_key
-      ? ` · shared limit ${data.base_rate_limit_max_requests}/${data.base_rate_limit_window_sec}s`
+      ? ` Shared limit: ${data.base_rate_limit_max_requests} requests every ${data.base_rate_limit_window_sec}s per IP.`
       : '';
-    baseEl.textContent = `${data.base_ready ? '✓' : '✗'} Base LLM: ${data.base_name}${rateLimit} · geometry generation and modification`;
+    baseEl.innerHTML = data.base_ready
+      ? `<strong>Geometry model ready.</strong> ${data.base_name} will handle road generation and edits.${rateLimit}`
+      : '<strong>Geometry model unavailable.</strong> Choose another source before starting.';
     baseEl.style.color = data.base_ready ? 'var(--muted)' : 'var(--yellow)';
     const defaultDesc = document.getElementById('default-base-desc');
     if (defaultDesc && data.base_model) {
-      defaultDesc.textContent = `Use the shared server ${providerDisplayName(data.base_provider)} setup (${data.base_model}) for geometry generation and modification`;
+      defaultDesc.textContent = `Use the shared ${providerDisplayName(data.base_provider)} setup (${data.base_model}) for geometry generation and modification.`;
     }
 
     const clis = data.available_cli || [];
     const cliDesc = document.getElementById('cli-desc');
     if (clis.length) {
-      cliDesc.textContent = clis.join(', ') + ' available';
+      cliDesc.textContent = `${clis.join(', ')} available on this machine.`;
     } else {
-      cliDesc.textContent = 'No CLI installed';
-      document.getElementById('opt-cli').style.opacity = '0.4';
-      document.getElementById('opt-cli').style.pointerEvents = 'none';
+      cliDesc.textContent = 'No local CLI is installed on this machine.';
+      document.getElementById('opt-cli').disabled = true;
     }
 
     document.getElementById('setup-screen').style.display = 'flex';
   })
   .catch((err) => {
     console.error('status init failed', err);
-    document.getElementById('setup-ft-status').textContent = '✗ Fine-Tuning LLM status check failed';
+    document.getElementById('setup-ft-status').innerHTML = '<strong>We could not verify the parameter model.</strong>';
     document.getElementById('setup-ft-status').style.color = 'var(--red)';
-    document.getElementById('setup-base-status').textContent = 'Unable to verify Fine-Tuning LLM / Base LLM status';
+    document.getElementById('setup-base-status').innerHTML = '<strong>We could not verify the geometry model yet.</strong> You can still review the available options below.';
     document.getElementById('setup-base-status').style.color = 'var(--yellow)';
-    document.getElementById('cli-desc').textContent = 'Unable to verify';
+    document.getElementById('cli-desc').textContent = 'Availability could not be verified.';
     document.getElementById('setup-screen').style.display = 'flex';
   });
 
 function selectBaseLLM(mode) {
   _baseLLMMode = mode;
-
-  document.querySelectorAll('.setup-option').forEach(el => {
-    el.style.borderColor = 'var(--surface-border)';
-    el.style.background = 'rgba(255,255,255,0.92)';
-  });
+  setActiveSetupOption(mode);
 
   document.getElementById('setup-cli-select').style.display = 'none';
   document.getElementById('setup-api-input').style.display = 'none';
 
   if (mode === 'default') {
-    document.getElementById('opt-default').style.borderColor = 'var(--accent)';
-    document.getElementById('opt-default').style.background = 'rgba(239,35,60,0.04)';
     startApp('default');
   } else if (mode === 'cli') {
-    document.getElementById('opt-cli').style.borderColor = 'var(--accent)';
-    document.getElementById('opt-cli').style.background = 'rgba(239,35,60,0.04)';
     const clis = _setupData.available_cli || [];
     if (clis.length === 1) {
       startApp('cli:' + clis[0]);
     } else if (clis.length > 1) {
       const optDiv = document.getElementById('cli-options');
       optDiv.innerHTML = clis.map(c => `
-        <div onclick="startApp('cli:${c}')" style="
-          padding:10px 14px; border:1px solid var(--surface-border); border-radius:10px;
-          margin-bottom:6px; cursor:pointer; font-family:var(--mono); font-size:12px;
-          background:rgba(255,255,255,0.92); color:var(--dark);
-        ">${c}</div>
+        <button type="button" class="cli-option" onclick="startApp('cli:${c}')">${c}</button>
       `).join('');
       document.getElementById('setup-cli-select').style.display = 'block';
     }
   } else if (mode === 'custom-api') {
-    document.getElementById('opt-custom').style.borderColor = 'var(--accent)';
-    document.getElementById('opt-custom').style.background = 'rgba(239,35,60,0.04)';
     backToCustomApiKeys();
     document.getElementById('setup-api-input').style.display = 'block';
   }
@@ -640,13 +1111,14 @@ function confirmCustomApi() {
 function startApp(baseLLMConfig) {
   _baseLLMMode = baseLLMConfig;
   document.getElementById('setup-screen').style.display = 'none';
+  hideWelcomeCard();
   const label = describeBaseLLMConfig(baseLLMConfig);
   applySelectedBaseStatus(baseLLMConfig);
-  addMessage('system', `Base LLM: ${label}`);
-  addMessage('system', `Fine-Tuning LLM: ${_setupData.ft_name || 'Rule-based fallback'} · structured parameter extraction`);
+  addMessage('system', `Geometry model: ${label}`);
+  addMessage('system', `Parameter model: ${_setupData.ft_name || 'Rule-based fallback'}`);
   if (baseLLMConfig === 'default' && _setupData.base_shared_key) {
     const sharedLabel = `${providerDisplayName(_setupData.base_provider)} ${_setupData.base_model || ''}`.trim();
-    addMessage('system', `Shared server ${sharedLabel} active (${_setupData.base_rate_limit_max_requests} requests / ${_setupData.base_rate_limit_window_sec}s per IP). Use your own API key for higher flexibility.`);
+    addMessage('system', `Using the shared ${sharedLabel} geometry model. If you need more flexibility, switch to your own API key from Advanced Model Options.`);
   }
   setModeBanner();
 }
@@ -656,34 +1128,17 @@ function updateStatus(data) {
   document.getElementById('dot-llm').className = 'dot ' + ((data.ft_ready || data.base_ready) ? 'green' : 'yellow');
   document.getElementById('dot-data').className = 'dot ' + (data.traffic_data ? 'green' : 'yellow');
   const baseLabel = data.base_model || data.base_provider || 'off';
-  document.getElementById('llm-status').textContent = `Fine-Tuning LLM: ${data.ft_ready ? 'ready' : 'fallback'} / Base LLM: ${baseLabel}`;
-
-  const select = document.getElementById('llm-select');
-  if (!select) return;
-
-  if (data.available_cli && data.available_cli.length) {
-    data.available_cli.forEach(cli => {
-      if (!select.querySelector(`option[value="${cli}"]`)) {
-        const opt = document.createElement('option');
-        opt.value = cli;
-        opt.textContent = cli + ' (CLI)';
-        select.appendChild(opt);
-      }
-    });
-  }
-
-  if (data.llm_provider && data.llm_mode && select.querySelector(`option[value="${data.llm_provider}"]`)) {
-    select.value = data.llm_provider;
-  }
+  document.getElementById('llm-status').textContent = `Parameter model: ${data.ft_ready ? 'ready' : 'fallback'} / Geometry model: ${baseLabel}`;
 }
 
 function addMessage(role, text) {
+  hideWelcomeCard();
   const div = document.createElement('div');
   div.className = `message ${role}`;
-  const label = role === 'user' ? 'You' : role === 'tool' ? 'Tool' : 'Agent';
+  const label = role === 'user' ? 'You' : role === 'tool' ? 'Tool' : role === 'system' ? 'Status' : 'Agent';
   div.innerHTML = `<div class="msg-label">${label}</div><div class="msg-body">${escapeHtml(text)}</div>`;
   messagesEl.appendChild(div);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
+  document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
   return div;
 }
 
@@ -693,7 +1148,7 @@ function addLoading() {
   div.id = 'loading';
   div.innerHTML = '<div class="msg-label">Agent</div><div class="msg-body"><div class="loading"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div></div>';
   messagesEl.appendChild(div);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
+  document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
 }
 
 function removeLoading() {
@@ -763,6 +1218,12 @@ async function send() {
         base_llm: _baseLLMMode || 'default',
       }),
     });
+    if (!response.ok) {
+      throw new Error(`Simulation request failed (${response.status})`);
+    }
+    if (!response.body) {
+      throw new Error('Streaming response was not available.');
+    }
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
@@ -846,11 +1307,11 @@ function addNetworkToChat(netData) {
   const svgId = 'net-d3-' + Date.now();
   div.innerHTML = `
     <div class="msg-label">Network</div>
-    <div class="msg-body" style="padding:0; background:#1a1a2e; border-radius:12px; overflow:hidden;">
+    <div class="msg-body network-shell">
       <div id="${svgId}" style="width:100%; height:400px; position:relative;"></div>
     </div>`;
   messagesEl.appendChild(div);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
+  document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
 
   requestAnimationFrame(() => renderD3Network(svgId, netData));
 }
@@ -1006,78 +1467,52 @@ function renderD3Network(containerId, netData) {
 let _modifyMode = false;
 let _modifySubmenuOpen = false;
 
+function clearActionCards() {
+  document.querySelectorAll('[data-action-card="true"]').forEach(el => el.remove());
+}
+
 function addButtons(buttons) {
   _awaitingActionChoice = true;
   setInputLocked(true);
-  const downloadDiv = document.createElement('div');
-  downloadDiv.className = 'message agent';
-  downloadDiv.innerHTML = `
-    <div class="msg-body" style="padding:10px 12px; display:flex; justify-content:flex-end;">
-      <button onclick="handleAction('download')" style="
-        padding:8px 14px; border-radius:10px; cursor:pointer;
-        font-family:var(--mono); font-size:12px; font-weight:600;
-        border:1px solid var(--surface-border);
-        background:rgba(255,255,255,0.92); color:var(--dark);
-        transition:all 0.2s;
-      ">Download</button>
-    </div>`;
-  messagesEl.appendChild(downloadDiv);
-
+  clearActionCards();
   const div = document.createElement('div');
   div.className = 'message agent';
+  div.dataset.actionCard = 'true';
 
   const primary = buttons.filter(b => b.action === 'modify-menu' || b.action === 'new');
   const modifyOptions = buttons.filter(b => b.action === 'modify-correction' || b.action === 'modify-alternative');
 
-  let html = '<div class="msg-body" style="padding:12px; display:flex; flex-direction:column; gap:8px;">';
+  let html = '<div class="msg-body action-card">';
+  html += '<div class="action-card-copy">This run is complete. Download the artifacts, refine the current scenario, or start a fresh simulation.</div>';
+  html += '<div class="action-row">';
+  html += '<button type="button" class="action-btn" onclick="handleAction(\'download\')">Download artifacts</button>';
+  html += '</div>';
 
   if (primary.length) {
-    html += '<div style="display:flex; gap:8px; font-family:var(--sans); font-size:11px; color:var(--muted); margin-bottom:2px;">Decide whether to save this session, then choose to modify or start a new simulation</div>';
-    html += '<div style="display:flex; gap:8px;">';
+    html += '<div class="action-card-copy" style="margin-top:10px;">Choose whether to refine the current result or move on to a new scenario.</div>';
+    html += '<div class="action-row">';
     for (const btn of primary) {
       const isModify = btn.action === 'modify-menu';
-      html += `<button onclick="handleAction('${btn.action}')" style="
-        flex:1; padding:10px 16px; border-radius:10px; cursor:pointer;
-        font-family:var(--mono); font-size:13px; font-weight:700;
-        border:1.5px solid ${isModify ? 'var(--accent)' : 'var(--surface-border)'};
-        background:${isModify ? 'rgba(239,35,60,0.04)' : 'rgba(255,255,255,0.92)'};
-        color:${isModify ? 'var(--accent)' : 'var(--muted)'};
-        transition:all 0.2s;
-      " onmouseover="this.style.borderColor='${isModify ? 'var(--accent)' : 'var(--muted)'}';this.style.color='var(--dark)'"
-         onmouseout="this.style.borderColor='${isModify ? 'var(--accent)' : 'var(--surface-border)'}';this.style.color='${isModify ? 'var(--accent)' : 'var(--muted)'}'"
-      >${btn.label}</button>`;
+      html += `<button type="button" class="action-btn ${isModify ? 'action-btn-accent' : ''}" onclick="handleAction('${btn.action}')">${btn.label}</button>`;
     }
     html += '</div>';
   }
 
   if (_modifySubmenuOpen && modifyOptions.length) {
-    html += '<div style="display:flex; gap:8px; font-family:var(--sans); font-size:11px; color:var(--muted); margin-top:4px;">Select modification type</div>';
-    html += '<div style="display:flex; gap:8px; margin-top:4px;">';
+    html += '<div class="action-card-copy" style="margin-top:10px;">Choose the kind of change you want to make to this result.</div>';
+    html += '<div class="action-row">';
     for (const btn of modifyOptions) {
       const isCorrection = btn.action === 'modify-correction';
-      html += `<button onclick="handleAction('${btn.action}')" style="
-        flex:1; padding:10px 16px; border-radius:10px; cursor:pointer;
-        font-family:var(--mono); font-size:13px; font-weight:700;
-        border:1.5px solid ${isCorrection ? 'var(--red)' : 'var(--accent)'};
-        background:transparent;
-        color:${isCorrection ? 'var(--red)' : 'var(--accent)'};
-        transition:all 0.2s;
-      " onmouseover="this.style.background='${isCorrection ? 'var(--red)' : 'var(--accent)'}';this.style.color='#fff'"
-         onmouseout="this.style.background='transparent';this.style.color='${isCorrection ? 'var(--red)' : 'var(--accent)'}'"
-      >${btn.label}</button>`;
+      html += `<button type="button" class="action-btn ${isCorrection ? 'action-btn-accent' : 'action-btn-primary'}" onclick="handleAction('${btn.action}')">${btn.label}</button>`;
     }
-    html += `<button onclick="handleAction('modify-cancel')" style="
-      padding:10px 12px; border-radius:10px; cursor:pointer;
-      font-family:var(--mono); font-size:12px; font-weight:600;
-      border:1px solid var(--surface-border); background:transparent; color:var(--muted);
-    ">Cancel</button>`;
+    html += `<button type="button" class="action-btn" onclick="handleAction('modify-cancel')">Cancel</button>`;
     html += '</div>';
   }
 
   html += '</div>';
   div.innerHTML = html;
   messagesEl.appendChild(div);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
+  document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
 }
 
 function handleAction(action) {
@@ -1086,7 +1521,7 @@ function handleAction(action) {
   if (action === 'modify-menu') {
     _modifySubmenuOpen = true;
     addButtons([
-      {label: 'Modify', action: 'modify-menu'},
+      {label: 'Adjust', action: 'modify-menu'},
       {label: 'New Simulation', action: 'new'},
       {label: 'Error Correction', action: 'modify-correction'},
       {label: 'Tuning', action: 'modify-alternative'},
@@ -1095,7 +1530,7 @@ function handleAction(action) {
   } else if (action === 'modify-cancel') {
     _modifySubmenuOpen = false;
     addButtons([
-      {label: 'Modify', action: 'modify-menu'},
+      {label: 'Adjust', action: 'modify-menu'},
       {label: 'New Simulation', action: 'new'},
       {label: 'Error Correction', action: 'modify-correction'},
       {label: 'Tuning', action: 'modify-alternative'},
@@ -1106,19 +1541,21 @@ function handleAction(action) {
     _awaitingActionChoice = true;
     setInputLocked(true);
   } else if (action === 'modify-correction' || action === 'modify-alternative') {
+    clearActionCards();
     _modifySubmenuOpen = false;
     _modifyMode = true;
     _modifyIntent = action === 'modify-correction' ? 'correction' : 'alternative';
     addMessage('system', _modifyIntent === 'correction'
-      ? 'Error correction mode: Enter what needs to be fixed.'
-      : 'Tuning mode: Enter how you want to adjust the current result.');
-    document.getElementById('input').placeholder = 'Enter modification... (e.g., set volume to 3000, add lanes, use 2 intersections)';
+      ? 'Correction mode is active. Describe what is wrong and what should change.'
+      : 'Tuning mode is active. Describe how you want to adjust the current result.');
+    document.getElementById('input').placeholder = 'Describe the change you want, for example: reduce speed to 20 km/h or add one more intersection';
     document.getElementById('input').focus();
   } else {
+    clearActionCards();
     _modifySubmenuOpen = false;
     _modifyMode = false;
     _modifyIntent = null;
-    addMessage('system', 'Starting a new simulation.');
+    addMessage('system', 'Ready for a new simulation.');
     document.getElementById('input').placeholder = 'Simulate rush hour traffic at Gangnam Station...';
     document.getElementById('input').focus();
   }
@@ -1130,9 +1567,9 @@ function setInputLocked(locked) {
   sendBtn.disabled = locked;
   document.getElementById('input-lock-banner').style.display = locked ? 'block' : 'none';
   if (locked) {
-    inputEl.placeholder = 'Please select the next action from the buttons first.';
+    inputEl.placeholder = 'Choose the next action above before entering a new request.';
   } else if (_modifyMode) {
-    inputEl.placeholder = 'Enter modification... (e.g., set volume to 3000, add lanes, use 2 intersections)';
+    inputEl.placeholder = 'Describe the change you want to make to the current result...';
   } else {
     inputEl.placeholder = 'Simulate rush hour traffic at Gangnam Station...';
   }
@@ -1143,8 +1580,8 @@ function setModeBanner() {
   if (_modifyMode) {
     banner.style.display = 'block';
     banner.textContent = _modifyIntent === 'correction'
-      ? 'Current mode: Error Correction'
-      : 'Current mode: Tuning';
+      ? 'Current mode: Correction. We will treat your next message as a fix to the current result.'
+      : 'Current mode: Tuning. We will treat your next message as a variation request for the current result.';
   } else {
     banner.style.display = 'none';
     banner.textContent = '';
@@ -1174,15 +1611,12 @@ function saveKey(provider) {
     _apiKeys[provider] = key;
     input.value = '';
     input.placeholder = '✓ Saved';
-    const select = document.getElementById('llm-select');
-    if (select) { select.value = provider; }
-    addMessage('system', `${provider.toUpperCase()} API key configured`);
+    addMessage('system', `${providerDisplayName(provider)} API key saved for this session.`);
   }
 }
 
 function _getActiveKey() {
-  const select = document.getElementById('llm-select');
-  const provider = select ? select.value : _selectedProvider;
+  const provider = _selectedProvider;
   return provider ? (_apiKeys[provider] || null) : null;
 }
 

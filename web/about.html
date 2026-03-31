@@ -4,38 +4,50 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LLM-Guided Synthetic Driving Scenario Generation</title>
+<link rel="icon" href="/assets/ssw-favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script type="module">
-  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
-  mermaid.initialize({
-    startOnLoad: false,
-    theme: 'base',
-    securityLevel: 'loose',
-    themeVariables: {
-      background: '#EDF2F4',
-      primaryColor: '#ffffff',
-      primaryTextColor: '#2B2D42',
-      primaryBorderColor: '#8D99AE',
-      lineColor: '#8D99AE',
-      secondaryColor: '#ffffff',
-      tertiaryColor: '#ffffff',
-      fontFamily: 'SF Mono, Fira Code, monospace',
-      fontSize: '13px',
-      edgeLabelBackground: '#EDF2F4',
-      nodeTextColor: '#2B2D42',
-      clusterBkg: '#ffffff',
-      clusterBorder: '#8D99AE'
-    },
-    flowchart: {
-      curve: 'basis',
-      htmlLabels: true,
-      nodeSpacing: 30,
-      rankSpacing: 40
+  async function initMermaid() {
+    try {
+      const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs');
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: 'base',
+        securityLevel: 'loose',
+        themeVariables: {
+          background: '#EDF2F4',
+          primaryColor: '#ffffff',
+          primaryTextColor: '#2B2D42',
+          primaryBorderColor: '#8D99AE',
+          lineColor: '#8D99AE',
+          secondaryColor: '#ffffff',
+          tertiaryColor: '#ffffff',
+          fontFamily: 'Pretendard, system-ui, sans-serif',
+          fontSize: '13px',
+          edgeLabelBackground: '#EDF2F4',
+          nodeTextColor: '#2B2D42',
+          clusterBkg: '#ffffff',
+          clusterBorder: '#8D99AE'
+        },
+        flowchart: {
+          curve: 'basis',
+          htmlLabels: true,
+          nodeSpacing: 30,
+          rankSpacing: 40
+        }
+      });
+      window.mermaid = mermaid;
+      await mermaid.run();
+      document.getElementById('refinement-flow')?.classList.add('hidden');
+    } catch (e) {
+      console.warn('Mermaid failed to load:', e);
+      document.querySelectorAll('.mermaid-wrap').forEach(el => {
+        el.style.display = 'none';
+      });
     }
-  });
-  window.mermaid = mermaid;
-  await mermaid.run();
-  document.getElementById('refinement-flow')?.classList.add('hidden');
+  }
+  initMermaid();
 </script>
 <style>
   :root {
@@ -43,11 +55,13 @@
     --muted: #8D99AE;
     --surface: #EDF2F4;
     --accent: #EF233C;
+    --accent-text: #C91A30;
+    --surface-strong: rgba(255, 255, 255, 0.96);
     --surface-border: rgba(141, 153, 174, 0.25);
     --ink-soft: rgba(43, 45, 66, 0.72);
     --hero-max: 1180px;
     --sans: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-    --mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    --mono: 'SF Mono', 'Fira Code', 'Fira Mono', 'Consolas', monospace;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -86,9 +100,27 @@
     border-bottom: 1px solid var(--surface-border);
   }
 
+  .nav-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .nav-secondary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    width: 100%;
+    min-width: 0;
+  }
+
   .brand {
-    font: 700 14px/1 var(--mono);
-    letter-spacing: 0.06em;
+    font: 800 0.875rem/1 var(--sans);
+    letter-spacing: 0.02em;
     text-transform: uppercase;
     color: var(--dark);
   }
@@ -101,10 +133,11 @@
     list-style: none;
     flex-wrap: wrap;
     justify-content: center;
+    min-width: 0;
   }
 
   .nav-links a {
-    font: 500 12px/1 var(--mono);
+    font: 600 0.8125rem/1 var(--mono);
     text-decoration: none;
     color: var(--muted);
     transition: color 0.18s ease;
@@ -129,7 +162,7 @@
     border-radius: 14px;
     border: 1px solid var(--surface-border);
     text-decoration: none;
-    font: 700 12px/1 var(--mono);
+    font: 700 0.8125rem/1 var(--mono);
     letter-spacing: 0.02em;
     transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
   }
@@ -177,8 +210,8 @@
 
   .eyebrow {
     margin-bottom: 14px;
-    color: var(--accent);
-    font: 700 0.78rem/1 var(--mono);
+    color: var(--accent-text);
+    font: 700 0.75rem/1 var(--mono);
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
@@ -187,12 +220,13 @@
     font: 800 clamp(28px, 4vw, 46px)/1.1 var(--sans);
     letter-spacing: -0.04em;
     margin-bottom: 16px;
-    max-width: 760px;
+    max-width: none;
+    text-wrap: balance;
     color: var(--dark);
   }
 
   .section-copy {
-    max-width: 760px;
+    max-width: none;
     color: var(--ink-soft);
     font-size: 1.06rem;
   }
@@ -210,6 +244,10 @@
     align-items: end;
   }
 
+  .hero-copy {
+    max-width: none;
+  }
+
   .hero-chip {
     display: inline-flex;
     align-items: center;
@@ -219,8 +257,8 @@
     margin-bottom: 26px;
     background: rgba(239, 35, 60, 0.06);
     border: 1px solid rgba(239, 35, 60, 0.18);
-    color: var(--accent);
-    font: 700 11px/1 var(--mono);
+    color: var(--accent-text);
+    font: 700 0.6875rem/1 var(--mono);
     letter-spacing: 0.1em;
     text-transform: uppercase;
   }
@@ -228,7 +266,7 @@
   .hero-title {
     font: 900 clamp(40px, 7vw, 76px)/0.98 var(--sans);
     letter-spacing: -0.04em;
-    max-width: 760px;
+    max-width: none;
     margin-bottom: 20px;
     color: var(--dark);
   }
@@ -239,14 +277,14 @@
   }
 
   .hero-sub {
-    max-width: 690px;
+    max-width: none;
     color: var(--ink-soft);
     font-size: 1.06rem;
     margin-bottom: 24px;
   }
 
   .hero-detail {
-    max-width: 660px;
+    max-width: none;
     color: var(--muted);
     font-size: 0.92rem;
   }
@@ -259,7 +297,7 @@
   }
 
   .hero-panel {
-    background: rgba(255, 255, 255, 0.92);
+    background: var(--surface-strong);
     border: 1px solid var(--surface-border);
     border-radius: 22px;
     padding: 24px;
@@ -267,7 +305,7 @@
   }
 
   .hero-panel-title {
-    font: 800 15px/1.2 var(--sans);
+    font: 800 0.9375rem/1.2 var(--sans);
     margin-bottom: 16px;
     color: var(--accent);
   }
@@ -275,6 +313,13 @@
   .hero-metrics {
     display: grid;
     gap: 12px;
+  }
+
+  .hero-panel-note {
+    margin-top: 14px;
+    color: var(--muted);
+    font-size: 0.82rem;
+    line-height: 1.55;
   }
 
   .metric {
@@ -286,14 +331,14 @@
 
   .metric-label {
     color: var(--muted);
-    font: 700 11px/1 var(--mono);
+    font: 700 0.75rem/1 var(--mono);
     text-transform: uppercase;
     letter-spacing: 0.08em;
     margin-bottom: 6px;
   }
 
   .metric-value {
-    font: 800 18px/1.2 var(--sans);
+    font: 800 1.125rem/1.2 var(--sans);
     margin-bottom: 6px;
     color: var(--dark);
   }
@@ -316,13 +361,13 @@
     border: 1px solid var(--surface-border);
     background: rgba(255, 255, 255, 0.92);
     color: var(--ink-soft);
-    font: 500 12px/1 var(--mono);
+    font: 600 0.8125rem/1 var(--mono);
   }
 
   .overview-grid,
   .explore-grid {
     display: grid;
-    grid-template-columns: 1.2fr 0.8fr;
+    grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
     gap: 22px;
     margin-top: 28px;
   }
@@ -361,7 +406,7 @@
     display: block;
     margin-bottom: 4px;
     color: var(--dark);
-    font: 700 13px/1.3 var(--sans);
+    font: 700 0.8125rem/1.3 var(--sans);
   }
 
   .mini-item span {
@@ -374,6 +419,16 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 18px;
     margin-top: 28px;
+  }
+
+  .card-copy code,
+  .results-table code,
+  .result-metric-copy code {
+    font-family: var(--mono);
+    font-size: 0.94em;
+    background: rgba(237, 242, 244, 0.88);
+    padding: 0.12rem 0.38rem;
+    border-radius: 0.45rem;
   }
 
   .data-paths {
@@ -392,15 +447,15 @@
   }
 
   .path-label {
-    color: var(--accent);
-    font: 700 11px/1 var(--mono);
+    color: var(--accent-text);
+    font: 700 0.75rem/1 var(--mono);
     text-transform: uppercase;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.1em;
     margin-bottom: 10px;
   }
 
   .path-title {
-    font: 800 18px/1.15 var(--sans);
+    font: 800 1.125rem/1.15 var(--sans);
     margin-bottom: 10px;
     color: var(--dark);
   }
@@ -441,16 +496,17 @@
 
   .result-metric-label {
     color: var(--muted);
-    font: 700 11px/1 var(--mono);
+    font: 700 0.6875rem/1 var(--mono);
     text-transform: uppercase;
     letter-spacing: 0.08em;
     margin-bottom: 8px;
   }
 
   .result-metric-value {
-    font: 800 28px/1.05 var(--mono);
+    font: 800 1.75rem/1.05 var(--sans);
     margin-bottom: 8px;
     color: var(--dark);
+    font-variant-numeric: tabular-nums;
   }
 
   .result-metric-copy {
@@ -483,14 +539,14 @@
 
   .results-table th {
     color: var(--dark);
-    font: 700 11px/1 var(--mono);
+    font: 700 0.6875rem/1 var(--mono);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;
   }
 
   .results-table td {
     color: var(--ink-soft);
-    font-family: var(--mono);
+    font-family: var(--sans);
   }
 
   .results-table td strong {
@@ -530,11 +586,11 @@
     color: var(--accent);
     background: rgba(239, 35, 60, 0.06);
     border: 1px solid rgba(239, 35, 60, 0.15);
-    font: 700 14px/1 var(--mono);
+    font: 700 0.875rem/1 var(--mono);
   }
 
   .card-title {
-    font: 800 18px/1.2 var(--sans);
+    font: 800 1.125rem/1.2 var(--sans);
     margin-bottom: 10px;
     color: var(--dark);
   }
@@ -567,7 +623,7 @@
     border: 1px solid transparent;
     background: transparent;
     color: var(--muted);
-    font: 700 12px/1 var(--mono);
+    font: 700 0.75rem/1 var(--mono);
     cursor: pointer;
     transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
   }
@@ -591,7 +647,7 @@
   }
 
   .workflow-title {
-    font: 800 20px/1.2 var(--sans);
+    font: 800 1.25rem/1.2 var(--sans);
     margin-bottom: 8px;
     color: var(--dark);
   }
@@ -600,7 +656,7 @@
     color: var(--muted);
     font-size: 0.88rem;
     margin-bottom: 18px;
-    max-width: 760px;
+    max-width: none;
   }
 
   .mermaid-wrap {
@@ -612,7 +668,19 @@
   }
 
   .mermaid {
-    min-width: 780px;
+    min-width: 600px;
+  }
+
+  .mermaid-wrap {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mermaid-mobile-hint {
+    display: none;
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 8px;
+    font-family: var(--mono);
   }
 
   .signal-band {
@@ -632,7 +700,7 @@
   .signal strong {
     display: block;
     margin-bottom: 5px;
-    font: 700 13px/1.3 var(--sans);
+    font: 700 0.8125rem/1.3 var(--sans);
   }
 
   .signal span {
@@ -653,7 +721,7 @@
   }
 
   .quality-note-title {
-    font: 800 16px/1.2 var(--sans);
+    font: 800 1rem/1.2 var(--sans);
     margin-bottom: 8px;
     color: var(--dark);
   }
@@ -672,15 +740,15 @@
   }
 
   .explore-meta {
-    color: var(--accent);
-    font: 700 11px/1 var(--mono);
+    color: var(--accent-text);
+    font: 700 0.75rem/1 var(--mono);
     text-transform: uppercase;
     letter-spacing: 0.12em;
     margin-bottom: 10px;
   }
 
   .explore-title {
-    font: 800 20px/1.15 var(--sans);
+    font: 800 1.25rem/1.15 var(--sans);
     margin-bottom: 10px;
     color: var(--dark);
   }
@@ -746,12 +814,34 @@
   footer a:hover { color: var(--accent); }
 
   @media (max-width: 980px) {
+    nav {
+      gap: 18px;
+      padding: 16px 24px;
+    }
+
+    .nav-secondary {
+      justify-content: flex-start;
+    }
+
     .hero-layout,
     .overview-grid,
     .results-grid,
     .explore-grid,
     .limits {
       grid-template-columns: 1fr;
+    }
+
+    #hero {
+      min-height: auto;
+      padding-top: 48px;
+    }
+
+    .hero-layout {
+      align-items: start;
+    }
+
+    .hero-panel {
+      max-width: 720px;
     }
 
     .cards {
@@ -765,17 +855,46 @@
 
   @media (max-width: 640px) {
     nav {
-      flex-direction: column;
-      align-items: flex-start;
       padding: 16px 20px;
     }
 
-    .nav-links {
+    .nav-main {
       gap: 12px;
     }
 
+    .nav-links {
+      gap: 10px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+
+    .nav-links::-webkit-scrollbar { display: none; }
+
+    .nav-links li { flex: 0 0 auto; }
+
+    .nav-links a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 38px;
+      padding: 0 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.84);
+      border: 1px solid var(--surface-border);
+      white-space: nowrap;
+    }
+
     .nav-actions {
-      display: none;
+      display: grid;
+      grid-template-columns: 1fr;
+    }
+
+    .nav-actions .nav-btn {
+      width: 100%;
+      font-size: 0.75rem;
+      min-height: 42px;
+      padding: 0 14px;
     }
 
     main {
@@ -787,20 +906,57 @@
     }
 
     .hero-layout {
-      gap: 20px;
+      gap: 18px;
     }
 
     .hero-title {
       font-size: clamp(34px, 12vw, 54px);
     }
 
+    .hero-sub,
+    .section-copy,
+    .hero-detail {
+      font-size: 0.94rem;
+    }
+
+    .hero-actions {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .highlights {
+      gap: 8px;
+    }
+
+    .highlight-pill {
+      width: 100%;
+      text-align: center;
+    }
+
+    .hero-panel,
+    .panel,
+    .card,
+    .path-card,
+    .result-metric,
+    .results-table-wrap,
+    .workflow-card,
+    .limit-item {
+      padding: 18px;
+      border-radius: 18px;
+    }
+
     .cards,
-    .signal-band {
+    .signal-band,
+    .data-paths {
       grid-template-columns: 1fr;
     }
 
     .mermaid {
-      min-width: 680px;
+      min-width: 440px;
+    }
+
+    .mermaid-mobile-hint {
+      display: block;
     }
 
     .workflow-tabs {
@@ -814,11 +970,7 @@
     }
 
     .section-title {
-      font-size: 30px;
-    }
-
-    .hero-sub {
-      font-size: 15px;
+      font-size: 1.875rem;
     }
 
     .btn,
@@ -829,34 +981,98 @@
     .cta-actions {
       flex-direction: column;
     }
+
+    footer {
+      padding: 0 20px 40px;
+      flex-direction: column;
+    }
+  }
+
+  @media (max-width: 420px) {
+    main {
+      padding: 0 16px 72px;
+    }
+
+    nav {
+      padding: 14px 16px;
+    }
+
+    section {
+      padding-top: 64px;
+    }
+
+    .hero-title {
+      font-size: clamp(30px, 12vw, 44px);
+    }
+
+    .hero-chip,
+    .eyebrow {
+      letter-spacing: 0.05em;
+    }
+
+    .mermaid {
+      min-width: 380px;
+    }
+  }
+
+  /* Skip link */
+  .skip-link {
+    position: absolute;
+    top: -100%;
+    left: 16px;
+    z-index: 100;
+    padding: 8px 16px;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 0 0 8px 8px;
+    font: 700 0.8125rem/1 var(--sans);
+    text-decoration: none;
+    transition: top 0.2s;
+  }
+  .skip-link:focus {
+    top: 0;
+  }
+
+  /* Focus & accessibility */
+  .btn:focus-visible,
+  .nav-btn:focus-visible,
+  .nav-links a:focus-visible,
+  .workflow-tab:focus-visible,
+  footer a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   }
 </style>
 </head>
 <body>
 <div class="shell">
+  <a href="#hero" class="skip-link">Skip to content</a>
   <nav>
-    <div class="brand">Synthetic <span>Scenario</span> Workflow</div>
-    <ul class="nav-links">
-      <li><a href="#hero">About</a></li>
-      <li><a href="#overview">Overview</a></li>
-      <li><a href="#built">Components</a></li>
-      <li><a href="#results">Results</a></li>
-      <li><a href="#data-paths">Data Paths</a></li>
-      <li><a href="#workflow">Workflow</a></li>
-      <li><a href="#explore">Explore</a></li>
-      <li><a href="#lessons">Lessons</a></li>
-    </ul>
-    <div class="nav-actions">
-      <a class="nav-btn btn-secondary" href="https://github.com/ParkSewon-PM/sumo-traffic-agent" target="_blank">GitHub</a>
-      <a class="nav-btn btn-secondary" href="/admin">Admin Dashboard</a>
-      <a class="nav-btn btn-primary" href="/">View Live System</a>
+    <div class="nav-main">
+      <div class="brand">Synthetic <span>Scenario</span> Workflow</div>
+      <ul class="nav-links">
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#built">Components</a></li>
+        <li><a href="#results">Results</a></li>
+        <li><a href="#workflow">Workflow</a></li>
+        <li><a href="#explore">Explore</a></li>
+      </ul>
+      <div class="nav-actions">
+        <a class="nav-btn btn-secondary" href="https://github.com/ParkSewon-PM/sumo-traffic-agent" target="_blank">GitHub</a>
+        <a class="nav-btn btn-secondary" href="/admin">Admin Dashboard</a>
+        <a class="nav-btn btn-primary" href="/">View Live System</a>
+      </div>
     </div>
   </nav>
 
   <main>
     <section id="hero">
       <div class="hero-layout">
-        <div>
+        <div class="hero-copy">
           <div class="hero-chip">LLM Workflow for Synthetic Scenario Generation</div>
           <h1 class="hero-title">Natural Language to <em>Runnable Driving Scenarios</em></h1>
           <p class="hero-sub">
@@ -868,24 +1084,20 @@
             scenario execution, evaluation, and correction-derived export in one connected loop.
           </p>
           <div class="hero-actions">
-            <a class="btn btn-primary" href="/">View Live System</a>
-            <a class="btn btn-secondary" href="https://github.com/ParkSewon-PM/sumo-traffic-agent" target="_blank">GitHub</a>
-            <a class="btn btn-secondary" href="/admin">Admin Dashboard</a>
+            <a class="btn btn-primary" href="/">Try Live System</a>
+            <a class="btn btn-secondary" href="#overview">How it works</a>
           </div>
       <div class="highlights">
             <div class="highlight-pill">Python</div>
-            <div class="highlight-pill">Prompt Engineering</div>
             <div class="highlight-pill">OpenAI Fine-Tuning</div>
-            <div class="highlight-pill">Claude API</div>
-            <div class="highlight-pill">AI Agent</div>
-            <div class="highlight-pill">Gemini API</div>
-            <div class="highlight-pill">Docker</div>
+            <div class="highlight-pill">Multi-LLM Agent</div>
+            <div class="highlight-pill">SUMO</div>
             <div class="highlight-pill">GCP Cloud Run</div>
           </div>
         </div>
 
         <aside class="hero-panel">
-          <div class="hero-panel-title">What stands out in this project</div>
+          <h2 class="hero-panel-title">What stands out in this project</h2>
           <div class="hero-metrics">
             <div class="metric">
               <div class="metric-label">Role Separation</div>
@@ -903,6 +1115,7 @@
               <div class="metric-copy">The user flow, evidence layer, and technical document are intentionally split.</div>
             </div>
           </div>
+          <p class="hero-panel-note">This page is optimized for project review: what the system does, where the evidence lives, and why the workflow is structured this way.</p>
         </aside>
       </div>
     </section>
@@ -1137,6 +1350,7 @@ flowchart TD
     J --> K[Validation and Statistics]
             </div>
           </div>
+          <div class="mermaid-mobile-hint">Scroll horizontally to view full diagram</div>
         </article>
 
         <article class="workflow-card" id="refinement-flow">
@@ -1255,13 +1469,9 @@ flowchart TD
     <section id="cta" class="cta">
       <div class="eyebrow">Try It</div>
       <h2 class="section-title">Run the Full Pipeline</h2>
-      <p class="section-copy">
-        The generation interface runs the end-to-end pipeline from prompt to SUMO execution. The admin dashboard exposes the evaluation layer, correction logs, and retraining exports behind it.
-      </p>
       <div class="cta-actions">
-        <a class="btn btn-primary" href="/">View Live System</a>
+        <a class="btn btn-primary" href="/">Try Live System</a>
         <a class="btn btn-secondary" href="/admin">Admin Dashboard</a>
-        <a class="btn btn-secondary" href="https://github.com/ParkSewon-PM/sumo-traffic-agent" target="_blank">GitHub</a>
       </div>
     </section>
   </main>
