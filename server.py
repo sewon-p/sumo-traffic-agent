@@ -209,6 +209,20 @@ def _base_runtime_status():
             "available_cli": available_clis,
         }
 
+    if os.environ.get("GEMINI_API_KEY"):
+        model = _default_base_model("gemini")
+        return {
+            "provider": "gemini",
+            "model": model,
+            "name": f"Gemini API ({model})",
+            "ready": _provider_runtime_ready("gemini"),
+            "shared": True,
+            "mode": "api",
+            "rate_limit_window_sec": BASE_LLM_RATE_WINDOW_SEC,
+            "rate_limit_max_requests": BASE_LLM_RATE_MAX_REQUESTS,
+            "available_cli": available_clis,
+        }
+
     if os.environ.get("OPENAI_API_KEY"):
         model = _default_base_model("gpt")
         return {
