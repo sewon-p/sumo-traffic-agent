@@ -79,6 +79,7 @@ jobs:
             --image $IMAGE \
             --region $REGION \
             --platform managed \
+            --execution-environment gen2 \
             --port 8080 \
             --memory 2Gi \
             --cpu 1 \
