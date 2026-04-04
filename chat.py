@@ -221,7 +221,7 @@ def run_rule_based(user_input: str):
     """Run rule-based pipeline"""
     from src.llm_parser import parse_user_input
     from tools.osm_network import build_network
-    from tools.sumo_generator import generate_all, TrafficDemand, SimulationConfig
+    from tools.sumo_generator import build_vtypes_from_ft, generate_all, TrafficDemand, SimulationConfig
     from tools.topis_api import query_realtime_traffic
     from src.validator import validate, generate_report
 
@@ -231,6 +231,13 @@ def run_rule_based(user_input: str):
     print(f"  Location: {params.location}")
     print(f"  Time: {params.time_start} ~ {params.time_end}")
     print(f"  Traffic volume: {params.vehicles_per_hour} veh/h")
+
+    ft = {}
+    if params.notes:
+        try:
+            ft = json.loads(params.notes)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            ft = {}
 
     # 2) Query real-time traffic data
     print(f"\n[2/5] Querying real-time traffic data...")
@@ -249,7 +256,12 @@ def run_rule_based(user_input: str):
     # 3) Build road network
     print(f"\n[3/5] Building {params.location} road network...")
     output_dir = os.path.join("output", params.location.replace(" ", "_"))
-    net_path = build_network(params.location, params.radius_m, output_dir)
+    net_path = build_network(
+        params.location,
+        params.radius_m,
+        output_dir,
+        speed_limit_kmh=params.speed_limit_kmh,
+    )
 
     # 4) Generate simulation files
     print(f"\n[4/5] Generating SUMO simulation files...")
@@ -264,7 +276,8 @@ def run_rule_based(user_input: str):
     duration = max((h2 - h1) * 3600, 3600)
     sim_config = SimulationConfig(begin_time=0, end_time=duration)
 
-    files = generate_all(net_path, output_dir, demand=demand, sim_config=sim_config)
+    vtypes = build_vtypes_from_ft(ft, speed_limit_kmh=params.speed_limit_kmh)
+    files = generate_all(net_path, output_dir, demand=demand, vtypes=vtypes, sim_config=sim_config)
 
     # 5) Run simulation
     print(f"\n[5/5] Running simulation...")

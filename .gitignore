@@ -28,3 +28,9 @@ llm_sumo_agent_project.md
 
 # Benchmark results (reproducible, not source)
 evaluation/results/
+
+# Node
+node_modules/
+
+# Test artifacts
+test-results/

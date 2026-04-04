@@ -471,6 +471,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             api_key = body.get("api_key", None)
             base_llm = body.get("base_llm", "default")
             self._handle_simulate_sse(user_input, provider=provider, modify_intent=modify_intent, api_key=api_key, base_llm=base_llm)
+        elif self.path == "/api/calibrate":
+            self._handle_calibrate_sse()
         else:
             self.send_error(404)
 
@@ -765,14 +767,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         4) Run SUMO + validate
         """
         from src.llm_parser import parse_user_input, SimulationParams, get_prompt_metadata
-        from tools.osm_network import build_network
+        from tools.osm_network import apply_speed_limit_to_net, build_network
         from src.base_llm import (
             clear_request_base_llm_override,
             generate_network_xml,
             modify_network_xml,
             set_request_base_llm_override,
         )
-        from tools.sumo_generator import generate_all, TrafficDemand, SimulationConfig
+        from tools.sumo_generator import build_vtypes_from_ft, generate_all, TrafficDemand, SimulationConfig
         from src.validator import validate
         from datetime import datetime
 
@@ -958,8 +960,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
         # Parameter-only modification -> reuse existing network
         if is_modify and is_param_only and _session.get("net_path") and os.path.exists(_session["net_path"]):
-            net_path = _session["net_path"]
-            self.send_sse({"type": "message", "text": "Reusing road network (parameters only changed)"})
+            source_net_path = _session["net_path"]
+            net_path = os.path.join(output_dir, os.path.basename(source_net_path))
+            shutil.copy2(source_net_path, net_path)
+            apply_speed_limit_to_net(net_path, params.speed_limit_kmh)
+            self.send_sse({"type": "message", "text": "Reusing road network with updated speed settings"})
 
         # Geometry modification: if LLM modified XML, run netconvert
         elif is_modify and 'new_nod_path' in dir() and os.path.exists(new_nod_path):
@@ -969,6 +974,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                    "--no-turnarounds", "true"]
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
             if os.path.exists(net_path):
+                apply_speed_limit_to_net(net_path, params.speed_limit_kmh)
                 _session["nod_path"] = new_nod_path
                 _session["edg_path"] = new_edg_path
             else:
@@ -988,6 +994,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         f.write(new_edg2)
                     result2 = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
                     if os.path.exists(net_path):
+                        apply_speed_limit_to_net(net_path, params.speed_limit_kmh)
                         _session["nod_path"] = new_nod_path
                         _session["edg_path"] = new_edg_path
                         self.send_sse({"type": "message", "text": "Retry succeeded"})
@@ -1003,7 +1010,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.send_sse({"type": "tool", "name": "osm_network",
                                "summary": f"{params.location} OSM download"})
                 try:
-                    net_path = build_network(params.location, params.radius_m, output_dir)
+                    net_path = build_network(
+                        params.location,
+                        params.radius_m,
+                        output_dir,
+                        speed_limit_kmh=params.speed_limit_kmh,
+                    )
                 except Exception as e:
                     self.send_sse({"type": "message",
                                    "text": f"OSM failed -> LLM road generation: {e}"})
@@ -1033,6 +1045,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     subprocess.run(cmd, capture_output=True, text=True, timeout=60)
                     if not os.path.exists(net_path):
                         raise RuntimeError("netconvert failed")
+                    apply_speed_limit_to_net(net_path, params.speed_limit_kmh)
                     _session["nod_path"] = nod_path
                     _session["edg_path"] = edg_path
                 except Exception as e:
@@ -1060,8 +1073,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 f"Simulation time setup: warmup {warmup_seconds // 60} min + "
                 f"evaluation {evaluation_duration // 60} min"
             )})
+        vtypes = build_vtypes_from_ft(ft, speed_limit_kmh=params.speed_limit_kmh)
         files = generate_all(net_path, output_dir,
                              demand=demand,
+                             vtypes=vtypes,
                              sim_config=SimulationConfig(
                                  begin_time=0,
                                  end_time=total_duration,
@@ -1087,12 +1102,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 "sim_speed": sim_stats["avg_speed_kmh"],
                 "issues": v.issues,
             }})
-            self.send_sse({"type": "message", "text": (
-                f"\nValidation: FT prediction {ft_speed}km/h vs SUMO {sim_stats['avg_speed_kmh']}km/h"
-                f" -> error {v.speed_error_pct:+.1f}% (grade {v.grade})"
-            )})
-
-        self.send_sse({"type": "message", "text": f"\nFiles saved: {output_dir}/"})
 
         # -- DB save --
         from src.session_db import save_simulation, save_modification
@@ -1141,16 +1150,130 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         _session["net_path"] = net_path
         _session["params"] = params
         _session["ft"] = ft
+        _session["sim_stats"] = sim_stats
 
-        # -- Buttons: Adjust / New Simulation / Download --
-        self.send_sse({"type": "buttons", "data": [
+        # -- Buttons: Adjust / New Simulation / Download / Calibrate --
+        buttons = [
             {"label": "Adjust", "action": "modify-menu"},
             {"label": "New Simulation", "action": "new"},
             {"label": "Download", "action": "download"},
             {"label": "Correction", "action": "modify-correction"},
             {"label": "Tuning", "action": "modify-alternative"},
-        ]})
+        ]
+        if ft.get("speed_kmh") and sim_stats.get("avg_speed_kmh"):
+            buttons.append({"label": "Calibrate", "action": "calibrate"})
+        self.send_sse({"type": "buttons", "data": buttons})
         self.send_sse({"type": "done"})
+
+    def _handle_calibrate_sse(self):
+        """Stream calibration loop progress via SSE."""
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "keep-alive")
+        self.end_headers()
+
+        try:
+            self._run_calibration()
+        except Exception as e:
+            self.send_sse({"type": "error", "text": f"Calibration error: {e}"})
+        self.send_sse({"type": "done"})
+
+    def _run_calibration(self):
+        from src.calibrator import run_calibration
+        from src.session_db import save_calibration
+
+        ft = _session.get("ft") or {}
+        params = _session.get("params")
+        net_path = _session.get("net_path")
+        sim_stats = _session.get("sim_stats") or {}
+        output_dir = _session.get("output_dir")
+        sim_id = _session.get("sim_id")
+
+        target_speed = ft.get("speed_kmh")
+        initial_speed = sim_stats.get("avg_speed_kmh")
+
+        if not all([params, net_path, output_dir, target_speed, initial_speed]):
+            self.send_sse({"type": "error",
+                           "text": "Cannot calibrate: missing session data. Run a simulation first."})
+            return
+
+        warmup_seconds = max(int(os.environ.get("SIM_WARMUP_SECONDS", "600") or 0), 0)
+        error_pct = round((initial_speed - target_speed) / target_speed * 100, 1)
+
+        self.send_sse({"type": "cal_start", "data": {
+            "target_speed_kmh": target_speed,
+            "initial_speed_kmh": initial_speed,
+            "initial_error_pct": error_pct,
+            "max_iterations": 3,
+            "tolerance_pct": 10.0,
+        }})
+
+        if abs(error_pct) <= 10.0:
+            self.send_sse({"type": "cal_complete", "data": {
+                "status": "already_converged",
+                "converged": True,
+                "message": f"Already within tolerance ({error_pct:+.1f}%). No calibration needed.",
+            }})
+            self._send_post_sim_buttons(ft, sim_stats)
+            return
+
+        def on_iteration(iter_data):
+            self.send_sse({"type": "cal_iteration", "data": iter_data})
+
+        result = run_calibration(
+            ft=ft,
+            params=params,
+            net_path=net_path,
+            output_dir=output_dir,
+            initial_sim_speed=initial_speed,
+            warmup_seconds=warmup_seconds,
+            on_iteration=on_iteration,
+        )
+
+        # Update session with calibrated values
+        if result.get("converged") or result.get("status") == "max_iterations":
+            cal = result["calibrated"]
+            params.vehicles_per_hour = cal["vehicles_per_hour"]
+            ft["sigma"] = cal["sigma"]
+            ft["tau"] = cal["tau"]
+            _session["params"] = params
+            _session["ft"] = ft
+
+        # Save to DB
+        if sim_id and result.get("status") != "skipped":
+            try:
+                save_calibration(sim_id, result.get("calibrated", {}), result)
+            except Exception:
+                pass
+
+        self.send_sse({"type": "cal_complete", "data": {
+            "status": result.get("status"),
+            "converged": result.get("converged", False),
+            "iterations_count": len(result.get("iterations", [])),
+            "original_params": result.get("original"),
+            "calibrated_params": result.get("calibrated"),
+            "drift": result.get("drift"),
+            "target_speed_kmh": result.get("target_speed_kmh"),
+            "final_speed_kmh": result.get("final_speed_kmh"),
+            "final_error_pct": result.get("final_error_pct"),
+            "initial_error_pct": result.get("initial_error_pct"),
+            "error_message": result.get("error_message", ""),
+        }})
+
+        self._send_post_sim_buttons(ft, sim_stats)
+
+    def _send_post_sim_buttons(self, ft, sim_stats):
+        buttons = [
+            {"label": "Adjust", "action": "modify-menu"},
+            {"label": "New Simulation", "action": "new"},
+            {"label": "Download", "action": "download"},
+            {"label": "Correction", "action": "modify-correction"},
+            {"label": "Tuning", "action": "modify-alternative"},
+        ]
+        if ft.get("speed_kmh") and (sim_stats or {}).get("avg_speed_kmh"):
+            buttons.append({"label": "Calibrate", "action": "calibrate"})
+        self.send_sse({"type": "buttons", "data": buttons})
 
     def _send_network_info(self, net_path):
         """Send network coordinate data via SSE (for chat Canvas rendering)."""

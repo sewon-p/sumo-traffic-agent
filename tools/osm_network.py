@@ -10,6 +10,7 @@ import subprocess
 import urllib.request
 import urllib.parse
 import json
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 
 
@@ -171,7 +172,48 @@ def convert_osm_to_net(
     return net_path
 
 
-def build_network(location_name: str, radius_m: float = 500, output_dir: str = "output") -> str:
+def apply_speed_limit_to_net(net_path: str, speed_limit_kmh: float) -> str:
+    """
+    Override lane/edge speeds inside an existing SUMO .net.xml file.
+
+    This keeps OSM geometry while making the network-level speed constraint
+    follow the scenario parameters predicted by the FT layer.
+    """
+    speed_ms = max(float(speed_limit_kmh) / 3.6, 0.1)
+
+    tree = ET.parse(net_path)
+    root = tree.getroot()
+    updated_lanes = 0
+    updated_edges = 0
+
+    for edge in root.findall("edge"):
+        edge_id = edge.get("id", "")
+        if edge_id.startswith(":"):
+            continue
+
+        if edge.get("speed") is not None:
+            edge.set("speed", f"{speed_ms:.2f}")
+            updated_edges += 1
+
+        for lane in edge.findall("lane"):
+            lane.set("speed", f"{speed_ms:.2f}")
+            updated_lanes += 1
+
+    ET.indent(tree, space="    ")
+    tree.write(net_path, encoding="utf-8", xml_declaration=True)
+    print(
+        f"Applied speed limit override: {speed_limit_kmh} km/h "
+        f"({updated_edges} edges, {updated_lanes} lanes)"
+    )
+    return net_path
+
+
+def build_network(
+    location_name: str,
+    radius_m: float = 500,
+    output_dir: str = "output",
+    speed_limit_kmh: float = None,
+) -> str:
     """
     Main function that generates a SUMO network file from a location name.
 
@@ -204,6 +246,8 @@ def build_network(location_name: str, radius_m: float = 500, output_dir: str = "
             print(f"OSM download failed -> using existing OSM cache: {e}")
         elif os.path.exists(net_path):
             print(f"OSM download failed -> using existing network cache: {e}")
+            if speed_limit_kmh is not None:
+                apply_speed_limit_to_net(net_path, speed_limit_kmh)
             return net_path
         else:
             raise
@@ -211,6 +255,8 @@ def build_network(location_name: str, radius_m: float = 500, output_dir: str = "
     # 4) Convert with netconvert
     from src.config import get_netconvert_bin
     convert_osm_to_net(osm_path, net_path, netconvert_bin=get_netconvert_bin())
+    if speed_limit_kmh is not None:
+        apply_speed_limit_to_net(net_path, speed_limit_kmh)
 
     return net_path
 

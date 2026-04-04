@@ -9,6 +9,7 @@ to produce a complete simulation set.
 import os
 import subprocess
 import xml.etree.ElementTree as ET
+from copy import deepcopy
 from dataclasses import dataclass
 
 
@@ -75,6 +76,57 @@ DEFAULT_VTYPES = [
         tau=1.5, color="0,0.5,1",
     ),
 ]
+
+
+def _clamp(value: float, min_value: float, max_value: float) -> float:
+    return max(min_value, min(max_value, value))
+
+
+def build_vtypes_from_ft(
+    ft: dict = None,
+    speed_limit_kmh: float = None,
+    base_vtypes: list[VehicleType] = None,
+) -> list[VehicleType]:
+    """
+    Build runtime vehicle types from FT output.
+
+    The FT layer predicts scene-wide driver-behavior parameters (`sigma`, `tau`).
+    We reflect those values into the SUMO vType definitions rather than leaving
+    every run on the same hard-coded defaults.
+    """
+    vtypes = deepcopy(base_vtypes or DEFAULT_VTYPES)
+    ft = ft or {}
+
+    sigma = ft.get("sigma")
+    tau = ft.get("tau")
+
+    try:
+        sigma = _clamp(float(sigma), 0.0, 1.0) if sigma is not None else None
+    except (TypeError, ValueError):
+        sigma = None
+
+    try:
+        tau = _clamp(float(tau), 0.5, 3.0) if tau is not None else None
+    except (TypeError, ValueError):
+        tau = None
+
+    limit_ms = None
+    try:
+        if speed_limit_kmh is not None:
+            limit_ms = max(float(speed_limit_kmh) / 3.6, 1.0)
+    except (TypeError, ValueError):
+        limit_ms = None
+
+    for vt in vtypes:
+        if sigma is not None:
+            vt.sigma = sigma
+        if tau is not None:
+            vt.tau = tau
+        if limit_ms is not None:
+            # Keep class-specific caps while preventing implausibly high desired speeds.
+            vt.max_speed = min(vt.max_speed, round(limit_ms * 1.05, 2))
+
+    return vtypes
 
 
 def parse_net_edges(net_path: str) -> list[dict]:
@@ -380,6 +432,7 @@ def generate_all(
     net_path: str,
     output_dir: str = None,
     demand: TrafficDemand = None,
+    vtypes: list[VehicleType] = None,
     sim_config: SimulationConfig = None,
 ) -> dict[str, str]:
     """
@@ -398,7 +451,7 @@ def generate_all(
     add_path = os.path.join(output_dir, f"{base_name}.add.xml")
     cfg_path = os.path.join(output_dir, f"{base_name}.sumocfg")
 
-    generate_rou_xml(net_path, rou_path, demand=demand, sim_config=sim_config)
+    generate_rou_xml(net_path, rou_path, demand=demand, vtypes=vtypes, sim_config=sim_config)
     generate_add_xml(net_path, add_path)
     generate_sumocfg(net_path, rou_path, add_path, cfg_path, sim_config=sim_config)
 

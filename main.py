@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from src.llm_parser import parse_user_input, SimulationParams
 from tools.osm_network import build_network
 from tools.sumo_generator import (
+    build_vtypes_from_ft,
     generate_all,
     TrafficDemand,
     SimulationConfig,
@@ -92,10 +93,22 @@ def pipeline(user_input: str, api_key: str = None) -> dict:
     if params.incident:
         print(f"  Special condition: {params.incident} (lane closure: {params.lane_closure})")
 
+    ft = {}
+    if params.notes:
+        try:
+            ft = json.loads(params.notes)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            ft = {}
+
     # 2) OSM -> SUMO network
     print(f"\n[2/4] Building {params.location} road network...")
     output_dir = os.path.join("output", params.location.replace(" ", "_"))
-    net_path = build_network(params.location, params.radius_m, output_dir)
+    net_path = build_network(
+        params.location,
+        params.radius_m,
+        output_dir,
+        speed_limit_kmh=params.speed_limit_kmh,
+    )
 
     # 3) Generate SUMO files
     print(f"\n[3/4] Generating SUMO simulation files...")
@@ -116,7 +129,8 @@ def pipeline(user_input: str, api_key: str = None) -> dict:
         end_time=duration,
     )
 
-    files = generate_all(net_path, output_dir, demand=demand, sim_config=sim_config)
+    vtypes = build_vtypes_from_ft(ft, speed_limit_kmh=params.speed_limit_kmh)
+    files = generate_all(net_path, output_dir, demand=demand, vtypes=vtypes, sim_config=sim_config)
 
     # 4) Run simulation
     print(f"\n[4/4] Running simulation...")

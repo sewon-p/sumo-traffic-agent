@@ -44,6 +44,10 @@ def _get_conn():
         conn.execute("ALTER TABLE simulations ADD COLUMN initial_ft_output_json TEXT")
     if "prompt_meta_json" not in sim_cols:
         conn.execute("ALTER TABLE simulations ADD COLUMN prompt_meta_json TEXT")
+    if "calibrated_params_json" not in sim_cols:
+        conn.execute("ALTER TABLE simulations ADD COLUMN calibrated_params_json TEXT")
+    if "calibration_meta_json" not in sim_cols:
+        conn.execute("ALTER TABLE simulations ADD COLUMN calibration_meta_json TEXT")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS modifications (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -149,6 +153,22 @@ def update_simulation_params(sim_id, params_dict, ft_dict, sim_speed=None, error
     conn.close()
 
 
+def save_calibration(sim_id, calibrated_params, calibration_meta):
+    """Save calibration results to the simulation record."""
+    conn = _get_conn()
+    conn.execute("""
+        UPDATE simulations
+        SET calibrated_params_json = ?, calibration_meta_json = ?
+        WHERE id = ?
+    """, (
+        json.dumps(calibrated_params, ensure_ascii=False),
+        json.dumps(calibration_meta, ensure_ascii=False),
+        sim_id,
+    ))
+    conn.commit()
+    conn.close()
+
+
 SYSTEM_PROMPT = (
     "You are a traffic engineering expert and SUMO simulation engineer. "
     "When the user describes a road/traffic situation, return only JSON with the parameters needed for SUMO simulation. "
@@ -161,7 +181,7 @@ SYSTEM_PROMPT = (
 
 
 def _simulation_to_training_record(row):
-    ft_out = json.loads(row["ft_output_json"]) if row["ft_output_json"] else {}
+    ft_out = json.loads(row["initial_ft_output_json"] or row["ft_output_json"] or "{}") if (row["initial_ft_output_json"] or row["ft_output_json"]) else {}
     params = json.loads(row["params_json"]) if row["params_json"] else {}
     if not ft_out:
         return None

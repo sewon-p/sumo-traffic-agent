@@ -7,7 +7,6 @@
 <link rel="icon" href="/assets/ssw-favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script src="https://d3js.org/d3.v7.min.js"></script>
 <style>
   :root {
     --dark: #2B2D42;
@@ -24,6 +23,22 @@
     --green: #2ecc71;
     --yellow: #f39c12;
     --red: #EF233C;
+    --network-bg: #1F2334;
+    --network-road-shadow: #161A28;
+    --network-lane-1: #44547B;
+    --network-lane-2: #586A96;
+    --network-lane-3: #6B80B1;
+    --network-lane-4: #8298CB;
+    --network-lane-5: #A1B6E6;
+    --network-lane-hover: #C7D7F7;
+    --network-junction: #64748B;
+    --network-junction-stroke: #394255;
+    --network-signal: #D4A017;
+    --network-signal-stroke: #8A6E10;
+    --network-signal-core: #EF233C;
+    --network-tooltip-bg: rgba(43, 45, 66, 0.92);
+    --network-tooltip-fg: #EDF2F4;
+    --network-legend: rgba(141, 153, 174, 0.88);
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -35,6 +50,14 @@
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+  }
+
+  body.setup-active header,
+  body.setup-active .main {
+    opacity: 0.16;
+    filter: blur(2px);
+    pointer-events: none;
+    user-select: none;
   }
 
   .sr-only {
@@ -118,7 +141,6 @@
     flex: 1;
     overflow-y: auto;
     padding: 20px 24px;
-    scroll-behavior: smooth;
   }
 
   .messages::-webkit-scrollbar { width: 4px; }
@@ -300,74 +322,6 @@
     flex-direction: column;
   }
 
-  .welcome-card {
-    margin-bottom: 18px;
-    padding: 22px;
-    border-radius: 20px;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.84));
-    border: 1px solid var(--surface-border);
-    box-shadow: var(--panel-shadow);
-  }
-
-  .welcome-eyebrow {
-    margin-bottom: 10px;
-    color: var(--accent);
-    font-size: 0.72rem;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .welcome-title {
-    max-width: 12ch;
-    margin-bottom: 10px;
-    font-size: clamp(1.7rem, 4vw, 2.5rem);
-    line-height: 0.98;
-    font-weight: 900;
-    letter-spacing: -0.05em;
-  }
-
-  .welcome-copy {
-    max-width: 60ch;
-    margin-bottom: 16px;
-    color: var(--ink-soft);
-    font-size: 0.95rem;
-    line-height: 1.65;
-  }
-
-  .welcome-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
-    margin-bottom: 16px;
-  }
-
-  .welcome-panel {
-    padding: 14px;
-    border-radius: 16px;
-    background: rgba(237, 242, 244, 0.78);
-    border: 1px solid rgba(141, 153, 174, 0.2);
-  }
-
-  .welcome-panel strong {
-    display: block;
-    margin-bottom: 4px;
-    color: var(--dark);
-    font-size: 0.82rem;
-  }
-
-  .welcome-panel span {
-    color: var(--ink-soft);
-    font-size: 0.8rem;
-    line-height: 1.55;
-  }
-
-  .prompt-suggestions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-
   /* Loading spinner */
   .loading {
     display: inline-flex;
@@ -390,25 +344,6 @@
     50% { opacity: 1; }
   }
 
-  /* Example prompt chips */
-  .example-chip {
-    background: rgba(255,255,255,0.92);
-    border: 1px solid var(--surface-border);
-    border-radius: 999px;
-    padding: 10px 14px;
-    min-height: 42px;
-    font-family: var(--sans);
-    font-size: 0.8125rem;
-    color: var(--ink-soft);
-    cursor: pointer;
-    transition: border-color 0.2s, color 0.2s, transform 0.2s;
-  }
-  .example-chip:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-    transform: translateY(-1px);
-  }
-
   .setup-screen {
     position: fixed;
     inset: 0;
@@ -429,6 +364,10 @@
     border: 1px solid var(--surface-border);
     background: var(--surface-strong);
     box-shadow: 0 24px 60px rgba(43, 45, 66, 0.12);
+  }
+
+  .setup-panel:focus {
+    outline: none;
   }
 
   .setup-title {
@@ -576,6 +515,11 @@
     font: 0.875rem/1.3 var(--sans);
   }
 
+  .setup-output {
+    display: flex;
+    align-items: center;
+  }
+
   .setup-input.mono,
   .cli-option {
     font-family: var(--mono);
@@ -666,9 +610,17 @@
 
   .network-shell {
     padding: 0;
-    background: #1a1a2e;
+    background: var(--network-bg);
     border-radius: 12px;
     overflow: hidden;
+  }
+
+  .btn-full {
+    width: 100%;
+  }
+
+  .btn-flex {
+    flex: 1;
   }
 
   /* Focus & accessibility */
@@ -678,7 +630,6 @@
   .setup-input:focus-visible,
   .setup-select:focus-visible,
   .action-btn:focus-visible,
-  .example-chip:focus-visible,
   .input-row input:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
@@ -706,7 +657,6 @@
     .messages { padding: 16px; }
     .input-area { padding: 12px 16px; }
     .input-row { flex-direction: column; align-items: stretch; }
-    .welcome-grid,
     .setup-top-actions,
     .setup-actions,
     .action-row {
@@ -715,15 +665,14 @@
     }
     .setup-screen { padding: 12px; align-items: stretch; }
     .setup-panel { width: 100%; border-radius: 18px; }
-    .example-chip { width: 100%; justify-content: flex-start; }
   }
 </style>
 </head>
-<body>
+<body class="setup-active">
 
 <!-- ========== Setup Screen ========== -->
 <div id="setup-screen" class="setup-screen" role="dialog" aria-modal="true" aria-labelledby="setup-title" aria-describedby="setup-copy">
-  <div class="setup-panel">
+  <div class="setup-panel" id="setup-panel" tabindex="-1">
     <h1 id="setup-title" class="setup-title"><span style="color:var(--accent);">SUMO</span> Traffic Simulation Agent</h1>
     <p id="setup-copy" class="setup-copy">Describe a traffic situation and get a runnable SUMO scenario. Start with the default setup now, or open advanced model options if you want to use your own CLI or API key.</p>
     <div class="setup-top-actions">
@@ -746,48 +695,48 @@
           <div class="setup-option-copy" id="cli-desc"></div>
         </button>
 
+        <div id="setup-cli-select" class="setup-subpanel" style="display:none;">
+          <div class="setup-subcopy">Multiple CLIs are available. Pick the local client you want to use for geometry reasoning.</div>
+          <div id="cli-options" class="setup-grid"></div>
+        </div>
+
         <button type="button" class="setup-option" onclick="selectBaseLLM('custom-api')" id="opt-custom">
           <div class="setup-option-title">Your Own API Key</div>
           <div class="setup-option-copy">Use your own Gemini, Claude, or OpenAI key for geometry generation.</div>
         </button>
-      </div>
 
-      <div id="setup-cli-select" class="setup-subpanel" style="display:none;">
-        <div class="setup-subcopy">Multiple CLIs are available. Pick the local client you want to use for geometry reasoning.</div>
-        <div id="cli-options" class="setup-grid"></div>
-      </div>
+        <div id="setup-api-input" class="setup-subpanel" style="display:none;">
+          <div id="setup-api-key-step">
+            <div class="setup-subcopy">Enter one provider key. After that, choose a model from the same provider.</div>
+            <div class="setup-field">
+              <label for="setup-key-gemini">Gemini</label>
+              <input class="setup-input mono" type="password" id="setup-key-gemini" placeholder="AIzaSy...">
+            </div>
+            <div class="setup-field">
+              <label for="setup-key-claude">Claude</label>
+              <input class="setup-input mono" type="password" id="setup-key-claude" placeholder="sk-ant-...">
+            </div>
+            <div class="setup-field">
+              <label for="setup-key-gpt">OpenAI</label>
+              <input class="setup-input mono" type="password" id="setup-key-gpt" placeholder="sk-...">
+            </div>
+            <button class="btn btn-full" onclick="continueCustomApiSelection()">Continue to Model Selection</button>
+          </div>
 
-      <div id="setup-api-input" class="setup-subpanel" style="display:none;">
-        <div id="setup-api-key-step">
-          <div class="setup-subcopy">Enter one provider key. After that, choose a model from the same provider.</div>
-          <div class="setup-field">
-            <label for="setup-key-gemini">Gemini</label>
-            <input class="setup-input mono" type="password" id="setup-key-gemini" placeholder="AIzaSy...">
-          </div>
-          <div class="setup-field">
-            <label for="setup-key-claude">Claude</label>
-            <input class="setup-input mono" type="password" id="setup-key-claude" placeholder="sk-ant-...">
-          </div>
-          <div class="setup-field">
-            <label for="setup-key-gpt">OpenAI</label>
-            <input class="setup-input mono" type="password" id="setup-key-gpt" placeholder="sk-...">
-          </div>
-          <button class="btn" style="width:100%;" onclick="continueCustomApiSelection()">Continue to Model Selection</button>
-        </div>
-
-        <div id="setup-api-model-step" style="display:none;">
-          <div class="setup-subcopy">Select the Base LLM model for the provider you entered.</div>
-          <div class="setup-field">
-            <label for="setup-selected-provider">Selected Provider</label>
-            <div id="setup-selected-provider" class="setup-input" aria-live="polite">-</div>
-          </div>
-          <div class="setup-field">
-            <label for="setup-model-selected">Model</label>
-            <select id="setup-model-selected" class="setup-select"></select>
-          </div>
-          <div class="setup-actions">
-            <button class="btn btn-secondary" style="flex:1;" onclick="backToCustomApiKeys()">Back</button>
-            <button class="btn" style="flex:1;" onclick="confirmCustomApi()">Connect</button>
+          <div id="setup-api-model-step" style="display:none;">
+            <div class="setup-subcopy">Select the Base LLM model for the provider you entered.</div>
+            <div class="setup-field">
+              <span id="setup-selected-provider-label">Selected Provider</span>
+              <output id="setup-selected-provider" class="setup-input setup-output" aria-live="polite" aria-labelledby="setup-selected-provider-label">-</output>
+            </div>
+            <div class="setup-field">
+              <label for="setup-model-selected">Model</label>
+              <select id="setup-model-selected" class="setup-select"></select>
+            </div>
+            <div class="setup-actions">
+              <button class="btn btn-secondary btn-flex" onclick="backToCustomApiKeys()">Back</button>
+              <button class="btn btn-flex" onclick="confirmCustomApi()">Connect</button>
+            </div>
           </div>
         </div>
       </div>
@@ -813,32 +762,7 @@
 <main class="main">
   <div class="chat-container">
     <div class="messages" id="messages" role="log" aria-live="polite" aria-relevant="additions text">
-      <div class="messages-inner" id="messages-inner">
-        <div class="welcome-card" id="welcome-card">
-          <div class="welcome-eyebrow">Scenario Generation</div>
-          <div class="welcome-title">Natural language to runnable traffic simulations</div>
-          <div class="welcome-copy">Describe a place, road pattern, or congestion condition. We will extract parameters, build geometry, run SUMO, and stream the results back into this workspace.</div>
-          <div class="welcome-grid">
-            <div class="welcome-panel">
-              <strong>1. Describe the scene</strong>
-              <span>Use natural language instead of XML or SUMO config files.</span>
-            </div>
-            <div class="welcome-panel">
-              <strong>2. Review the result</strong>
-              <span>See extracted parameters, tool activity, and a network preview.</span>
-            </div>
-            <div class="welcome-panel">
-              <strong>3. Refine quickly</strong>
-              <span>Switch into correction or tuning mode without leaving the chat.</span>
-            </div>
-          </div>
-          <div class="prompt-suggestions" id="example-prompts">
-            <button type="button" class="example-chip" onclick="useExample(this)">Morning congestion near Gangnam Station with frequent buses</button>
-            <button type="button" class="example-chip" onclick="useExample(this)">Create a single urban intersection with moderate evening traffic</button>
-            <button type="button" class="example-chip" onclick="useExample(this)">School-zone arterial with slow traffic and short blocks</button>
-          </div>
-        </div>
-      </div>
+      <div class="messages-inner" id="messages-inner"></div>
     </div>
 
     <div class="input-area">
@@ -853,25 +777,7 @@
         This run is complete. Choose what to do next before entering a new request.
       </div>
       <div class="status-note">
-        Press Enter to run. Try prompts like “A moderately congested evening commute” or “Create a single intersection near Gangnam Station.”
-      </div>
-      <div id="api-key-panel" style="display:none; margin-top:8px; padding:8px; background:rgba(255,255,255,0.92); border-radius:10px; border:1px solid var(--surface-border);">
-        <div style="font-family:var(--sans); font-size:0.6875rem; color:var(--muted); margin-bottom:6px;">Enter an API key to use the corresponding LLM agent mode.</div>
-        <div style="display:flex; gap:6px; margin-bottom:4px;">
-          <label class="sr-only" for="key-gemini">Gemini API key</label>
-          <input type="password" id="key-gemini" placeholder="Gemini API Key" style="flex:1; background:var(--surface); border:1px solid var(--surface-border); color:var(--dark); font-family:var(--mono); font-size:11px; padding:5px 8px; border-radius:6px;">
-          <button class="btn btn-secondary" style="padding:5px 10px; font-size:10px;" onclick="saveKey('gemini')">Save</button>
-        </div>
-        <div style="display:flex; gap:6px; margin-bottom:4px;">
-          <label class="sr-only" for="key-claude">Claude API key</label>
-          <input type="password" id="key-claude" placeholder="Claude API Key" style="flex:1; background:var(--surface); border:1px solid var(--surface-border); color:var(--dark); font-family:var(--mono); font-size:11px; padding:5px 8px; border-radius:6px;">
-          <button class="btn btn-secondary" style="padding:5px 10px; font-size:10px;" onclick="saveKey('claude')">Save</button>
-        </div>
-        <div style="display:flex; gap:6px;">
-          <label class="sr-only" for="key-gpt">OpenAI API key</label>
-          <input type="password" id="key-gpt" placeholder="OpenAI API Key" style="flex:1; background:var(--surface); border:1px solid var(--surface-border); color:var(--dark); font-family:var(--mono); font-size:11px; padding:5px 8px; border-radius:6px;">
-          <button class="btn btn-secondary" style="padding:5px 10px; font-size:10px;" onclick="saveKey('gpt')">Save</button>
-        </div>
+        Press Enter to run. Describe the traffic scene first, then refine the result in correction or tuning mode.
       </div>
     </div>
   </div>
@@ -882,12 +788,59 @@ const API = '';
 const messagesEl = document.getElementById('messages-inner');
 const inputEl = document.getElementById('input');
 const sendBtn = document.getElementById('send-btn');
+const setupScreenEl = document.getElementById('setup-screen');
+const setupPanelEl = document.getElementById('setup-panel');
+const mainHeaderEl = document.querySelector('header');
+const mainContentEl = document.querySelector('.main');
 let _isComposing = false;
 let _sending = false;
+let _d3Promise = null;
 
-function hideWelcomeCard() {
-  const card = document.getElementById('welcome-card');
-  if (card) card.remove();
+function setSetupActive(active) {
+  document.body.classList.toggle('setup-active', active);
+  if (mainHeaderEl) {
+    mainHeaderEl.toggleAttribute('inert', active);
+    mainHeaderEl.setAttribute('aria-hidden', active ? 'true' : 'false');
+  }
+  if (mainContentEl) {
+    mainContentEl.toggleAttribute('inert', active);
+    mainContentEl.setAttribute('aria-hidden', active ? 'true' : 'false');
+  }
+  if (active) {
+    requestAnimationFrame(() => {
+      const firstTarget = document.querySelector('#setup-screen .btn') || setupPanelEl;
+      firstTarget?.focus();
+    });
+  }
+}
+
+setupScreenEl.addEventListener('keydown', (event) => {
+  if (setupScreenEl.style.display === 'none' || event.key !== 'Tab') return;
+  const focusable = setupScreenEl.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+  const items = [...focusable].filter((el) => !el.disabled && el.offsetParent !== null);
+  if (!items.length) return;
+  const first = items[0];
+  const last = items[items.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+});
+
+function ensureD3() {
+  if (window.d3) return Promise.resolve(window.d3);
+  if (_d3Promise) return _d3Promise;
+  _d3Promise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://d3js.org/d3.v7.min.js';
+    script.onload = () => resolve(window.d3);
+    script.onerror = () => reject(new Error('Failed to load the network renderer.'));
+    document.head.appendChild(script);
+  });
+  return _d3Promise;
 }
 
 function toggleAdvancedSetup() {
@@ -898,12 +851,6 @@ function toggleAdvancedSetup() {
   button.setAttribute('aria-expanded', String(!isOpen));
 }
 
-function useExample(el) {
-  inputEl.value = el.textContent;
-  inputEl.focus();
-  send();
-}
-
 inputEl.addEventListener('keydown', e => {
   if (e.isComposing || _isComposing) return;
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
@@ -912,9 +859,6 @@ inputEl.addEventListener('compositionstart', () => { _isComposing = true; });
 inputEl.addEventListener('compositionend', () => { _isComposing = false; });
 
 let _setupData = {};
-let _selectedMode = '';
-let _selectedProvider = '';
-
 let _baseLLMMode = 'default';
 let _awaitingActionChoice = false;
 let _modifyIntent = null;
@@ -1037,6 +981,7 @@ fetch('/api/status')
       document.getElementById('opt-cli').disabled = true;
     }
 
+    setSetupActive(true);
     document.getElementById('setup-screen').style.display = 'flex';
   })
   .catch((err) => {
@@ -1046,6 +991,7 @@ fetch('/api/status')
     document.getElementById('setup-base-status').innerHTML = '<strong>We could not verify the geometry model yet.</strong> You can still review the available options below.';
     document.getElementById('setup-base-status').style.color = 'var(--yellow)';
     document.getElementById('cli-desc').textContent = 'Availability could not be verified.';
+    setSetupActive(true);
     document.getElementById('setup-screen').style.display = 'flex';
   });
 
@@ -1111,14 +1057,14 @@ function confirmCustomApi() {
 function startApp(baseLLMConfig) {
   _baseLLMMode = baseLLMConfig;
   document.getElementById('setup-screen').style.display = 'none';
-  hideWelcomeCard();
+  setSetupActive(false);
   const label = describeBaseLLMConfig(baseLLMConfig);
   applySelectedBaseStatus(baseLLMConfig);
-  addMessage('system', `Geometry model: ${label}`);
-  addMessage('system', `Parameter model: ${_setupData.ft_name || 'Rule-based fallback'}`);
+  addMessage('system', `Layout model: ${label}`);
+  addMessage('system', `Traffic parameter model: ${_setupData.ft_name || 'Rule-based fallback'}`);
   if (baseLLMConfig === 'default' && _setupData.base_shared_key) {
     const sharedLabel = `${providerDisplayName(_setupData.base_provider)} ${_setupData.base_model || ''}`.trim();
-    addMessage('system', `Using the shared ${sharedLabel} geometry model. If you need more flexibility, switch to your own API key from Advanced Model Options.`);
+    addMessage('system', `Using the shared ${sharedLabel} layout model. If you need more flexibility, switch to your own API key from Advanced Model Options.`);
   }
   setModeBanner();
 }
@@ -1128,17 +1074,23 @@ function updateStatus(data) {
   document.getElementById('dot-llm').className = 'dot ' + ((data.ft_ready || data.base_ready) ? 'green' : 'yellow');
   document.getElementById('dot-data').className = 'dot ' + (data.traffic_data ? 'green' : 'yellow');
   const baseLabel = data.base_model || data.base_provider || 'off';
-  document.getElementById('llm-status').textContent = `Parameter model: ${data.ft_ready ? 'ready' : 'fallback'} / Geometry model: ${baseLabel}`;
+  document.getElementById('llm-status').textContent = `Parameters: ${data.ft_ready ? 'ready' : 'fallback'} / Layout: ${baseLabel}`;
+}
+
+function scrollToBottom() {
+  requestAnimationFrame(() => {
+    const container = document.getElementById('messages');
+    if (container) container.scrollTop = container.scrollHeight;
+  });
 }
 
 function addMessage(role, text) {
-  hideWelcomeCard();
   const div = document.createElement('div');
   div.className = `message ${role}`;
   const label = role === 'user' ? 'You' : role === 'tool' ? 'Tool' : role === 'system' ? 'Status' : 'Agent';
   div.innerHTML = `<div class="msg-label">${label}</div><div class="msg-body">${escapeHtml(text)}</div>`;
   messagesEl.appendChild(div);
-  document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+  scrollToBottom();
   return div;
 }
 
@@ -1148,7 +1100,7 @@ function addLoading() {
   div.id = 'loading';
   div.innerHTML = '<div class="msg-label">Agent</div><div class="msg-body"><div class="loading"><div class="loading-dot"></div><div class="loading-dot"></div><div class="loading-dot"></div></div></div>';
   messagesEl.appendChild(div);
-  document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+  scrollToBottom();
 }
 
 function removeLoading() {
@@ -1257,6 +1209,56 @@ async function send() {
 
   sendBtn.disabled = false;
   _sending = false;
+  _modifyMode = false;
+  _modifyIntent = null;
+  setModeBanner();
+}
+
+async function sendCalibrate() {
+  if (_sending) return;
+  _sending = true;
+  sendBtn.disabled = true;
+  clearActionCards();
+  addLoading();
+
+  try {
+    const response = await fetch('/api/calibrate', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: '{}',
+    });
+    if (!response.ok) throw new Error(`Calibration failed (${response.status})`);
+    if (!response.body) throw new Error('Streaming not available.');
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    removeLoading();
+
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, {stream: true});
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      let shouldBreak = false;
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const event = JSON.parse(line.slice(6));
+          if (event.type === 'done') { shouldBreak = true; break; }
+          handleEvent(event);
+        } catch(e) {}
+      }
+      if (shouldBreak) { reader.cancel(); break; }
+    }
+  } catch (e) {
+    removeLoading();
+    addMessage('agent', `Calibration error: ${e.message}`);
+  }
+
+  sendBtn.disabled = false;
+  _sending = false;
 }
 
 function handleEvent(event) {
@@ -1294,8 +1296,55 @@ function handleEvent(event) {
       break;
 
     case 'buttons':
+      _lastButtons = event.data;
       addButtons(event.data);
       break;
+
+    case 'cal_start': {
+      const d = event.data;
+      addMessage('agent',
+        `Calibration starting:\n` +
+        `  Target: ${d.target_speed_kmh} km/h\n` +
+        `  Current: ${d.initial_speed_kmh} km/h (error: ${d.initial_error_pct > 0 ? '+' : ''}${d.initial_error_pct.toFixed(1)}%)\n` +
+        `  Max ${d.max_iterations} iterations, tolerance ±${d.tolerance_pct}%`);
+      break;
+    }
+
+    case 'cal_iteration': {
+      const d = event.data;
+      const tag = d.converged ? '✓ converged' : 'adjusting...';
+      addMessage('agent',
+        `[${d.iteration}/3] sim=${d.sim_speed_kmh.toFixed(1)} km/h, ` +
+        `error=${d.error_pct > 0 ? '+' : ''}${d.error_pct.toFixed(1)}% [${tag}]\n` +
+        `  vph=${d.params.vehicles_per_hour}, sigma=${d.params.sigma.toFixed(3)}, tau=${d.params.tau.toFixed(3)}`);
+      break;
+    }
+
+    case 'cal_complete': {
+      const d = event.data;
+      if (d.status === 'already_converged') {
+        addMessage('agent', d.message);
+      } else if (d.converged) {
+        addMessage('agent',
+          `Calibration converged in ${d.iterations_count} iteration(s).\n` +
+          `  ${d.initial_error_pct > 0 ? '+' : ''}${d.initial_error_pct}% → ${d.final_error_pct > 0 ? '+' : ''}${d.final_error_pct}%\n` +
+          `  Final: ${d.final_speed_kmh} km/h (target ${d.target_speed_kmh})\n` +
+          `  Drift: vph ${d.drift.volume_pct > 0 ? '+' : ''}${d.drift.volume_pct}%, ` +
+          `sigma ${d.drift.sigma > 0 ? '+' : ''}${d.drift.sigma}, ` +
+          `tau ${d.drift.tau > 0 ? '+' : ''}${d.drift.tau}`);
+      } else if (d.status === 'error') {
+        addMessage('agent', `Calibration failed: ${d.error_message}`);
+      } else {
+        addMessage('agent',
+          `Calibration reached max iterations (${d.iterations_count}).\n` +
+          `  ${d.initial_error_pct > 0 ? '+' : ''}${d.initial_error_pct}% → ${d.final_error_pct > 0 ? '+' : ''}${d.final_error_pct}%\n` +
+          `  Best: ${d.final_speed_kmh} km/h (target ${d.target_speed_kmh})\n` +
+          `  Drift: vph ${d.drift.volume_pct > 0 ? '+' : ''}${d.drift.volume_pct}%, ` +
+          `sigma ${d.drift.sigma > 0 ? '+' : ''}${d.drift.sigma}, ` +
+          `tau ${d.drift.tau > 0 ? '+' : ''}${d.drift.tau}`);
+      }
+      break;
+    }
   }
 }
 
@@ -1311,12 +1360,19 @@ function addNetworkToChat(netData) {
       <div id="${svgId}" style="width:100%; height:400px; position:relative;"></div>
     </div>`;
   messagesEl.appendChild(div);
-  document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+  scrollToBottom();
 
-  requestAnimationFrame(() => renderD3Network(svgId, netData));
+  requestAnimationFrame(() => {
+    renderD3Network(svgId, netData).then(() => {
+      scrollToBottom();
+    }).catch((error) => {
+      addMessage('system', `Network preview unavailable. ${error.message}`);
+    });
+  });
 }
 
-function renderD3Network(containerId, netData) {
+async function renderD3Network(containerId, netData) {
+  const d3 = await ensureD3();
   const container = document.getElementById(containerId);
   if (!container) return;
 
@@ -1331,19 +1387,19 @@ function renderD3Network(containerId, netData) {
   const svg = d3.select('#' + containerId)
     .append('svg')
     .attr('width', W).attr('height', H)
-    .style('background', '#1a1a2e');
+    .style('background', 'var(--network-bg)');
 
   const g = svg.append('g');
 
   const zoom = d3.zoom().scaleExtent([0.3, 20]).on('zoom', e => g.attr('transform', e.transform));
   svg.call(zoom);
 
-  const laneColor = lanes => {
-    if (lanes >= 5) return '#7b9ef5';
-    if (lanes >= 4) return '#5a7ae8';
-    if (lanes >= 3) return '#4a6abc';
-    if (lanes >= 2) return '#3d5590';
-    return '#2d3d65';
+  const laneColor = (lanes) => {
+    if (lanes >= 5) return 'var(--network-lane-5)';
+    if (lanes >= 4) return 'var(--network-lane-4)';
+    if (lanes >= 3) return 'var(--network-lane-3)';
+    if (lanes >= 2) return 'var(--network-lane-2)';
+    return 'var(--network-lane-1)';
   };
 
   g.selectAll('.edge-bg')
@@ -1356,7 +1412,7 @@ function renderD3Network(containerId, netData) {
       return 'M' + pts.map(p => xScale(p[0]) + ',' + yScale(p[1])).join('L');
     })
     .attr('fill', 'none')
-    .attr('stroke', '#0f0f18')
+    .attr('stroke', 'var(--network-road-shadow)')
     .attr('stroke-width', e => Math.max(3, (e.lanes || 1) * 3 + 2))
     .attr('stroke-linecap', 'round')
     .attr('stroke-linejoin', 'round');
@@ -1377,7 +1433,7 @@ function renderD3Network(containerId, netData) {
     .attr('stroke-linejoin', 'round')
     .attr('opacity', 0.85)
     .on('mouseover', function(event, e) {
-      d3.select(this).attr('stroke', '#a0c0ff').attr('opacity', 1);
+      d3.select(this).attr('stroke', 'var(--network-lane-hover)').attr('opacity', 1);
       tooltip.style('display', 'block')
         .html(`${e.lanes || 1} lanes - ${Math.round(e.length || 0)}m`)
         .style('left', (event.offsetX + 10) + 'px')
@@ -1399,16 +1455,16 @@ function renderD3Network(containerId, netData) {
         let path = '';
         for (let i = 0; i < pts.length - 1; i++) {
           const x1 = xScale(pts[i][0]), y1 = yScale(pts[i][1]);
-          const x2 = xScale(pts[i+1][0]), y2 = yScale(pts[i+1][1]);
+          const x2 = xScale(pts[i + 1][0]), y2 = yScale(pts[i + 1][1]);
           const dx = x2 - x1, dy = y2 - y1;
-          const len = Math.sqrt(dx*dx + dy*dy) || 1;
-          const px = -dy/len * offset, py = dx/len * offset;
-          path += (i === 0 ? 'M' : 'L') + (x1+px) + ',' + (y1+py);
+          const len = Math.sqrt(dx * dx + dy * dy) || 1;
+          const px = -dy / len * offset, py = dx / len * offset;
+          path += (i === 0 ? 'M' : 'L') + (x1 + px) + ',' + (y1 + py);
         }
         g.append('path')
           .attr('d', path)
           .attr('fill', 'none')
-          .attr('stroke', 'rgba(255,255,255,0.12)')
+          .attr('stroke', 'rgba(237, 242, 244, 0.14)')
           .attr('stroke-width', 0.5)
           .attr('stroke-dasharray', '3,3');
       }
@@ -1422,8 +1478,8 @@ function renderD3Network(containerId, netData) {
     .attr('cx', j => xScale(j.x))
     .attr('cy', j => yScale(j.y))
     .attr('r', j => j.type === 'traffic_light' ? 5 : 3)
-    .attr('fill', j => j.type === 'traffic_light' ? '#facc15' : '#4a5570')
-    .attr('stroke', j => j.type === 'traffic_light' ? '#a08810' : '#2a3040')
+    .attr('fill', j => j.type === 'traffic_light' ? 'var(--network-signal)' : 'var(--network-junction)')
+    .attr('stroke', j => j.type === 'traffic_light' ? 'var(--network-signal-stroke)' : 'var(--network-junction-stroke)')
     .attr('stroke-width', 1.5);
 
   g.selectAll('.tl-inner')
@@ -1432,40 +1488,47 @@ function renderD3Network(containerId, netData) {
     .attr('cx', j => xScale(j.x))
     .attr('cy', j => yScale(j.y))
     .attr('r', 2)
-    .attr('fill', '#ff6b6b');
+    .attr('fill', 'var(--network-signal-core)');
 
   const tooltip = d3.select('#' + containerId)
     .append('div')
     .style('position', 'absolute')
     .style('display', 'none')
-    .style('background', 'rgba(0,0,0,0.85)')
-    .style('color', '#e0e0e8')
+    .style('background', 'var(--network-tooltip-bg)')
+    .style('color', 'var(--network-tooltip-fg)')
     .style('padding', '4px 8px')
     .style('border-radius', '4px')
-    .style('font-size', '10px')
+    .style('font-size', '11px')
     .style('font-family', 'var(--mono)')
     .style('pointer-events', 'none')
     .style('z-index', '10');
 
   svg.append('text')
     .attr('x', 8).attr('y', H - 8)
-    .attr('fill', '#6668')
-    .attr('font-size', '9px')
-    .attr('font-family', 'monospace')
+    .attr('fill', 'var(--network-legend)')
+    .attr('font-size', '11px')
+    .attr('font-family', 'var(--mono)')
     .text(`${netData.edges.length} edges · ${juncs.length} junctions · drag/scroll to navigate`);
 
   const legend = svg.append('g').attr('transform', `translate(${W - 120}, 16)`);
-  [{l:1,c:'#2d3d65'},{l:2,c:'#3d5590'},{l:3,c:'#4a6abc'},{l:4,c:'#5a7ae8'},{l:'5+',c:'#7b9ef5'}].forEach((d,i) => {
-    legend.append('line').attr('x1',0).attr('y1',i*14).attr('x2',20).attr('y2',i*14)
-      .attr('stroke',d.c).attr('stroke-width', typeof d.l==='number'? d.l*2 : 10).attr('stroke-linecap','round');
-    legend.append('text').attr('x',26).attr('y',i*14+3)
-      .attr('fill','#888').attr('font-size','9px').attr('font-family','monospace')
+  [
+    {l: 1, c: 'var(--network-lane-1)'},
+    {l: 2, c: 'var(--network-lane-2)'},
+    {l: 3, c: 'var(--network-lane-3)'},
+    {l: 4, c: 'var(--network-lane-4)'},
+    {l: '5+', c: 'var(--network-lane-5)'},
+  ].forEach((d, i) => {
+    legend.append('line').attr('x1', 0).attr('y1', i * 14).attr('x2', 20).attr('y2', i * 14)
+      .attr('stroke', d.c).attr('stroke-width', typeof d.l === 'number' ? d.l * 2 : 10).attr('stroke-linecap', 'round');
+    legend.append('text').attr('x', 26).attr('y', i * 14 + 3)
+      .attr('fill', 'var(--network-legend)').attr('font-size', '11px').attr('font-family', 'var(--mono)')
       .text(d.l + ' lanes');
   });
 }
 
 let _modifyMode = false;
 let _modifySubmenuOpen = false;
+let _lastButtons = [];
 
 function clearActionCards() {
   document.querySelectorAll('[data-action-card="true"]').forEach(el => el.remove());
@@ -1479,17 +1542,13 @@ function addButtons(buttons) {
   div.className = 'message agent';
   div.dataset.actionCard = 'true';
 
-  const primary = buttons.filter(b => b.action === 'modify-menu' || b.action === 'new');
+  const primary = buttons.filter(b => b.action === 'modify-menu' || b.action === 'new' || b.action === 'download' || b.action === 'calibrate');
   const modifyOptions = buttons.filter(b => b.action === 'modify-correction' || b.action === 'modify-alternative');
 
   let html = '<div class="msg-body action-card">';
-  html += '<div class="action-card-copy">This run is complete. Download the artifacts, refine the current scenario, or start a fresh simulation.</div>';
-  html += '<div class="action-row">';
-  html += '<button type="button" class="action-btn" onclick="handleAction(\'download\')">Download artifacts</button>';
-  html += '</div>';
+  html += '<div class="action-card-copy">Simulation complete. Refine the current result or start a new scenario.</div>';
 
   if (primary.length) {
-    html += '<div class="action-card-copy" style="margin-top:10px;">Choose whether to refine the current result or move on to a new scenario.</div>';
     html += '<div class="action-row">';
     for (const btn of primary) {
       const isModify = btn.action === 'modify-menu';
@@ -1512,34 +1571,28 @@ function addButtons(buttons) {
   html += '</div>';
   div.innerHTML = html;
   messagesEl.appendChild(div);
-  document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+  scrollToBottom();
 }
 
 function handleAction(action) {
   _awaitingActionChoice = false;
   setInputLocked(false);
-  if (action === 'modify-menu') {
+  if (action === 'calibrate') {
+    clearActionCards();
+    sendCalibrate();
+    return;
+  } else if (action === 'modify-menu') {
     _modifySubmenuOpen = true;
-    addButtons([
-      {label: 'Adjust', action: 'modify-menu'},
-      {label: 'New Simulation', action: 'new'},
-      {label: 'Error Correction', action: 'modify-correction'},
-      {label: 'Tuning', action: 'modify-alternative'},
-    ]);
+    addButtons(_lastButtons);
     return;
   } else if (action === 'modify-cancel') {
     _modifySubmenuOpen = false;
-    addButtons([
-      {label: 'Adjust', action: 'modify-menu'},
-      {label: 'New Simulation', action: 'new'},
-      {label: 'Error Correction', action: 'modify-correction'},
-      {label: 'Tuning', action: 'modify-alternative'},
-    ]);
+    addButtons(_lastButtons);
     return;
   } else if (action === 'download') {
     window.location.href = '/api/download';
-    _awaitingActionChoice = true;
-    setInputLocked(true);
+    addButtons(_lastButtons);
+    return;
   } else if (action === 'modify-correction' || action === 'modify-alternative') {
     clearActionCards();
     _modifySubmenuOpen = false;
@@ -1595,29 +1648,6 @@ function formatResult(r) {
   msg += `  Avg waiting time: ${r.avg_waiting_time_s || '-'}s\n`;
   msg += `  Time loss: ${r.avg_time_loss_s || '-'}s`;
   return msg;
-}
-
-const _apiKeys = {};
-
-function toggleApiKeyPanel() {
-  const panel = document.getElementById('api-key-panel');
-  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-}
-
-function saveKey(provider) {
-  const input = document.getElementById('key-' + provider);
-  const key = input.value.trim();
-  if (key) {
-    _apiKeys[provider] = key;
-    input.value = '';
-    input.placeholder = '✓ Saved';
-    addMessage('system', `${providerDisplayName(provider)} API key saved for this session.`);
-  }
-}
-
-function _getActiveKey() {
-  const provider = _selectedProvider;
-  return provider ? (_apiKeys[provider] || null) : null;
 }
 
 async function queryTraffic() {

@@ -1,1346 +1,2044 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LLM-Guided Synthetic Driving Scenario Generation</title>
-<link rel="icon" href="/assets/ssw-favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<script type="module">
-  async function initMermaid() {
-    try {
-      const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs');
-      mermaid.initialize({
-        startOnLoad: false,
-        theme: 'base',
-        securityLevel: 'loose',
-        themeVariables: {
-          background: '#EDF2F4',
-          primaryColor: '#ffffff',
-          primaryTextColor: '#2B2D42',
-          primaryBorderColor: '#8D99AE',
-          lineColor: '#8D99AE',
-          secondaryColor: '#ffffff',
-          tertiaryColor: '#ffffff',
-          fontFamily: 'Pretendard, system-ui, sans-serif',
-          fontSize: '13px',
-          edgeLabelBackground: '#EDF2F4',
-          nodeTextColor: '#2B2D42',
-          clusterBkg: '#ffffff',
-          clusterBorder: '#8D99AE'
-        },
-        flowchart: {
-          curve: 'basis',
-          htmlLabels: true,
-          nodeSpacing: 30,
-          rankSpacing: 40
-        }
-      });
-      window.mermaid = mermaid;
-      await mermaid.run();
-      document.getElementById('refinement-flow')?.classList.add('hidden');
-    } catch (e) {
-      console.warn('Mermaid failed to load:', e);
-      document.querySelectorAll('.mermaid-wrap').forEach(el => {
-        el.style.display = 'none';
-      });
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM-Guided Synthetic Driving Scenario Generation</title>
+  <link rel="icon" href="/assets/ssw-favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <script type="module">
+    async function initMermaid() {
+      try {
+        const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs');
+        mermaid.initialize({
+          startOnLoad: false,
+          theme: 'base',
+          securityLevel: 'loose',
+          themeVariables: {
+            background: '#EDF2F4',
+            primaryColor: '#ffffff',
+            primaryTextColor: '#2B2D42',
+            primaryBorderColor: '#8D99AE',
+            lineColor: '#8D99AE',
+            secondaryColor: '#ffffff',
+            tertiaryColor: '#ffffff',
+            fontFamily: 'Pretendard, system-ui, sans-serif',
+            fontSize: '13px',
+            edgeLabelBackground: '#EDF2F4',
+            nodeTextColor: '#2B2D42',
+            clusterBkg: '#ffffff',
+            clusterBorder: '#8D99AE'
+          },
+          flowchart: {
+            curve: 'basis',
+            htmlLabels: true,
+            nodeSpacing: 30,
+            rankSpacing: 40
+          }
+        });
+        await mermaid.run();
+      } catch (error) {
+        console.warn('Mermaid failed to load:', error);
+        document.querySelectorAll('.mermaid-wrap').forEach((element) => {
+          element.style.display = 'none';
+        });
+      }
     }
-  }
-  initMermaid();
-</script>
-<style>
-  :root {
-    --dark: #2B2D42;
-    --muted: #8D99AE;
-    --surface: #EDF2F4;
-    --accent: #EF233C;
-    --accent-text: #C91A30;
-    --surface-strong: rgba(255, 255, 255, 0.96);
-    --surface-border: rgba(141, 153, 174, 0.25);
-    --ink-soft: rgba(43, 45, 66, 0.72);
-    --hero-max: 1180px;
-    --sans: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-    --mono: 'SF Mono', 'Fira Code', 'Fira Mono', 'Consolas', monospace;
-  }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  html {
-    scroll-behavior: smooth;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(239, 35, 60, 0.18) var(--surface);
-  }
-
-  body {
-    min-height: 100vh;
-    background: var(--surface);
-    color: var(--dark);
-    font: 500 1.06rem/1.68 var(--sans);
-    -webkit-font-smoothing: antialiased;
-  }
-
-  a { color: inherit; }
-
-  .shell {
-    position: relative;
-  }
-
-  nav {
-    position: sticky;
-    top: 0;
-    z-index: 20;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 24px;
-    padding: 18px 28px;
-    backdrop-filter: blur(14px);
-    background: rgba(255, 255, 255, 0.88);
-    border-bottom: 1px solid var(--surface-border);
-  }
-
-  .nav-main {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 24px;
-    width: 100%;
-    min-width: 0;
-  }
-
-  .nav-secondary {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 20px;
-    width: 100%;
-    min-width: 0;
-  }
-
-  .brand {
-    font: 800 0.875rem/1 var(--sans);
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-    color: var(--dark);
-  }
-
-  .brand span { color: var(--accent); }
-
-  .nav-links {
-    display: flex;
-    gap: 18px;
-    list-style: none;
-    flex-wrap: wrap;
-    justify-content: center;
-    min-width: 0;
-  }
-
-  .nav-links a {
-    font: 600 0.8125rem/1 var(--mono);
-    text-decoration: none;
-    color: var(--muted);
-    transition: color 0.18s ease;
-  }
-
-  .nav-links a:hover { color: var(--accent); }
-
-  .nav-actions {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-  }
-
-  .nav-btn,
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    min-height: 42px;
-    padding: 0 18px;
-    border-radius: 14px;
-    border: 1px solid var(--surface-border);
-    text-decoration: none;
-    font: 700 0.8125rem/1 var(--mono);
-    letter-spacing: 0.02em;
-    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
-  }
-
-  .nav-btn:hover,
-  .btn:hover {
-    transform: translateY(-1px);
-    border-color: rgba(239, 35, 60, 0.38);
-  }
-
-  .btn-primary {
-    background: var(--accent);
-    color: #ffffff;
-    border-color: transparent;
-    box-shadow: 0 8px 24px rgba(239, 35, 60, 0.16);
-  }
-
-  .btn-primary:visited,
-  .btn-primary:hover,
-  .btn-primary:focus {
-    color: #ffffff;
-  }
-
-  .btn-secondary {
-    background: transparent;
-    color: var(--dark);
-    border: 1px solid var(--surface-border);
-  }
-
-  .btn-secondary:visited,
-  .btn-secondary:hover,
-  .btn-secondary:focus {
-    color: var(--dark);
-  }
-
-  main {
-    max-width: var(--hero-max);
-    margin: 0 auto;
-    padding: 0 28px 96px;
-  }
-
-  section {
-    padding: 88px 0 0;
-  }
-
-  .eyebrow {
-    margin-bottom: 14px;
-    color: var(--accent-text);
-    font: 700 0.75rem/1 var(--mono);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  .section-title {
-    font: 800 clamp(28px, 4vw, 46px)/1.1 var(--sans);
-    letter-spacing: -0.04em;
-    margin-bottom: 16px;
-    max-width: none;
-    text-wrap: balance;
-    color: var(--dark);
-  }
-
-  .section-copy {
-    max-width: none;
-    color: var(--ink-soft);
-    font-size: 1.06rem;
-  }
-
-  #hero {
-    min-height: calc(100vh - 78px);
-    display: grid;
-    align-items: center;
-  }
-
-  .hero-layout {
-    display: grid;
-    grid-template-columns: 1.15fr 0.85fr;
-    gap: 32px;
-    align-items: end;
-  }
-
-  .hero-copy {
-    max-width: none;
-  }
-
-  .hero-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 14px;
-    border-radius: 999px;
-    margin-bottom: 26px;
-    background: rgba(239, 35, 60, 0.06);
-    border: 1px solid rgba(239, 35, 60, 0.18);
-    color: var(--accent-text);
-    font: 700 0.6875rem/1 var(--mono);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-
-  .hero-title {
-    font: 900 clamp(40px, 7vw, 76px)/0.98 var(--sans);
-    letter-spacing: -0.04em;
-    max-width: none;
-    margin-bottom: 20px;
-    color: var(--dark);
-  }
-
-  .hero-title em {
-    color: var(--accent);
-    font-style: normal;
-  }
-
-  .hero-sub {
-    max-width: none;
-    color: var(--ink-soft);
-    font-size: 1.06rem;
-    margin-bottom: 24px;
-  }
-
-  .hero-detail {
-    max-width: none;
-    color: var(--muted);
-    font-size: 0.92rem;
-  }
-
-  .hero-actions {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-top: 30px;
-  }
-
-  .hero-panel {
-    background: var(--surface-strong);
-    border: 1px solid var(--surface-border);
-    border-radius: 22px;
-    padding: 24px;
-    box-shadow: 0 8px 24px rgba(43, 45, 66, 0.06);
-  }
-
-  .hero-panel-title {
-    font: 800 0.9375rem/1.2 var(--sans);
-    margin-bottom: 16px;
-    color: var(--accent);
-  }
-
-  .hero-metrics {
-    display: grid;
-    gap: 12px;
-  }
-
-  .hero-panel-note {
-    margin-top: 14px;
-    color: var(--muted);
-    font-size: 0.82rem;
-    line-height: 1.55;
-  }
-
-  .metric {
-    padding: 14px 16px;
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.92);
-    border: 1px solid var(--surface-border);
-  }
-
-  .metric-label {
-    color: var(--muted);
-    font: 700 0.75rem/1 var(--mono);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 6px;
-  }
-
-  .metric-value {
-    font: 800 1.125rem/1.2 var(--sans);
-    margin-bottom: 6px;
-    color: var(--dark);
-  }
-
-  .metric-copy {
-    color: var(--ink-soft);
-    font-size: 0.82rem;
-  }
-
-  .highlights {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 28px;
-  }
-
-  .highlight-pill {
-    padding: 10px 14px;
-    border-radius: 999px;
-    border: 1px solid var(--surface-border);
-    background: rgba(255, 255, 255, 0.92);
-    color: var(--ink-soft);
-    font: 600 0.8125rem/1 var(--mono);
-  }
-
-  .overview-grid,
-  .explore-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
-    gap: 22px;
-    margin-top: 28px;
-  }
-
-  .panel {
-    background: rgba(255, 255, 255, 0.92);
-    border: 1px solid var(--surface-border);
-    border-radius: 22px;
-    padding: 24px;
-    box-shadow: 0 8px 24px rgba(43, 45, 66, 0.06);
-  }
-
-  .panel p + p {
-    margin-top: 14px;
-  }
-
-  .panel-note {
-    color: var(--muted);
-    font-size: 0.88rem;
-  }
-
-  .mini-list {
-    display: grid;
-    gap: 12px;
-  }
-
-  .mini-item {
-    padding: 14px 16px;
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.92);
-    border: 1px solid var(--surface-border);
-    box-shadow: 0 8px 24px rgba(43, 45, 66, 0.06);
-  }
-
-  .mini-item strong {
-    display: block;
-    margin-bottom: 4px;
-    color: var(--dark);
-    font: 700 0.8125rem/1.3 var(--sans);
-  }
-
-  .mini-item span {
-    color: var(--muted);
-    font-size: 0.82rem;
-  }
-
-  .cards {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 18px;
-    margin-top: 28px;
-  }
-
-  .card-copy code,
-  .results-table code,
-  .result-metric-copy code {
-    font-family: var(--mono);
-    font-size: 0.94em;
-    background: rgba(237, 242, 244, 0.88);
-    padding: 0.12rem 0.38rem;
-    border-radius: 0.45rem;
-  }
-
-  .data-paths {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 18px;
-    margin-top: 28px;
-  }
-
-  .path-card {
-    background: rgba(255, 255, 255, 0.92);
-    border: 1px solid var(--surface-border);
-    border-radius: 22px;
-    padding: 22px;
-    box-shadow: 0 8px 24px rgba(43, 45, 66, 0.06);
-  }
-
-  .path-label {
-    color: var(--accent-text);
-    font: 700 0.75rem/1 var(--mono);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-bottom: 10px;
-  }
-
-  .path-title {
-    font: 800 1.125rem/1.15 var(--sans);
-    margin-bottom: 10px;
-    color: var(--dark);
-  }
-
-  .path-copy {
-    color: var(--ink-soft);
-    font-size: 0.88rem;
-    margin-bottom: 12px;
-  }
-
-  .path-meta {
-    color: var(--muted);
-    font-size: 0.82rem;
-  }
-
-  .results-grid {
-    display: grid;
-    grid-template-columns: 0.95fr 1.05fr;
-    gap: 22px;
-    margin-top: 28px;
-  }
-
-  .results-metrics {
-    display: grid;
-    gap: 14px;
-  }
-
-  .result-metric {
-    padding: 18px 20px;
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.92);
-    border: 1px solid var(--surface-border);
-    box-shadow: 0 8px 24px rgba(43, 45, 66, 0.06);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-
-  .result-metric-label {
-    color: var(--muted);
-    font: 700 0.6875rem/1 var(--mono);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 8px;
-  }
-
-  .result-metric-value {
-    font: 800 1.75rem/1.05 var(--sans);
-    margin-bottom: 8px;
-    color: var(--dark);
-    font-variant-numeric: tabular-nums;
-  }
-
-  .result-metric-copy {
-    color: var(--ink-soft);
-    font-size: 0.88rem;
-  }
-
-  .results-table-wrap {
-    background: rgba(255, 255, 255, 0.92);
-    border: 1px solid var(--surface-border);
-    border-radius: 22px;
-    padding: 18px;
-    overflow-x: auto;
-    box-shadow: 0 8px 24px rgba(43, 45, 66, 0.06);
-  }
-
-  .results-table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 420px;
-  }
-
-  .results-table th,
-  .results-table td {
-    padding: 11px 10px;
-    border-bottom: 1px solid var(--surface-border);
-    text-align: left;
-    font-size: 0.82rem;
-  }
-
-  .results-table th {
-    color: var(--dark);
-    font: 700 0.6875rem/1 var(--mono);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-
-  .results-table td {
-    color: var(--ink-soft);
-    font-family: var(--sans);
-  }
-
-  .results-table td strong {
-    color: var(--accent);
-    font-weight: 800;
-  }
-
-  .results-note {
-    margin-top: 12px;
-    color: var(--muted);
-    font-size: 0.78rem;
-  }
-
-  .card {
-    background: rgba(255, 255, 255, 0.92);
-    border: 1px solid var(--surface-border);
-    border-radius: 22px;
-    padding: 22px;
-    box-shadow: 0 8px 24px rgba(43, 45, 66, 0.06);
-    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
-  }
-
-  .card:hover {
-    transform: translateY(-3px);
-    border-color: rgba(239, 35, 60, 0.38);
-    box-shadow: 0 24px 44px rgba(43, 45, 66, 0.09);
-  }
-
-  .card-icon {
-    width: 42px;
-    height: 42px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 14px;
-    margin-bottom: 14px;
-    color: var(--accent);
-    background: rgba(239, 35, 60, 0.06);
-    border: 1px solid rgba(239, 35, 60, 0.15);
-    font: 700 0.875rem/1 var(--mono);
-  }
-
-  .card-title {
-    font: 800 1.125rem/1.2 var(--sans);
-    margin-bottom: 10px;
-    color: var(--dark);
-  }
-
-  .card-copy {
-    color: var(--ink-soft);
-    font-size: 0.88rem;
-  }
-
-  .workflow-grid {
-    display: grid;
-    gap: 24px;
-    margin-top: 28px;
-  }
-
-  .workflow-tabs {
-    display: inline-flex;
-    gap: 8px;
-    padding: 6px;
-    margin-top: 28px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.92);
-    border: 1px solid var(--surface-border);
-  }
-
-  .workflow-tab {
-    min-height: 38px;
-    padding: 0 16px;
-    border-radius: 999px;
-    border: 1px solid transparent;
-    background: transparent;
-    color: var(--muted);
-    font: 700 0.75rem/1 var(--mono);
-    cursor: pointer;
-    transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
-  }
-
-  .workflow-tab.active {
-    background: rgba(239, 35, 60, 0.08);
-    border-color: rgba(239, 35, 60, 0.18);
-    color: var(--dark);
-  }
-
-  .workflow-card {
-    background: rgba(255, 255, 255, 0.92);
-    border: 1px solid var(--surface-border);
-    border-radius: 22px;
-    padding: 24px;
-    box-shadow: 0 8px 24px rgba(43, 45, 66, 0.06);
-  }
-
-  .workflow-card.hidden {
-    display: none;
-  }
-
-  .workflow-title {
-    font: 800 1.25rem/1.2 var(--sans);
-    margin-bottom: 8px;
-    color: var(--dark);
-  }
-
-  .workflow-copy {
-    color: var(--muted);
-    font-size: 0.88rem;
-    margin-bottom: 18px;
-    max-width: none;
-  }
-
-  .mermaid-wrap {
-    overflow-x: auto;
-    padding: 12px;
-    border-radius: 18px;
-    background: rgba(237, 242, 244, 0.6);
-    border: 1px solid var(--surface-border);
-  }
-
-  .mermaid {
-    min-width: 600px;
-  }
-
-  .mermaid-wrap {
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .mermaid-mobile-hint {
-    display: none;
-    font-size: 0.75rem;
-    color: var(--muted);
-    margin-top: 8px;
-    font-family: var(--mono);
-  }
-
-  .signal-band {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
-    margin-top: 18px;
-  }
-
-  .signal {
-    padding: 14px 16px;
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.92);
-    border: 1px solid var(--surface-border);
-  }
-
-  .signal strong {
-    display: block;
-    margin-bottom: 5px;
-    font: 700 0.8125rem/1.3 var(--sans);
-  }
-
-  .signal span {
-    color: var(--muted);
-    font-size: 0.82rem;
-  }
-
-  .signal.correction strong { color: var(--dark); }
-  .signal.tuning strong { color: var(--dark); }
-  .signal.export strong { color: var(--accent); }
-
-  .quality-note {
-    margin-top: 22px;
-    padding: 18px 20px;
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.92);
-    border: 1px solid rgba(239, 35, 60, 0.18);
-  }
-
-  .quality-note-title {
-    font: 800 1rem/1.2 var(--sans);
-    margin-bottom: 8px;
-    color: var(--dark);
-  }
-
-  .quality-note-copy {
-    color: var(--ink-soft);
-    font-size: 0.88rem;
-  }
-
-  .explore-card {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    gap: 18px;
-    min-height: 220px;
-  }
-
-  .explore-meta {
-    color: var(--accent-text);
-    font: 700 0.75rem/1 var(--mono);
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    margin-bottom: 10px;
-  }
-
-  .explore-title {
-    font: 800 1.25rem/1.15 var(--sans);
-    margin-bottom: 10px;
-    color: var(--dark);
-  }
-
-  .explore-copy {
-    color: var(--ink-soft);
-    font-size: 0.88rem;
-  }
-
-  .limits {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 18px;
-    margin-top: 28px;
-  }
-
-  .limit-item {
-    padding: 18px 20px;
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.92);
-    border: 1px solid var(--surface-border);
-    color: var(--ink-soft);
-    font-size: 0.88rem;
-    box-shadow: 0 8px 24px rgba(43, 45, 66, 0.06);
-  }
-
-  .cta {
-    text-align: center;
-    padding-bottom: 64px;
-  }
-
-  .cta .section-title,
-  .cta .section-copy {
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  .cta-actions {
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-top: 28px;
-  }
-
-  footer {
-    max-width: var(--hero-max);
-    margin: 0 auto;
-    padding: 0 28px 48px;
-    color: var(--muted);
-    font-size: 0.78rem;
-    display: flex;
-    justify-content: space-between;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
-
-  footer a {
-    text-decoration: none;
-    color: var(--muted);
-  }
-
-  footer a:hover { color: var(--accent); }
-
-  @media (max-width: 980px) {
-    nav {
+    initMermaid();
+  </script>
+  <style>
+    :root {
+      --dark: #2B2D42;
+      --muted: #5E677A;
+      --surface: #EDF2F4;
+      --accent: #EF233C;
+      --accent-soft: rgba(239, 35, 60, 0.08);
+      --surface-border: rgba(94, 103, 122, 0.24);
+      --ink-soft: rgba(43, 45, 66, 0.82);
+      --ink-muted: rgba(43, 45, 66, 0.66);
+      --focus-ring: rgba(192, 31, 51, 0.22);
+      --hero-max: 1180px;
+      --sans: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      --mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 156px;
+    }
+
+    body {
+      min-height: 100vh;
+      background: var(--surface);
+      color: var(--dark);
+      font: 500 1.06rem/1.68 var(--sans);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a {
+      color: inherit;
+      text-underline-offset: 0.18em;
+    }
+
+    .shell {
+      min-width: 0;
+    }
+
+    /* Architecture tabs */
+    .arch-tabs {
+      display: inline-flex;
+      gap: 8px;
+      padding: 6px;
+      margin-top: 28px;
+      margin-bottom: 20px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid var(--surface-border);
+    }
+
+    .arch-tab {
+      min-height: 38px;
+      padding: 0 18px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      font: 700 0.8125rem/1 var(--sans);
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+    }
+
+    .arch-tab.active {
+      background: rgba(239, 35, 60, 0.08);
+      border-color: rgba(239, 35, 60, 0.18);
+      color: var(--dark);
+    }
+
+    .arch-hidden {
+      height: 0;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Pipeline example */
+    .pipeline-example {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      align-items: center;
+    }
+
+    .pipeline-input,
+    .pipeline-step,
+    .pipeline-result {
+      width: 100%;
+      max-width: 700px;
+      padding: 18px 22px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid var(--surface-border);
+    }
+
+    .pipeline-result {
+      border-color: var(--surface-border);
+      background: rgba(255, 255, 255, 0.92);
+    }
+
+    .pipeline-label {
+      font: 700 0.75rem/1 var(--sans);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--accent-text);
+      margin-bottom: 10px;
+    }
+
+    .pipeline-code {
+      font: 500 0.875rem/1.6 var(--sans);
+      color: var(--dark);
+    }
+
+    .pipeline-json {
+      margin: 0;
+      padding: 14px 16px;
+      border-radius: 10px;
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      font: 400 0.8125rem/1.6 var(--mono);
+      color: var(--ink-soft);
+      overflow-x: auto;
+    }
+
+    .pipeline-arrow {
+      font-size: 1.25rem;
+      color: var(--muted);
+      padding: 6px 0;
+    }
+
+    /* Prompt engineering */
+    .prompt-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       gap: 18px;
-      padding: 16px 24px;
+      margin-top: 28px;
     }
 
-    .nav-secondary {
-      justify-content: flex-start;
+    .prompt-list {
+      list-style: none;
+      padding: 0;
+      display: grid;
+      gap: 10px;
     }
 
-    .hero-layout,
-    .overview-grid,
-    .results-grid,
-    .explore-grid,
-    .limits {
-      grid-template-columns: 1fr;
+    .prompt-list li {
+      position: relative;
+      padding-left: 18px;
+      font-size: 0.88rem;
+      color: var(--ink-soft);
+      line-height: 1.55;
     }
 
-    #hero {
-      min-height: auto;
-      padding-top: 48px;
+    .prompt-list li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 8px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
     }
 
-    .hero-layout {
-      align-items: start;
+    @media (max-width: 980px) {
+      .prompt-grid { grid-template-columns: 1fr; }
     }
 
-    .hero-panel {
-      max-width: 720px;
+    /* Demo showcase */
+    .demo-showcase {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 24px;
+      margin-top: 32px;
+      align-items: stretch;
     }
 
-    .cards {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+    .demo-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
 
-    .data-paths {
-      grid-template-columns: 1fr;
+    .demo-step {
+      flex: 1;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      padding: 16px 18px;
+      border-radius: 16px;
+      border: 2px solid var(--surface-border);
+      background: rgba(255, 255, 255, 0.92);
+      cursor: pointer;
+      text-align: left;
+      font-family: var(--sans);
+      transition: border-color 0.25s ease, box-shadow 0.25s ease;
     }
-  }
 
-  @media (max-width: 640px) {
-    nav {
-      padding: 16px 20px;
+    .demo-step:hover {
+      border-color: rgba(239, 35, 60, 0.25);
     }
 
-    .nav-main {
-      gap: 12px;
+    .demo-step.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(239, 35, 60, 0.1), 0 8px 24px rgba(43, 45, 66, 0.08);
+    }
+
+    .demo-step-num {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: var(--surface);
+      color: var(--muted);
+      font: 700 0.75rem/1 var(--sans);
+      flex-shrink: 0;
+      transition: background 0.25s, color 0.25s;
+    }
+
+    .demo-step.active .demo-step-num {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .demo-step-body strong {
+      display: block;
+      font: 700 0.875rem/1.3 var(--sans);
+      color: var(--dark);
+      margin-bottom: 4px;
+    }
+
+    .demo-step-body span {
+      font-size: 0.8125rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .demo-player {
+      border-radius: 16px;
+      overflow: hidden;
+      border: 2px solid var(--accent);
+      box-shadow: 0 12px 32px rgba(239, 35, 60, 0.08), 0 4px 16px rgba(43, 45, 66, 0.06);
+      background: var(--dark);
+      display: flex;
+      align-items: center;
+    }
+
+    .demo-player img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    @media (max-width: 980px) {
+      .demo-showcase {
+        grid-template-columns: 1fr;
+      }
+      .demo-steps {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      .demo-player {
+        position: static;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .demo-steps {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .skip-link {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      z-index: 30;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: var(--dark);
+      color: #fff;
+      text-decoration: none;
+      font: 700 12px/1 var(--mono);
+      transform: translateY(-180%);
+      transition: transform 0.18s ease;
+    }
+
+    .skip-link:focus-visible {
+      transform: translateY(0);
+      outline: none;
+      box-shadow: 0 0 0 4px var(--focus-ring);
+    }
+
+    .top-nav {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 18px 28px;
+      backdrop-filter: blur(14px);
+      background: rgba(255, 255, 255, 0.88);
+      border-bottom: 1px solid var(--surface-border);
+    }
+
+    .brand {
+      font: 700 14px/1 var(--mono);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      min-width: 0;
+    }
+
+    .brand span {
+      color: var(--accent);
     }
 
     .nav-links {
-      gap: 10px;
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      padding-bottom: 4px;
-      scrollbar-width: none;
+      display: flex;
+      gap: 10px 12px;
+      list-style: none;
+      flex-wrap: wrap;
+      min-width: 0;
     }
-
-    .nav-links::-webkit-scrollbar { display: none; }
-
-    .nav-links li { flex: 0 0 auto; }
 
     .nav-links a {
       display: inline-flex;
       align-items: center;
-      min-height: 38px;
+      justify-content: center;
+      min-height: 44px;
       padding: 0 12px;
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.84);
-      border: 1px solid var(--surface-border);
-      white-space: nowrap;
+      font: 500 12px/1 var(--mono);
+      text-decoration: none;
+      color: var(--muted);
+      text-align: center;
+      transition: color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .nav-links a:hover {
+      background: rgba(43, 45, 66, 0.06);
+      color: var(--accent);
     }
 
     .nav-actions {
-      display: grid;
-      grid-template-columns: 1fr;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      min-width: 0;
     }
 
-    .nav-actions .nav-btn {
-      width: 100%;
-      font-size: 0.75rem;
-      min-height: 42px;
-      padding: 0 14px;
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 46px;
+      padding: 0 20px;
+      border-radius: 14px;
+      border: 1px solid var(--surface-border);
+      text-decoration: none;
+      font: 700 12px/1 var(--mono);
+      letter-spacing: 0.02em;
+      text-align: center;
+      transition: transform 0.18s ease, border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(192, 31, 51, 0.38);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: transparent;
+      box-shadow: 0 8px 24px rgba(192, 31, 51, 0.18);
+    }
+
+    .btn-primary:visited,
+    .btn-primary:hover {
+      color: #fff;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--dark);
     }
 
     main {
-      padding: 0 20px 84px;
+      max-width: var(--hero-max);
+      margin: 0 auto;
+      padding: 0 28px 96px;
+      min-width: 0;
     }
 
     section {
-      padding-top: 76px;
+      padding: 88px 0 0;
     }
 
-    .hero-layout {
-      gap: 18px;
-    }
-
-    .hero-title {
-      font-size: clamp(34px, 12vw, 54px);
-    }
-
-    .hero-sub,
-    .section-copy,
-    .hero-detail {
-      font-size: 0.94rem;
-    }
-
-    .hero-actions {
-      flex-direction: column;
-      align-items: stretch;
-    }
-
-    .highlights {
-      gap: 8px;
-    }
-
-    .highlight-pill {
-      width: 100%;
-      text-align: center;
-    }
-
-    .hero-panel,
-    .panel,
-    .card,
-    .path-card,
-    .result-metric,
-    .results-table-wrap,
-    .workflow-card,
-    .limit-item {
-      padding: 18px;
-      border-radius: 18px;
-    }
-
-    .cards,
-    .signal-band,
-    .data-paths {
-      grid-template-columns: 1fr;
-    }
-
-    .mermaid {
-      min-width: 440px;
-    }
-
-    .mermaid-mobile-hint {
-      display: block;
-    }
-
-    .workflow-tabs {
-      width: 100%;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-    }
-
-    .workflow-tab {
-      width: 100%;
+    .eyebrow {
+      margin-bottom: 14px;
+      color: var(--accent);
+      font: 700 0.78rem/1 var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
 
     .section-title {
-      font-size: 1.875rem;
+      font: 800 clamp(28px, 4vw, 46px)/1.1 var(--sans);
+      letter-spacing: -0.04em;
+      margin-bottom: 16px;
+      max-width: none;
+      text-wrap: balance;
     }
 
-    .btn,
-    .nav-btn {
-      width: 100%;
+    .section-copy {
+      max-width: none;
+      color: var(--ink-soft);
+      font-size: 1.06rem;
+      text-wrap: pretty;
     }
 
-    .cta-actions {
-      flex-direction: column;
+    .section-copy + .section-copy {
+      margin-top: 14px;
     }
 
-    footer {
-      padding: 0 20px 40px;
-      flex-direction: column;
-    }
-  }
-
-  @media (max-width: 420px) {
-    main {
-      padding: 0 16px 72px;
+    .copy-spaced {
+      margin-top: 14px;
     }
 
-    nav {
-      padding: 14px 16px;
+    #hero {
+      min-height: calc(100vh - 78px);
+      display: grid;
+      align-items: center;
     }
 
-    section {
-      padding-top: 64px;
+    .hero-layout {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 32px;
+      align-items: end;
+    }
+
+    .hero-layout > *,
+    .hero-metrics > *,
+    .cards-four > *,
+    .cards-three > *,
+    .grid-two > *,
+    .explore-layout > * {
+      min-width: 0;
+    }
+
+    .hero-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      margin-bottom: 26px;
+      background: var(--accent-soft);
+      border: 1px solid rgba(192, 31, 51, 0.18);
+      color: var(--accent);
+      font: 700 11px/1 var(--mono);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
     }
 
     .hero-title {
-      font-size: clamp(30px, 12vw, 44px);
+      font: 900 clamp(40px, 7vw, 72px)/0.98 var(--sans);
+      letter-spacing: -0.04em;
+      max-width: 760px;
+      margin-bottom: 20px;
     }
 
-    .hero-chip,
-    .eyebrow {
+    .hero-title em {
+      color: var(--accent);
+      font-style: normal;
+    }
+
+    .hero-sub {
+      max-width: 690px;
+      color: var(--ink-soft);
+      font-size: 1.06rem;
+      margin-bottom: 24px;
+      overflow-wrap: anywhere;
+    }
+
+    .hero-subtle {
+      color: var(--ink-muted);
+      font-size: 0.92rem;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 30px;
+    }
+
+    .hero-panel,
+    .story-panel,
+    .approach-copy-box,
+    .panel,
+    .card,
+    .explore-shell,
+    .problem-insight,
+    .table-shell {
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid var(--surface-border);
+      box-shadow: 0 8px 24px rgba(43, 45, 66, 0.05);
+    }
+
+    .hero-panel {
+      border-radius: 22px;
+      padding: 24px;
+    }
+
+    .panel-heading {
+      font: 700 0.8125rem/1 var(--sans);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent-text);
+      margin-bottom: 14px;
+    }
+
+    .story-panel .section-copy {
+      max-width: 100%;
+      font-size: 0.92rem;
+      line-height: 1.65;
+    }
+
+    .story-panel .section-copy + .section-copy {
+      margin-top: 12px;
+    }
+
+    .hero-metrics {
+      display: grid;
+      gap: 12px;
+    }
+
+    .metric {
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid var(--surface-border);
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font: 700 11px/1 var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    .metric-value {
+      font: 800 18px/1.2 var(--sans);
+      margin-bottom: 6px;
+      overflow-wrap: anywhere;
+    }
+
+    .metric-copy {
+      color: var(--ink-soft);
+      font-size: 0.82rem;
+      line-height: 1.62;
+    }
+
+    .highlights {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 28px;
+    }
+
+    .highlight-pill {
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--surface-border);
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--ink-soft);
+      font: 500 12px/1 var(--mono);
+    }
+
+    .problem-layout {
+      margin-top: 22px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    .story-panel {
+      position: relative;
+      display: grid;
+      gap: 18px;
+      padding: 28px 26px 28px;
+      border-radius: 22px;
+      overflow: hidden;
+      isolation: isolate;
+    }
+
+    .story-panel::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 3px;
+      height: 100%;
+      border-radius: 999px;
+      background: rgba(239, 35, 60, 0.72);
+    }
+
+    .story-panel > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .problem-copy-lead,
+    .approach-copy-lead {
+      margin-bottom: 14px;
+      font: 800 clamp(22px, 2.5vw, 30px)/1.25 var(--sans);
+      letter-spacing: -0.03em;
+      color: var(--dark);
+    }
+
+    .problem-insights {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .problem-insight {
+      padding: 20px 22px;
+      border-radius: 22px;
+      min-height: 168px;
+    }
+
+    .problem-insight strong {
+      display: block;
+      margin-bottom: 8px;
+      font: 800 16px/1.32 var(--sans);
+      letter-spacing: -0.02em;
+      color: var(--dark);
+    }
+
+    .problem-insight span {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.72;
+      text-wrap: pretty;
+    }
+
+    .approach-copy-box {
+      margin-top: 20px;
+      padding: 24px 26px;
+      border-radius: 22px;
+      max-width: var(--hero-max);
+    }
+
+    .cards-four,
+    .cards-three,
+    .grid-two {
+      display: grid;
+      gap: 14px;
+      margin-top: 22px;
+    }
+
+    .cards-four {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .cards-three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .grid-two {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .card {
+      border-radius: 22px;
+      padding: 20px 20px 22px;
+    }
+
+    .card-title,
+    .card-title-sm {
+      margin-top: 8px;
+      font: 800 16px/1.3 var(--sans);
+      text-wrap: balance;
+    }
+
+    .card-desc {
+      margin-top: 6px;
+      color: var(--ink-soft);
+      font-size: 0.85rem;
+      line-height: 1.62;
+      text-wrap: pretty;
+    }
+
+    .mermaid-wrap {
+      margin-top: 28px;
+      background: rgba(255, 255, 255, 0.6);
+      border: 1px solid var(--surface-border);
+      border-radius: 22px;
+      padding: 28px;
+      overflow-x: auto;
+    }
+
+    .mermaid-wrap pre {
+      background: transparent;
+      margin: 0;
+    }
+
+    .table-shell {
+      margin-top: 22px;
+      padding: 22px;
+      border-radius: 22px;
+      overflow-x: auto;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 480px;
+    }
+
+    .data-table thead th {
+      color: var(--dark);
+      font: 700 11px/1 var(--mono);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      text-align: left;
+      padding-bottom: 12px;
+    }
+
+    .data-table th,
+    .data-table td {
+      padding: 12px 10px;
+      border-top: 1px solid var(--surface-border);
+    }
+
+    .data-table .numeric {
+      text-align: right;
+    }
+
+    .data-table .accent-cell,
+    .data-table strong {
+      color: var(--accent);
+      font-weight: 800;
+    }
+
+    .note-copy {
+      margin-top: 14px;
+      color: var(--ink-muted);
+      font-size: 0.82rem;
+      line-height: 1.64;
+    }
+
+    .panel {
+      border-radius: 22px;
+      padding: 22px;
+    }
+
+    .panel strong {
+      display: block;
+      margin-bottom: 8px;
+      font: 800 16px/1.3 var(--sans);
+      letter-spacing: -0.02em;
+      color: var(--dark);
+    }
+
+    .panel-accent {
+      background:
+        radial-gradient(circle at top right, rgba(239, 35, 60, 0.14), transparent 30%),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(251, 244, 246, 0.94));
+      border-color: rgba(239, 35, 60, 0.18);
+    }
+
+    .panel-accent-title {
+      display: block;
+      font: 800 22px/1.2 var(--sans);
+      letter-spacing: -0.03em;
+      margin-bottom: 10px;
+    }
+
+    .lesson-copy,
+    .accent-copy {
+      color: var(--ink-soft);
+      font-size: 0.96rem;
+      line-height: 1.7;
+    }
+
+    .explore-shell {
+      position: relative;
+      margin-top: 28px;
+      padding: 34px;
+      border-radius: 34px;
+      overflow: hidden;
+      isolation: isolate;
+      background:
+        radial-gradient(circle at top right, rgba(239, 35, 60, 0.16), transparent 24%),
+        radial-gradient(circle at bottom left, rgba(43, 45, 66, 0.07), transparent 28%),
+        linear-gradient(135deg, rgba(247, 249, 252, 0.98), rgba(255, 255, 255, 0.9));
+    }
+
+    .explore-shell::before {
+      content: '';
+      position: absolute;
+      inset: 18px;
+      border-radius: 26px;
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .explore-intro {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) auto;
+      gap: 18px;
+      align-items: end;
+    }
+
+    .explore-copy {
+      max-width: 620px;
+      color: var(--ink-soft);
+      margin-top: 12px;
+    }
+
+    .explore-callout {
+      justify-self: end;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 999px;
+      background: rgba(43, 45, 66, 0.06);
+      border: 1px solid rgba(94, 103, 122, 0.14);
+      color: var(--dark);
+      font: 700 11px/1 var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .explore-layout {
+      margin-top: 30px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.14fr) minmax(0, 1fr);
+      gap: 18px;
+    }
+
+    .explore-hero {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 320px;
+      padding: 28px;
+      border-radius: 30px;
+      text-decoration: none;
+      color: rgba(247, 249, 252, 0.98);
+      background:
+        radial-gradient(circle at top right, rgba(255, 255, 255, 0.16), transparent 24%),
+        radial-gradient(circle at 18% 18%, rgba(239, 35, 60, 0.28), transparent 28%),
+        linear-gradient(135deg, #242738, #31364c 58%, #3b2b34 100%);
+      box-shadow: 0 26px 60px rgba(43, 45, 66, 0.22);
+      overflow: hidden;
+    }
+
+    .explore-hero-head,
+    .explore-hero-foot {
+      position: relative;
+      z-index: 1;
+    }
+
+    .explore-hero-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .explore-badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      padding: 0 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: rgba(247, 249, 252, 0.94);
+      font: 700 10px/1 var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .explore-hero-title {
+      font: 900 clamp(28px, 3vw, 42px)/0.95 var(--sans);
+      letter-spacing: -0.04em;
+      max-width: 360px;
+    }
+
+    .explore-hero-copy {
+      margin-top: 18px;
+      max-width: 430px;
+      color: rgba(247, 249, 252, 0.84);
+      font-size: 1rem;
+      line-height: 1.66;
+    }
+
+    .explore-lane {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .explore-lane span {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: rgba(247, 249, 252, 0.86);
+      font: 600 11px/1 var(--mono);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .explore-hero-foot {
+      margin-top: 28px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .explore-hero-note {
+      max-width: 300px;
+      color: rgba(247, 249, 252, 0.66);
+      font-size: 0.82rem;
+      line-height: 1.55;
+    }
+
+    .explore-hero-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: rgba(247, 249, 252, 0.98);
+      font: 800 13px/1 var(--sans);
+      letter-spacing: 0.01em;
+    }
+
+    .explore-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .interface-card {
+      position: relative;
+      min-height: 150px;
+      padding: 22px;
+      border-radius: 24px;
+      border: 1px solid rgba(94, 103, 122, 0.12);
+      background:
+        radial-gradient(circle at top right, rgba(239, 35, 60, 0.08), transparent 28%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(251, 252, 255, 0.92));
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .interface-card-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .interface-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 0 8px rgba(239, 35, 60, 0.12);
+    }
+
+    .interface-title {
+      margin-top: 12px;
+      font: 800 22px/1.06 var(--sans);
+      letter-spacing: -0.03em;
+    }
+
+    .interface-desc {
+      margin-top: 8px;
+      color: var(--ink-soft);
+      font-size: 0.9rem;
+      line-height: 1.62;
+    }
+
+    .interface-meta {
+      margin-top: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .interface-meta span {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: rgba(43, 45, 66, 0.05);
+      color: var(--dark);
+      font: 700 10px/1 var(--mono);
       letter-spacing: 0.05em;
+      text-transform: uppercase;
     }
 
-    .mermaid {
-      min-width: 380px;
+    footer {
+      max-width: var(--hero-max);
+      margin: 0 auto;
+      padding: 0 28px 48px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
     }
-  }
 
-  /* Skip link */
-  .skip-link {
-    position: absolute;
-    top: -100%;
-    left: 16px;
-    z-index: 100;
-    padding: 8px 16px;
-    background: var(--accent);
-    color: #fff;
-    border-radius: 0 0 8px 8px;
-    font: 700 0.8125rem/1 var(--sans);
-    text-decoration: none;
-    transition: top 0.2s;
-  }
-  .skip-link:focus {
-    top: 0;
-  }
+    footer a {
+      text-decoration: none;
+      color: var(--muted);
+    }
 
-  /* Focus & accessibility */
-  .btn:focus-visible,
-  .nav-btn:focus-visible,
-  .nav-links a:focus-visible,
-  .workflow-tab:focus-visible,
-  footer a:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
+    footer a:hover {
+      color: var(--accent);
+    }
 
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
-  }
-</style>
+    @media (max-width: 980px) {
+      .top-nav {
+        gap: 18px;
+        padding: 16px 24px;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+      }
+
+      .hero-layout,
+      .explore-layout,
+      .cards-three,
+      .grid-two,
+      .problem-insights,
+      .explore-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .cards-four {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      #hero {
+        min-height: auto;
+        padding-top: 48px;
+      }
+
+      .explore-intro {
+        grid-template-columns: 1fr;
+      }
+
+      .explore-callout {
+        justify-self: start;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .top-nav {
+        padding: 16px 20px;
+      }
+
+      .nav-links {
+        gap: 10px;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none;
+        width: 100%;
+        padding-bottom: 4px;
+      }
+
+      .nav-links::-webkit-scrollbar {
+        display: none;
+      }
+
+      .nav-links li {
+        flex: 0 0 auto;
+      }
+
+      .nav-links a {
+        background: rgba(255, 255, 255, 0.84);
+        border: 1px solid var(--surface-border);
+        white-space: nowrap;
+      }
+
+      .nav-actions {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+
+      main {
+        padding: 0 20px 84px;
+      }
+
+      section {
+        padding-top: 76px;
+      }
+
+      .hero-title {
+        font-size: clamp(34px, 12vw, 54px);
+      }
+
+      .hero-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .cards-four {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-panel,
+      .story-panel,
+      .approach-copy-box,
+      .panel,
+      .card,
+      .table-shell,
+      .explore-shell,
+      .problem-insight {
+        padding: 20px;
+        border-radius: 22px;
+      }
+
+      .btn {
+        width: 100%;
+      }
+
+      .explore-shell {
+        padding: 24px;
+      }
+
+      footer {
+        padding: 0 20px 40px;
+        flex-direction: column;
+      }
+    }
+
+    /* ── Demo GIF tabs ── */
+    .demo-tabs {
+      display: flex; gap: 8px; margin-bottom: 16px;
+    }
+    .demo-tab {
+      padding: 10px 20px; border-radius: 12px;
+      border: 1px solid var(--surface-border);
+      background: transparent; cursor: pointer;
+      font: 600 13px/1 var(--sans); color: var(--muted);
+      transition: all 0.18s ease;
+    }
+    .demo-tab:hover { color: var(--dark); border-color: var(--muted); }
+    .demo-tab.active {
+      background: var(--accent); color: #fff;
+      border-color: transparent; box-shadow: 0 4px 12px rgba(192,31,51,0.18);
+    }
+    .demo-stage {
+      border-radius: 18px; overflow: hidden;
+      border: 1px solid var(--surface-border);
+      box-shadow: 0 8px 24px rgba(43,45,66,0.08);
+      background: var(--dark);
+    }
+    .demo-stage img {
+      display: block; width: 100%; height: auto;
+    }
+    .demo-caption {
+      padding: 14px 18px;
+      background: rgba(255,255,255,0.96);
+      font: 500 13.5px/1.5 var(--sans); color: var(--ink-soft);
+    }
+    .demo-caption strong { color: var(--dark); }
+
+    /* ── Pipeline / Admin preview layout ── */
+    .section-shell { margin-top: 22px; }
+    .pipeline-top {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) minmax(320px,1fr);
+      gap: 14px;
+      align-items: stretch;
+    }
+    .narrative-body { display: flex; flex-direction: column; justify-content: flex-start; }
+    .pipeline-preview {
+      position: relative; display: flex; flex-direction: column;
+      overflow: hidden; text-decoration: none; color: inherit;
+      border-radius: 22px; border: 1px solid var(--surface-border);
+      background: rgba(255,255,255,0.94);
+      box-shadow: 0 8px 24px rgba(43,45,66,0.05);
+      transition: transform 0.22s cubic-bezier(0.25,1,0.5,1), box-shadow 0.22s cubic-bezier(0.25,1,0.5,1), border-color 0.22s ease;
+    }
+    .pipeline-preview:hover {
+      transform: translateY(-2px);
+      border-color: rgba(239,35,60,0.24);
+      box-shadow: 0 14px 28px rgba(43,45,66,0.08);
+    }
+    .pipeline-preview img {
+      display: block; width: 100%; height: auto;
+      aspect-ratio: 16/10; object-fit: cover; object-position: top center;
+      background: rgba(237,242,244,0.82);
+    }
+    .pipeline-preview-copy { flex: 1; padding: 14px 16px 18px; }
+    .pipeline-preview-title {
+      font: 800 14px/1.3 var(--sans); letter-spacing: -0.02em; color: var(--dark); text-wrap: balance;
+    }
+    .pipeline-preview-desc {
+      margin-top: 6px; color: var(--ink-soft); font-size: 0.82rem; line-height: 1.55;
+    }
+    .pipeline-preview-link {
+      margin-top: 10px; display: inline-flex; align-items: center; gap: 8px;
+      color: var(--accent); font: 700 12px/1 var(--mono); letter-spacing: 0.04em;
+    }
+    .pipeline-preview-link::after { content: '→'; transition: transform 0.18s ease; }
+    .pipeline-preview:hover .pipeline-preview-link::after { transform: translateX(4px); }
+    @media (max-width: 900px) {
+      .pipeline-top { grid-template-columns: 1fr; }
+    }
+
+    /* ── Accordion (Fine-Tuning detail) ── */
+    .accordion { margin-top: 22px; }
+    .accordion details {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid var(--surface-border);
+      border-radius: 22px;
+      box-shadow: 0 8px 24px rgba(43,45,66,0.06);
+      margin-bottom: 14px;
+      overflow: hidden;
+      transition: border-color 0.18s, box-shadow 0.18s ease, background-color 0.18s ease;
+    }
+    .accordion details[open] {
+      border-color: rgba(192,31,51,0.25);
+      background: rgba(255,255,255,0.98);
+      box-shadow: 0 14px 32px rgba(43,45,66,0.08);
+    }
+    .accordion summary {
+      display: flex; align-items: center; gap: 12px;
+      padding: 18px 24px; cursor: pointer;
+      font: 700 15px/1.3 var(--sans); letter-spacing: -0.01em;
+      list-style: none; user-select: none;
+      transition: background-color 0.18s ease, padding 0.18s ease;
+    }
+    .accordion details[open] summary {
+      padding-top: 20px; padding-bottom: 16px;
+      background: linear-gradient(180deg, rgba(239,35,60,0.05), rgba(255,255,255,0));
+      border-bottom: 1px solid rgba(94,103,122,0.12);
+    }
+    .accordion summary::-webkit-details-marker { display: none; }
+    .accordion summary::before {
+      content: ''; flex-shrink: 0; width: 20px; height: 20px; border-radius: 6px;
+      background: var(--accent-soft) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%23EF233C' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat center;
+      transition: transform 0.2s ease;
+    }
+    .accordion details[open] summary::before { transform: rotate(180deg); }
+    .accordion summary .summary-sub {
+      margin-left: auto; font: 500 11px/1 var(--mono); color: var(--muted); letter-spacing: 0.04em;
+    }
+    .accordion summary .summary-title { min-width: 0; text-wrap: balance; }
+    .accordion .accordion-body { padding: 0 24px 24px; }
+    .accordion-lead {
+      margin: 2px 0 18px; color: var(--ink-soft);
+      font-size: 0.98rem; line-height: 1.68; text-wrap: pretty;
+    }
+    .accordion-lead strong { color: var(--dark); font-weight: 800; }
+
+    .overview-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start;
+    }
+
+    .ft-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+    .ft-table th, .ft-table td {
+      text-align: left; padding: 8px 12px;
+      border-bottom: 1px solid rgba(94,103,122,0.12);
+    }
+    .ft-table th { font-weight: 700; color: var(--dark); white-space: nowrap; }
+    .ft-table td { color: var(--ink-soft); }
+    .ft-table .tag-observed {
+      display: inline-block; padding: 2px 8px; border-radius: 6px; font: 700 11px/1.6 var(--mono);
+      background: rgba(46,139,87,0.10); color: #2e8b57;
+    }
+    .ft-table .tag-estimated {
+      display: inline-block; padding: 2px 8px; border-radius: 6px; font: 700 11px/1.6 var(--mono);
+      background: var(--accent-soft); color: var(--accent);
+    }
+
+    .prompt-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+    .prompt-table th, .prompt-table td {
+      text-align: left; padding: 10px 12px;
+      border-bottom: 1px solid rgba(94,103,122,0.12);
+    }
+    .prompt-table th { font-weight: 700; color: var(--dark); white-space: nowrap; }
+    .prompt-table td { color: var(--ink-soft); }
+    .prompt-table code { font: 500 12.5px/1.4 var(--mono); color: var(--dark); }
+    .prompt-table mark {
+      background: rgba(239,35,60,0.10); color: var(--accent);
+      padding: 1px 4px; border-radius: 4px; font-weight: 600;
+    }
+
+    .formula-block {
+      margin: 14px 0; padding: 14px 18px; border-radius: 14px;
+      background: rgba(43,45,66,0.04); font: 500 13px/1.6 var(--mono);
+      overflow-x: auto;
+    }
+
+    @media (max-width: 900px) {
+      .overview-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .accordion summary { padding: 16px 18px; font-size: 14px; }
+      .accordion .accordion-body { padding: 0 18px 18px; }
+    }
+
+    /* ── Prompt animation ── */
+    .prompt-anim {
+      position: relative;
+      padding: 28px 24px 20px;
+      background: rgba(255,255,255,0.92);
+      border: 1px solid var(--surface-border);
+      border-radius: 22px;
+      box-shadow: 0 8px 24px rgba(43,45,66,0.06);
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .pa-source {
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 1px dashed rgba(94,103,122,0.2);
+    }
+    .pa-source-label {
+      font: 700 11px/1 var(--mono);
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .pa-tokens {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .pa-tok {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 10px;
+      font: 600 14px/1.3 var(--sans);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+    .pa-tok[data-field="road"]       { background: rgba(239,35,60,0.10); color: #c01f33; }
+    .pa-tok[data-field="area"]       { background: rgba(59,130,246,0.10); color: #2563eb; }
+    .pa-tok[data-field="road_type"]  { background: rgba(16,185,129,0.10); color: #059669; }
+    .pa-tok[data-field="lanes"]      { background: rgba(245,158,11,0.10); color: #b45309; }
+    .pa-tok[data-field="time"]       { background: rgba(139,92,246,0.10); color: #7c3aed; }
+    .pa-tok[data-field="congestion"] { background: rgba(236,72,153,0.10); color: #db2777; }
+
+    .pa-targets { display: flex; flex-direction: column; gap: 10px; }
+    .pa-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 40px;
+    }
+    .pa-label {
+      flex-shrink: 0;
+      width: 24px; height: 24px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 8px;
+      background: var(--accent-soft);
+      font: 700 12px/1 var(--mono);
+      color: var(--accent);
+    }
+    .pa-slots {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0;
+      font: 500 14px/1.6 var(--sans);
+      color: var(--ink-soft);
+      min-height: 34px;
+    }
+    .pa-slot {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 8px;
+      font-weight: 600;
+      opacity: 0;
+      transform: translateY(-18px);
+      transition: opacity 0.5s ease, transform 0.5s ease, background-color 0.5s ease;
+    }
+    .pa-slot[data-field="road"]       { color: #c01f33; }
+    .pa-slot[data-field="area"]       { color: #2563eb; }
+    .pa-slot[data-field="road_type"]  { color: #059669; }
+    .pa-slot[data-field="lanes"]      { color: #b45309; }
+    .pa-slot[data-field="time"]       { color: #7c3aed; }
+    .pa-slot[data-field="congestion"] { color: #db2777; }
+    .pa-static {
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      white-space: pre;
+    }
+
+    /* Animated states — phase 1: source fades */
+    .pa-anim-active .pa-tok { opacity: 0.25; transform: scale(0.92); }
+    /* Slots stay hidden during clone flight */
+    .pa-anim-active .pa-slot { opacity: 0; transform: translateY(-18px); }
+    .pa-anim-active .pa-static { opacity: 0; }
+    /* Phase 2: clones gone, slots appear */
+    .pa-anim-landed .pa-slot {
+      opacity: 1;
+      transform: translateY(0);
+      background: rgba(0,0,0,0.04);
+      transition: opacity 0.35s ease, transform 0.35s ease;
+    }
+    .pa-anim-landed .pa-static {
+      opacity: 1;
+      transition: opacity 0.35s ease;
+    }
+    /* Staggered delays for each row */
+    .pa-anim-landed .pa-row:nth-child(1) .pa-slot,
+    .pa-anim-landed .pa-row:nth-child(1) .pa-static { transition-delay: 0s; }
+    .pa-anim-landed .pa-row:nth-child(2) .pa-slot,
+    .pa-anim-landed .pa-row:nth-child(2) .pa-static { transition-delay: 0.06s; }
+    .pa-anim-landed .pa-row:nth-child(3) .pa-slot,
+    .pa-anim-landed .pa-row:nth-child(3) .pa-static { transition-delay: 0.12s; }
+    .pa-anim-landed .pa-row:nth-child(4) .pa-slot,
+    .pa-anim-landed .pa-row:nth-child(4) .pa-static { transition-delay: 0.18s; }
+    .pa-anim-landed .pa-row:nth-child(5) .pa-slot,
+    .pa-anim-landed .pa-row:nth-child(5) .pa-static { transition-delay: 0.24s; }
+
+    /* Flying clones */
+    .pa-clone {
+      position: fixed;
+      z-index: 100;
+      padding: 5px 12px;
+      border-radius: 8px;
+      font: 600 14px/1.3 var(--sans);
+      pointer-events: none;
+      transition: all 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    }
+    .pa-clone[data-field="road"]       { background: rgba(239,35,60,0.15); color: #c01f33; }
+    .pa-clone[data-field="area"]       { background: rgba(59,130,246,0.15); color: #2563eb; }
+    .pa-clone[data-field="road_type"]  { background: rgba(16,185,129,0.15); color: #059669; }
+    .pa-clone[data-field="lanes"]      { background: rgba(245,158,11,0.15); color: #b45309; }
+    .pa-clone[data-field="time"]       { background: rgba(139,92,246,0.15); color: #7c3aed; }
+    .pa-clone[data-field="congestion"] { background: rgba(236,72,153,0.15); color: #db2777; }
+
+    /* Source param pills */
+    .pa-params {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px;
+    }
+    .pa-param {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px; border-radius: 8px;
+      background: rgba(43,45,66,0.05);
+      font: 500 12.5px/1.3 var(--mono); color: var(--ink-soft);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+    .pa-param-key { font-weight: 700; color: var(--dark); }
+    .pa-anim-active .pa-param { opacity: 0.35; }
+
+    /* Mid label */
+    .pa-mid-label {
+      text-align: center; padding: 10px 0 6px;
+      font: 600 12.5px/1 var(--mono);
+      color: var(--muted); letter-spacing: 0.02em;
+      opacity: 0; transform: translateY(-6px);
+      transition: opacity 0.5s ease 0.15s, transform 0.5s ease 0.15s;
+    }
+    .pa-mid-label .pa-arrow { color: var(--accent); font-size: 16px; }
+    .pa-anim-active .pa-mid-label { opacity: 1; transform: translateY(0); }
+
+    /* Output JSON block */
+    .pa-output {
+      margin-top: 14px; padding-top: 14px;
+      border-top: 1px dashed rgba(94,103,122,0.2);
+      opacity: 0; transform: translateY(10px);
+      transition: opacity 0.6s ease 0.9s, transform 0.6s ease 0.9s;
+    }
+    .pa-anim-landed .pa-output { opacity: 1; transform: translateY(0); transition-delay: 0.3s; }
+    .pa-output-bracket {
+      font: 700 11px/1 var(--mono); color: var(--accent);
+      letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 8px;
+    }
+    .pa-output-json {
+      padding: 12px 16px; border-radius: 12px;
+      background: rgba(43,45,66,0.04);
+      font: 500 12.5px/1.7 var(--mono); color: var(--ink-soft);
+      overflow-x: auto;
+    }
+    .pa-json-line { display: block; white-space: nowrap; }
+    .pa-jk { color: var(--accent); }
+    .pa-jv { color: #2563eb; font-weight: 700; }
+
+    .pa-replay {
+      display: inline-flex; align-items: center; gap: 6px;
+      margin-top: 18px;
+      padding: 8px 16px;
+      border: 1px solid var(--surface-border);
+      border-radius: 10px;
+      background: transparent;
+      font: 600 12px/1 var(--mono);
+      color: var(--muted);
+      cursor: pointer;
+      transition: color 0.18s, border-color 0.18s;
+    }
+    .pa-replay:hover { color: var(--accent); border-color: rgba(192,31,51,0.3); }
+    .pa-footnote {
+      margin-top: 10px;
+      font: 500 11.5px/1 var(--mono);
+      color: var(--muted);
+      letter-spacing: 0.02em;
+      opacity: 0.7;
+    }
+
+    @media (max-width: 640px) {
+      .prompt-anim { padding: 20px 16px 16px; }
+      .pa-tok, .pa-slot { font-size: 12.5px; padding: 4px 8px; }
+      .pa-slots { font-size: 12.5px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
 </head>
 <body>
-<div class="shell">
-  <a href="#hero" class="skip-link">Skip to content</a>
-  <nav>
-    <div class="nav-main">
+  <div class="shell">
+    <a href="#hero" class="skip-link">Skip to content</a>
+
+    <nav class="top-nav" aria-label="Project navigation">
       <div class="brand">Synthetic <span>Scenario</span> Workflow</div>
       <ul class="nav-links">
-        <li><a href="#overview">Overview</a></li>
-        <li><a href="#built">Components</a></li>
+        <li><a href="#hero">Overview</a></li>
+        <li><a href="#problem">Problem</a></li>
+        <li><a href="#approach">Approach</a></li>
+        <li><a href="#finetuning">Fine-Tuning</a></li>
         <li><a href="#results">Results</a></li>
-        <li><a href="#workflow">Workflow</a></li>
-        <li><a href="#explore">Explore</a></li>
+        <li><a href="#architecture">Architecture</a></li>
+        <li><a href="#prompting">Prompting</a></li>
+        <li><a href="#engineering">Engineering</a></li>
+        <li><a href="#explore">Demo</a></li>
+        <li><a href="#lessons">Lessons</a></li>
       </ul>
       <div class="nav-actions">
-        <a class="nav-btn btn-secondary" href="https://github.com/ParkSewon-PM/sumo-traffic-agent" target="_blank">GitHub</a>
-        <a class="nav-btn btn-secondary" href="/admin">Admin Dashboard</a>
-        <a class="nav-btn btn-primary" href="/">View Live System</a>
+        <a class="btn btn-secondary" href="https://github.com/ParkSewon-PM/sumo-traffic-agent" target="_blank" rel="noreferrer">GitHub</a>
+        <a class="btn btn-secondary" href="/admin">Admin</a>
+        <a class="btn btn-primary" href="/">View Live System</a>
       </div>
-    </div>
-  </nav>
+    </nav>
 
-  <main>
-    <section id="hero">
-      <div class="hero-layout">
-        <div class="hero-copy">
-          <div class="hero-chip">LLM Workflow for Synthetic Scenario Generation</div>
-          <h1 class="hero-title">Natural Language to <em>Runnable Driving Scenarios</em></h1>
-          <p class="hero-sub">
-            A role-separated LLM workflow that turns traffic requests into structured SUMO scenarios,
-            validates the result, and captures human corrections as future retraining signals.
-          </p>
-          <p class="hero-detail">
-            The system combines fine-tuned parameter extraction, base-model geometry reasoning,
-            scenario execution, evaluation, and correction-derived export in one connected loop.
-          </p>
-          <div class="hero-actions">
-            <a class="btn btn-primary" href="/">Try Live System</a>
-            <a class="btn btn-secondary" href="#overview">How it works</a>
-          </div>
-      <div class="highlights">
-            <div class="highlight-pill">Python</div>
-            <div class="highlight-pill">OpenAI Fine-Tuning</div>
-            <div class="highlight-pill">Multi-LLM Agent</div>
-            <div class="highlight-pill">SUMO</div>
-            <div class="highlight-pill">GCP Cloud Run</div>
-          </div>
-        </div>
-
-        <aside class="hero-panel">
-          <h2 class="hero-panel-title">What stands out in this project</h2>
-          <div class="hero-metrics">
-            <div class="metric">
-              <div class="metric-label">Role Separation</div>
-              <div class="metric-value">FT + Base LLM + Tool Layer</div>
-              <div class="metric-copy">Each layer handles a different part of the workflow instead of relying on one monolithic prompt.</div>
-            </div>
-            <div class="metric">
-              <div class="metric-label">Feedback Structure</div>
-              <div class="metric-value">Correction vs Tuning</div>
-              <div class="metric-copy">Trainable errors are separated from non-trainable preference edits.</div>
-            </div>
-            <div class="metric">
-              <div class="metric-label">Evidence Flow</div>
-              <div class="metric-value">Demo + Admin + README</div>
-              <div class="metric-copy">The user flow, evidence layer, and technical document are intentionally split.</div>
+    <main id="mainContent">
+      <section id="hero">
+        <div class="hero-layout">
+          <div>
+            <div class="hero-chip">LLM Workflow · End-to-End Scenario System</div>
+            <h1 class="hero-title">Natural language to <em>runnable traffic simulations</em></h1>
+            <p class="hero-sub">
+              This project converts vague traffic requests into executable SUMO scenarios by separating
+              structured parameter extraction from open-ended geometry reasoning, then keeping human
+              corrections as a reusable retraining signal instead of losing them in chat history.
+            </p>
+            <p class="hero-sub hero-subtle">
+              The project covers fine-tuned traffic-parameter extraction from natural-language requests,
+              base-LLM geometry reasoning and XML fallback, and Seoul traffic-data grounding with statistical
+              fallbacks. It also includes execution orchestration, held-out evaluation, correction logging,
+              retraining export, and live admin review.
+            </p>
+            <div class="hero-actions">
+              <a class="btn btn-primary" href="/">View Live System</a>
+              <a class="btn btn-secondary" href="https://github.com/ParkSewon-PM/sumo-traffic-agent" target="_blank" rel="noreferrer">GitHub</a>
             </div>
           </div>
-          <p class="hero-panel-note">This page is optimized for project review: what the system does, where the evidence lives, and why the workflow is structured this way.</p>
-        </aside>
-      </div>
-    </section>
+          <div class="hero-panel">
+            <div class="panel-heading">What this project actually includes</div>
+            <div class="hero-metrics">
+              <div class="metric">
+                <div class="metric-label">Fine-Tuned LLM</div>
+                <div class="metric-value">Extract structured traffic parameters from language</div>
+                <div class="metric-copy">The core model is fine-tuned to turn natural-language scene descriptions into speed, volume, lanes, speed limit, sigma, tau, and block-length fields.</div>
+              </div>
+              <div class="metric">
+                <div class="metric-label">Geometry LLM</div>
+                <div class="metric-value">Classify edits and handle geometry fallback</div>
+                <div class="metric-copy">This layer owns geometry reasoning: it routes edit requests and regenerates road XML when OSM or existing geometry is not enough, while the fine-tuned model stays focused on structured parameter extraction.</div>
+              </div>
+              <div class="metric">
+                <div class="metric-label">Agent and Review Loop</div>
+                <div class="metric-value">Orchestrate execution, then export trainable corrections</div>
+                <div class="metric-copy">An 11-tool agent runs network build, simulation, and validation, while correction-intent edits are logged with trainability metadata and exported as retraining data.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="highlights">
+          <span class="highlight-pill">OpenAI Fine-Tuning</span>
+          <span class="highlight-pill">SUMO</span>
+          <span class="highlight-pill">SQLite</span>
+          <span class="highlight-pill">Multi-LLM Routing</span>
+          <span class="highlight-pill">Harness Engineering</span>
+          <span class="highlight-pill">Cloud Run</span>
+          <span class="highlight-pill">GitHub Actions</span>
+        </div>
+      </section>
 
-    <section id="overview">
-      <div class="eyebrow">Overview</div>
-      <h2 class="section-title">From Prompt to Reusable Training Signal</h2>
-      <p class="section-copy">
-        Scenario creation is usually slow, manual, and difficult to scale. This project treats it as an LLM-driven workflow where generation, evaluation, and refinement are connected from the start.
-      </p>
+      <section id="problem">
+        <div class="eyebrow">The Problem</div>
+        <h2 class="section-title">Why is this hard?</h2>
+        <div class="problem-layout">
+          <div class="story-panel">
+            <div class="metric-label">Core Challenge</div>
+            <p class="problem-copy-lead">
+              Creating traffic simulations is still too inconvenient, too slow, and too unrealistic for a natural-language workflow.
+            </p>
+            <p class="section-copy">
+              Turning a traffic scene into a simulation is still inconvenient and expensive. Building it manually
+              takes too long because road lookup, network construction, config generation, execution, and validation
+              all have to be handled as separate steps before the user can even inspect one result.
+            </p>
+            <p class="section-copy">
+              Trying to generate the same thing with an LLM is faster, but it often does not represent the real scene
+              well enough. Natural-language requests mix congestion, road type, lane count, speed regime, spacing,
+              and driver behavior, and a general model often fails to convert that into realistic traffic parameters
+              and believable road geometry.
+            </p>
+            <p class="section-copy">
+              So the result can sound plausible as text while still feeling unrealistic once it is actually run in
+              SUMO. Manual creation takes too long, and LLM-only generation often does not reflect the traffic scene
+              with enough fidelity to be useful.
+            </p>
+            <p class="section-copy">
+              <strong>This project asks:</strong> can fine-tuned LLM extraction and a role-separated workflow
+              translate natural-language traffic scenes into runnable simulations with higher fidelity, while making
+              the overall generation process fast enough to use as an actual workflow?
+            </p>
+          </div>
+          <div class="problem-insights">
+            <div class="problem-insight">
+              <div class="metric-label">Workflow Cost</div>
+              <strong>Simulation creation is still too manual</strong>
+              <span>Road lookup, network building, config generation, simulation, and validation usually require too many separate steps for prompt-driven scenario creation to feel immediate.</span>
+            </div>
+            <div class="problem-insight">
+              <div class="metric-label">Parameter Failure</div>
+              <strong>General LLMs miss traffic interdependencies</strong>
+              <span>Speed, volume, lane count, speed limit, sigma, tau, and block spacing are connected. If one field is wrong, the resulting simulation drifts away from realistic traffic behavior.</span>
+            </div>
+            <div class="problem-insight">
+              <div class="metric-label">Realism Gap</div>
+              <strong>Natural-language-only generation looks convincing before execution</strong>
+              <span>A prompt can sound correct while still producing free-flow defaults, weak geometry, or unrealistic spacing once the scenario is actually run in SUMO.</span>
+            </div>
+            <div class="problem-insight">
+              <div class="metric-label">Feedback Loss</div>
+              <strong>Even good human fixes are easy to waste</strong>
+              <span>If a reviewer corrects the result but that edit disappears into chat history, the system stays expensive to improve and keeps repeating the same mistakes.</span>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      <div class="overview-grid">
-        <div class="panel">
-          <p>
-            A fine-tuned model extracts structured scenario parameters from natural-language traffic requests.
-            A base LLM handles open-ended geometry and XML reasoning. SUMO executes the resulting scenario,
-            while the backend logs what happened, what was corrected, and what can be reused as future training data.
+      <section id="approach">
+        <div class="eyebrow">Approach</div>
+        <h2 class="section-title">Teach traffic-scene context from real road data, then split generation by responsibility</h2>
+        <div class="approach-copy-box">
+          <div class="metric-label">Core Idea</div>
+          <p class="approach-copy-lead">
+            Build the missing traffic-scene dataset first, fine-tune the language-to-parameter layer, then let specialized components assemble the final simulation.
           </p>
-          <p class="panel-note">
-            The goal is not only to generate scenarios, but to preserve correction signals in a form that can be evaluated,
-            exported, and fed back into future fine-tuning.
+          <p class="section-copy">
+            There is no ready-made dataset that cleanly maps natural-language traffic scenes to simulation-ready
+            parameters, so the project first builds that supervision itself. Real road data from Seoul traffic detectors
+            and synthetic traffic-engineering scenarios are turned into prompt-target pairs, so the fine-tuned model
+            can learn how natural-language descriptions map to structured traffic context instead of only memorizing
+            road names or generic prompt patterns.
+          </p>
+          <p class="section-copy">
+            Once that layer is learned, generation is split by role. The fine-tuned extractor produces structured
+            traffic parameters, the geometry LLM classifies edits and handles geometry reasoning and XML fallback,
+            and the surrounding system rebuilds the network, runs SUMO, and validates the result. Because
+            traffic-scene data is still scarce, the system also logs correction-intent edits and exports them as
+            retrainable data, so the model can keep improving as more real usage accumulates.
+          </p>
+          <p class="section-copy">
+            The broader project also includes live Seoul traffic lookup, representative road-type statistics,
+            and similar-road estimation tools that support grounding and fallback around the main generation flow.
+          </p>
+        </div>
+        <div class="cards-four">
+          <div class="card">
+            <div class="metric-label">Stage 1</div>
+            <p class="card-title">Build traffic-scene supervision</p>
+            <p class="card-desc">Extract prompt-target data from real road observations and synthetic scenarios because off-the-shelf natural-language traffic-scene datasets do not really exist.</p>
+          </div>
+          <div class="card">
+            <div class="metric-label">Stage 2</div>
+            <p class="card-title">Fine-tune language to traffic parameters</p>
+            <p class="card-desc">Teach the model to read the context of a traffic scene from natural language and output structured fields such as speed, volume, lanes, sigma, tau, and spacing.</p>
+          </div>
+          <div class="card">
+            <div class="metric-label">Stage 3</div>
+            <p class="card-title">Split parameter, geometry, and execution roles</p>
+            <p class="card-desc">Use specialized components across the fine-tuned extractor, the geometry LLM, and the tool-calling agent so each part handles the part it is best at.</p>
+          </div>
+          <div class="card">
+            <div class="metric-label">Stage 4</div>
+            <p class="card-title">Keep extracting retrainable data</p>
+            <p class="card-desc">Log correction-intent feedback, separate it from tuning requests, and export reusable training data so the system can be tuned again over time.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="finetuning">
+        <div class="eyebrow">Fine-Tuning</div>
+        <h2 class="section-title">Real Seoul traffic data becomes supervised prompt–parameter pairs</h2>
+        <div class="approach-copy-box">
+          <div class="metric-label">Core Idea</div>
+          <p class="approach-copy-lead">
+            Extract observed speed and volume from detector data, estimate driver behavior parameters, then diversify prompts so the model learns traffic situations — not road-name lookup.
+          </p>
+          <p class="section-copy">
+            Training data comes from Seoul Metropolitan Government detector records (2025.10): speed data covering 31-day hourly averages per road segment,
+            volume data with hourly counts per collection point, and the national standard node-link SHP for speed limits and road geometry.
+            The fine-tuned model is <code>gpt-4.1-mini</code> via the OpenAI Fine-Tuning API.
+            ~70 road segments × 7 time periods × 5 prompt variants = <strong>~2,450 total pairs</strong>, split 90/10 into train (2,205) and validation (245).
           </p>
         </div>
 
-        <div class="mini-list">
-          <div class="mini-item">
-            <strong>Natural language in</strong>
-            <span>Traffic requests are translated into structured scenario parameters.</span>
-          </div>
-          <div class="mini-item">
-            <strong>Runnable scenario out</strong>
-            <span>Generated parameters and geometry become executable SUMO artifacts.</span>
-          </div>
-          <div class="mini-item">
-            <strong>Human feedback preserved</strong>
-            <span>Correction logs remain reusable instead of disappearing into chat history.</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="built">
-      <div class="eyebrow">System Components</div>
-      <h2 class="section-title">A Workflow, Not a Single Prompt</h2>
-      <p class="section-copy">
-        Each layer has a clear role in generation, refinement, evaluation, and future dataset improvement.
-      </p>
-
-      <div class="cards">
-        <article class="card">
-          <div class="card-icon">FT</div>
-          <h3 class="card-title">Fine-Tuned Extraction</h3>
-          <p class="card-copy">
-            A fine-tuned <code>gpt-4.1-mini</code> converts traffic requests into structured parameters (speed, volume, lanes, sigma, tau, avg_block_m). Trained on ~70 road segments from real Seoul traffic surveys. Ground truth uses BPR speed-flow functions, V/C ratio estimation, and Greenshields-based reverse estimation of driver behavior parameters.
-          </p>
-        </article>
-
-        <article class="card">
-          <div class="card-icon">XML</div>
-          <h3 class="card-title">Base LLM Geometry / XML</h3>
-          <p class="card-copy">
-            A separate base model (configurable: Claude, GPT, or Gemini) handles geometry edits, fallback XML generation, and modification classification when structured extraction alone is not enough.
-          </p>
-        </article>
-
-        <article class="card">
-          <div class="card-icon">RUN</div>
-          <h3 class="card-title">SUMO Scenario Execution</h3>
-          <p class="card-copy">
-            Structured parameters and network artifacts are turned into runnable SUMO scenarios with generated network, route, additional, and config files.
-          </p>
-        </article>
-
-        <article class="card">
-          <div class="card-icon">C/T</div>
-          <h3 class="card-title">Correction vs Tuning</h3>
-          <p class="card-copy">
-            User feedback is split into trainable corrections and non-trainable tuning requests, so preference edits do not contaminate retraining data.
-          </p>
-        </article>
-
-        <article class="card">
-          <div class="card-icon">ADM</div>
-          <h3 class="card-title">Evaluation and Reporting</h3>
-          <p class="card-copy">
-            An admin layer exposes correction history, field-level error patterns, geometry correction categories, and downloadable retraining exports.
-          </p>
-        </article>
-
-        <article class="card">
-          <div class="card-icon">AGT</div>
-          <h3 class="card-title">Tool-Calling Agent</h3>
-          <p class="card-copy">
-            An 11-tool agent autonomously selects and executes tools (geocoding, network building, traffic queries, simulation, validation, calibration) in a multi-turn loop based on user intent.
-          </p>
-        </article>
-
-        <article class="card">
-          <div class="card-icon">OPS</div>
-          <h3 class="card-title">Deployment Readiness</h3>
-          <p class="card-copy">
-            Docker, GitHub Actions CI/CD (test, build, deploy), and GCP Cloud Run deployment with Secret Manager integration for API keys.
-          </p>
-        </article>
-      </div>
-    </section>
-
-    <section id="results">
-      <div class="eyebrow">Results</div>
-      <h2 class="section-title">Fine-Tuning Delivers the Largest Gains Where Structure Matters Most</h2>
-      <p class="section-copy">
-        On 30 held-out validation samples derived from real Seoul traffic data, the fine-tuned extractor reduced overall MAPE from 51.5% to 10.6% against the base model.
-      </p>
-
-      <div class="results-grid">
-        <div class="results-metrics">
-          <div class="result-metric">
-            <div class="result-metric-label">Overall Accuracy</div>
-            <div class="result-metric-value">10.6% MAPE</div>
-            <div class="result-metric-copy">Overall error dropped by about 5x compared with the base model on the held-out benchmark.</div>
-          </div>
-          <div class="result-metric">
-            <div class="result-metric-label">Largest Improvement</div>
-            <div class="result-metric-value">Speed: 5.1%</div>
-            <div class="result-metric-copy">The biggest gain appeared in <code>speed_kmh</code>, where the base model tended to overestimate realistic traffic speeds.</div>
-          </div>
-          <div class="result-metric">
-            <div class="result-metric-label">Output Stability</div>
-            <div class="result-metric-value">1.47% CV</div>
-            <div class="result-metric-copy">Repeated runs were more consistent after fine-tuning than the base model baseline.</div>
-          </div>
+        <!-- Pipeline diagram — always visible -->
+        <div class="mermaid-wrap" style="margin-top:28px">
+          <pre class="mermaid">
+flowchart LR
+    A["Speed detectors\n31-day hourly avg"] --> D["Match by\nroad name &amp; link ID"]
+    B["Volume detectors\nhourly count"] --> D
+    C["Node-link SHP\nspeed limit · geometry"] --> D
+    D --> E["Group by 7\ntime periods"]
+    E --> F["Reverse-estimate\nsigma, tau\n(Greenshields)"]
+    F --> G["Generate 5\nprompt variants"]
+    G --> H["train JSONL\n2,205 (90%)"]
+    G --> I["val JSONL\n245 (10%)"]
+          </pre>
         </div>
 
-        <div class="results-table-wrap">
-          <table class="results-table">
+        <!-- Observed vs Estimated — always visible -->
+        <div class="table-shell" style="margin-top:28px">
+          <table class="ft-table">
+            <thead><tr><th>Parameter</th><th>Source</th><th>Method</th></tr></thead>
+            <tbody>
+              <tr><td><code>speed_kmh</code></td><td><span class="tag-observed">Observed</span></td><td>31-day hourly average from speed detectors</td></tr>
+              <tr><td><code>volume_vph</code></td><td><span class="tag-observed">Observed</span></td><td>Hourly average from volume detectors</td></tr>
+              <tr><td><code>lanes</code></td><td><span class="tag-observed">Observed</span></td><td>Mode of lane counts across link segments</td></tr>
+              <tr><td><code>speed_limit_kmh</code></td><td><span class="tag-observed">Observed</span></td><td>Node-link SHP MAX_SPD; road-type heuristic fallback</td></tr>
+              <tr><td><code>avg_block_m</code></td><td><span class="tag-observed">Observed</span></td><td>Mean link length from node-link geometry</td></tr>
+              <tr><td><code>sigma</code></td><td><span class="tag-estimated">Estimated</span></td><td>Greenshields reverse-estimation from observed speed</td></tr>
+              <tr><td><code>tau</code></td><td><span class="tag-estimated">Estimated</span></td><td>Greenshields reverse-estimation from observed speed</td></tr>
+              <tr><td><code>reasoning</code></td><td><span class="tag-estimated">Generated</span></td><td>Rule-based summary of the above values</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Prompt diversification — animation + table -->
+        <div class="table-shell" style="margin-top:28px">
+          <p class="section-copy" style="margin-bottom:14px">
+            Each (road, time period) pair produces <strong>5 prompt variants</strong> so the model learns from traffic situations, not road name lookup.
+          </p>
+
+          <!-- Animated prompt builder -->
+          <div class="prompt-anim" id="promptAnim">
+            <!-- Source row -->
+            <div class="pa-source" id="paSource">
+              <div class="pa-source-label">Raw data row <span style="font-weight:500;opacity:0.6;text-transform:none">(originally Korean — translated)</span></div>
+              <div class="pa-tokens">
+                <span class="pa-tok" data-field="road">Yangjae-daero</span>
+                <span class="pa-tok" data-field="area">suburban</span>
+                <span class="pa-tok" data-field="road_type">arterial</span>
+                <span class="pa-tok" data-field="lanes">8-lane</span>
+                <span class="pa-tok" data-field="time">afternoon</span>
+                <span class="pa-tok" data-field="congestion">moderate</span>
+              </div>
+              <div class="pa-params">
+                <span class="pa-param"><span class="pa-param-key">speed</span> 27.0 km/h</span>
+                <span class="pa-param"><span class="pa-param-key">volume</span> 4,460 vph</span>
+                <span class="pa-param"><span class="pa-param-key">limit</span> 50 km/h</span>
+                <span class="pa-param"><span class="pa-param-key">sigma</span> 0.40</span>
+                <span class="pa-param"><span class="pa-param-key">tau</span> 1.5 s</span>
+                <span class="pa-param"><span class="pa-param-key">block</span> 219 m</span>
+              </div>
+            </div>
+
+            <!-- 5 prompt targets -->
+            <div class="pa-mid-label" id="paMidLabel">
+              <span class="pa-arrow">↓</span> 5 prompts &times; 1 shared output = 5 training pairs
+            </div>
+            <div class="pa-targets" id="paTargets">
+              <div class="pa-row" data-style="Road + time + action">
+                <span class="pa-label">1</span>
+                <div class="pa-slots">
+                  <span class="pa-static">Simulate </span>
+                  <span class="pa-slot" data-field="road">Yangjae-daero</span>
+                  <span class="pa-static"> </span>
+                  <span class="pa-slot" data-field="time">afternoon</span>
+                </div>
+              </div>
+              <div class="pa-row" data-style="Road + time">
+                <span class="pa-label">2</span>
+                <div class="pa-slots">
+                  <span class="pa-slot" data-field="road">Yangjae-daero</span>
+                  <span class="pa-static"> </span>
+                  <span class="pa-slot" data-field="time">afternoon</span>
+                </div>
+              </div>
+              <div class="pa-row" data-style="Situational">
+                <span class="pa-label">3</span>
+                <div class="pa-slots">
+                  <span class="pa-slot" data-field="congestion">moderate</span>
+                  <span class="pa-static"> </span>
+                  <span class="pa-slot" data-field="area">suburban</span>
+                  <span class="pa-static"> </span>
+                  <span class="pa-slot" data-field="road_type">arterial</span>
+                  <span class="pa-static"> </span>
+                  <span class="pa-slot" data-field="lanes">8-lane</span>
+                  <span class="pa-static"> </span>
+                  <span class="pa-slot" data-field="time">afternoon</span>
+                </div>
+              </div>
+              <div class="pa-row" data-style="Generic type">
+                <span class="pa-label">4</span>
+                <div class="pa-slots">
+                  <span class="pa-slot" data-field="lanes">8-lane</span>
+                  <span class="pa-static"> </span>
+                  <span class="pa-slot" data-field="road_type">arterial</span>
+                  <span class="pa-static"> </span>
+                  <span class="pa-slot" data-field="time">afternoon</span>
+                  <span class="pa-static"> traffic simulation</span>
+                </div>
+              </div>
+              <div class="pa-row" data-style="Mixed">
+                <span class="pa-label">5</span>
+                <div class="pa-slots">
+                  <span class="pa-slot" data-field="road">Yangjae-daero</span>
+                  <span class="pa-static">-like </span>
+                  <span class="pa-slot" data-field="road_type">arterial</span>
+                  <span class="pa-static"> </span>
+                  <span class="pa-slot" data-field="time">afternoon</span>
+                  <span class="pa-static"> conditions</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Shared output JSON -->
+            <div class="pa-output" id="paOutput">
+              <div class="pa-output-bracket">→ shared output</div>
+              <div class="pa-output-json">
+                <span class="pa-json-line">{ <span class="pa-jk">"speed_kmh"</span>: <span class="pa-jv">27.0</span>, <span class="pa-jk">"volume_vph"</span>: <span class="pa-jv">4460</span>, <span class="pa-jk">"lanes"</span>: <span class="pa-jv">4</span>, <span class="pa-jk">"speed_limit_kmh"</span>: <span class="pa-jv">50</span>,</span>
+                <span class="pa-json-line">&nbsp;&nbsp;<span class="pa-jk">"sigma"</span>: <span class="pa-jv">0.4</span>, <span class="pa-jk">"tau"</span>: <span class="pa-jv">1.5</span>, <span class="pa-jk">"avg_block_m"</span>: <span class="pa-jv">219</span> }</span>
+              </div>
+            </div>
+
+            <button class="pa-replay" id="paReplay" aria-label="Replay animation">Replay</button>
+            <p class="pa-footnote">All prompts are originally in Korean — translated for display.</p>
+          </div>
+
+          <table class="prompt-table" style="margin-top:22px">
+            <thead><tr><th>Style</th><th>Template</th><th>Example (translated)</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>Road name + time + action</td>
+                <td><code><mark>{road}</mark> <mark>{time}</mark> {action}</code></td>
+                <td>"Simulate <mark>Yangjae-daero</mark> <mark>afternoon</mark>"</td>
+              </tr>
+              <tr>
+                <td>Road name + time</td>
+                <td><code><mark>{road}</mark> <mark>{time}</mark></code></td>
+                <td>"<mark>Yangjae-daero</mark> <mark>afternoon</mark>"</td>
+              </tr>
+              <tr>
+                <td>Situational (no name)</td>
+                <td><code><mark>{congestion}</mark> <mark>{area}</mark> <mark>{road_type}</mark> <mark>{lanes}</mark>-lane <mark>{time}</mark></code></td>
+                <td>"<mark>moderate</mark> <mark>suburban</mark> <mark>arterial</mark> <mark>8</mark>-lane <mark>afternoon</mark>"</td>
+              </tr>
+              <tr>
+                <td>Generic type + time</td>
+                <td><code><mark>{lanes}</mark>-lane <mark>{road_type}</mark> <mark>{time}</mark> traffic simulation</code></td>
+                <td>"<mark>8</mark>-lane <mark>arterial</mark> <mark>afternoon</mark> traffic simulation"</td>
+              </tr>
+              <tr>
+                <td>Mixed</td>
+                <td><code><mark>{road}</mark>-like <mark>{road_type}</mark> <mark>{time}</mark> conditions</code></td>
+                <td>"<mark>Yangjae-daero</mark>-like <mark>arterial</mark> <mark>afternoon</mark> conditions"</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="results">
+        <div class="eyebrow">Results</div>
+        <h2 class="section-title">The strongest gain appears in the structured extraction layer</h2>
+        <div class="table-shell">
+          <table class="data-table">
             <thead>
               <tr>
-                <th>Field</th>
-                <th>Fine-Tuned</th>
-                <th>Base</th>
+                <th scope="col">Field</th>
+                <th scope="col" class="numeric">Fine-tuned</th>
+                <th scope="col" class="numeric">Base</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td>speed_kmh</td><td><strong>5.1%</strong></td><td>74.6%</td></tr>
-              <tr><td>volume_vph</td><td><strong>34.8%</strong></td><td>48.1%</td></tr>
-              <tr><td>lanes</td><td><strong>8.9%</strong></td><td>13.9%</td></tr>
-              <tr><td>speed_limit_kmh</td><td><strong>1.7%</strong></td><td>23.8%</td></tr>
-              <tr><td>sigma</td><td><strong>4.5%</strong></td><td>21.3%</td></tr>
-              <tr><td>tau</td><td><strong>4.6%</strong></td><td>11.4%</td></tr>
-              <tr><td>avg_block_m</td><td><strong>14.5%</strong></td><td>167.6%</td></tr>
-              <tr><td><strong>Overall</strong></td><td><strong>10.6%</strong></td><td>51.5%</td></tr>
+              <tr><th scope="row">speed_kmh</th><td class="numeric accent-cell">5.1%</td><td class="numeric">74.6%</td></tr>
+              <tr><th scope="row">volume_vph</th><td class="numeric accent-cell">34.8%</td><td class="numeric">48.1%</td></tr>
+              <tr><th scope="row">lanes</th><td class="numeric accent-cell">8.9%</td><td class="numeric">13.9%</td></tr>
+              <tr><th scope="row">speed_limit_kmh</th><td class="numeric accent-cell">1.7%</td><td class="numeric">23.8%</td></tr>
+              <tr><th scope="row">sigma</th><td class="numeric accent-cell">4.5%</td><td class="numeric">21.3%</td></tr>
+              <tr><th scope="row">tau</th><td class="numeric accent-cell">4.6%</td><td class="numeric">11.4%</td></tr>
+              <tr><th scope="row">avg_block_m</th><td class="numeric accent-cell">14.5%</td><td class="numeric">167.6%</td></tr>
+              <tr><th scope="row"><strong>Overall</strong></th><td class="numeric accent-cell"><strong>10.6%</strong></td><td class="numeric"><strong>51.5%</strong></td></tr>
             </tbody>
           </table>
-          <div class="results-note">
-            Benchmark: 30 held-out samples with labels derived from real Seoul traffic data.
+          <p class="note-copy">
+            Benchmark: 30 held-out prompts with labels derived from real Seoul traffic data. The qualitative shift is not just lower error, but also lower domain bias in speed and block-spacing prediction.
+          </p>
+        </div>
+        <div class="cards-three">
+          <div class="card">
+            <div class="metric-label">Headline</div>
+            <p class="card-title-sm">Overall MAPE drops from 51.5% to 10.6%</p>
+            <p class="card-desc">The fine-tuned extractor reduces structured prediction error by about five times on the held-out benchmark.</p>
           </div>
-          <div class="results-note" style="margin-top:12px;">
-            <strong>Key error patterns:</strong> The base model systematically overpredicts speed (+68.3% bias, 0/30 accurate) and intersection spacing (+165%). Fine-tuning corrects these domain-specific biases — the FT model achieves near-zero bias on speed (+0.5%) and speed_limit (29/30 accurate). The remaining weakness is volume_vph (MAPE 34.8%), the most context-dependent field.
+          <div class="card">
+            <div class="metric-label">Largest gain</div>
+            <p class="card-title-sm">Speed bias is dramatically reduced</p>
+            <p class="card-desc">The base model defaults toward unrealistic free-flow speed, while the fine-tuned model brings the estimate much closer to observed traffic conditions.</p>
+          </div>
+          <div class="card">
+            <div class="metric-label">Weakest field</div>
+            <p class="card-title-sm">Volume still needs more supervision</p>
+            <p class="card-desc"><code>volume_vph</code> remains the hardest field and the clearest candidate for richer future training data.</p>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <section id="data-paths">
-      <div class="eyebrow">Training Data Paths</div>
-      <h2 class="section-title">Three Data Sources Feed the Same Improvement Loop</h2>
-      <p class="section-copy">
-        Fine-tuning in this project is not based on a single source. The workflow combines synthetic supervision, real-data-derived targets, and correction-derived retraining signals.
-      </p>
+      <section id="architecture">
+        <div class="eyebrow">System Architecture</div>
+        <h2 class="section-title">Prompt to runnable simulation, then back to reusable evidence</h2>
+        <p class="section-copy">
+          The workflow has two connected halves: an online generation path that turns requests into SUMO runs,
+          and a review path that classifies human edits so the system can improve without contaminating its own data.
+        </p>
 
-      <div class="data-paths">
-        <article class="path-card">
-          <div class="path-label">Synthetic</div>
-          <h3 class="path-title">Prompt-Target Scenario Generation</h3>
-          <p class="path-copy">
-            10 Seoul roads x 6 time periods x 4 weather conditions. Ground truth computed via BPR speed-flow model with road-type capacity (1800-2200 veh/h/lane by class), peak V/C ratios (0.75-0.95), and congestion-calibrated driver parameters (sigma 0.2-0.8, tau 0.8-2.5s).
-          </p>
-          <div class="path-meta">~70 samples. Used to bootstrap structured extraction before live correction data accumulates.</div>
-        </article>
+        <div class="arch-tabs">
+          <button class="arch-tab active" onclick="switchArch('system', this)">System Overview</button>
+          <button class="arch-tab" onclick="switchArch('diagram', this)">Workflow</button>
+          <button class="arch-tab" onclick="switchArch('pipeline', this)">Pipeline Example</button>
+        </div>
 
-        <article class="path-card">
-          <div class="path-label">Real Data</div>
-          <h3 class="path-title">Observed Seoul Traffic Targets</h3>
-          <p class="path-copy">
-            ~70 road segments from Seoul traffic surveys (2025.10). Observed speed/volume paired with rule-based natural language prompts in multiple styles — road name + time, situational description, mixed. Driver parameters reverse-estimated from observed speed via the Greenshields model.
-          </p>
-          <div class="path-meta">~245 samples. The model learns situation-to-parameter mapping, not road name lookup.</div>
-        </article>
-
-        <article class="path-card">
-          <div class="path-label">Corrections</div>
-          <h3 class="path-title">Human-in-the-Loop Retraining Signals</h3>
-          <p class="path-copy">
-            Session logs preserve before/after states, correction intent, field deltas, and trainability metadata so validated errors can flow back into future datasets.
-          </p>
-          <div class="path-meta">Used to turn interactive usage into reusable fine-tuning data while keeping tuning requests out by default.</div>
-        </article>
-      </div>
-    </section>
-
-    <section id="workflow">
-      <div class="eyebrow">How the Workflow Runs</div>
-      <h2 class="section-title">Generation and Refinement Are Part of the Same Loop</h2>
-      <p class="section-copy">
-        The workflow starts from natural-language input, produces a structured scenario, executes it in SUMO, and keeps the result auditable through validation and logging.
-      </p>
-      <div class="workflow-tabs" role="tablist" aria-label="Workflow diagrams">
-        <button class="workflow-tab active" data-target="generation-flow" role="tab" aria-selected="true">Generation Flow</button>
-        <button class="workflow-tab" data-target="refinement-flow" role="tab" aria-selected="false">Refinement Flow</button>
-      </div>
-
-      <div class="workflow-grid">
-        <article class="workflow-card" id="generation-flow">
-          <h3 class="workflow-title">Generation Flow</h3>
-          <p class="workflow-copy">
-            A traffic request is converted into structured parameters, used to build or retrieve geometry, executed in SUMO, and validated as a complete scenario run.
-          </p>
+        <div id="arch-diagram" class="arch-hidden">
           <div class="mermaid-wrap">
-            <div class="mermaid">
+            <pre class="mermaid">
 flowchart TD
     A[User Natural-Language Request] --> B[Fine-Tuned Parameter Extraction]
     B --> C[Structured Scenario Parameters]
     C --> D{Usable real location?}
     D -->|Yes| E[OSM-Based Network Retrieval]
-    D -->|No or Failed| F[Base LLM Geometry or XML Generation]
+    D -->|No / Failed| F[Geometry LLM — XML Generation]
     E --> G[SUMO Network Build]
     F --> G
     C --> H[Demand / Route / Config Generation]
@@ -1348,160 +2046,824 @@ flowchart TD
     H --> I
     I --> J[Scenario Execution]
     J --> K[Validation and Statistics]
-            </div>
+    K --> L[User Review]
+    L --> M{Intent}
+    M -->|Correction| N[Trainable Signal]
+    M -->|Tuning| O[Analysis Only]
+    N --> P[Correction Export]
+    P --> Q[Future Fine-Tuning Data]
+            </pre>
           </div>
-          <div class="mermaid-mobile-hint">Scroll horizontally to view full diagram</div>
-        </article>
+        </div>
 
-        <article class="workflow-card" id="refinement-flow">
-          <h3 class="workflow-title">Refinement and Retraining Flow</h3>
-          <p class="workflow-copy">
-            After execution, users continue with either Correction or Tuning. Only correction paths become retraining exports; tuning remains available for analysis.
-          </p>
+        <div id="arch-system">
           <div class="mermaid-wrap">
-            <div class="mermaid">
-flowchart TD
-    A[Generated Scenario] --> B[User Feedback]
-    B --> C{Intent}
-    C -->|Correction| D[Trainable Signal]
-    C -->|Tuning| E[Analysis Only]
-    D --> F{Target}
-    E --> F
-    F -->|Parameter| G[Parameter Update]
-    F -->|Geometry| H[Geometry or XML Update]
-    F -->|Mixed| I[Combined Update]
-    G --> J[Rebuild and Rerun]
-    H --> J
-    I --> J
-    J --> K[Session Logging]
-    K --> L{Trainable}
-    L -->|Correction| M[Correction Export]
-    L -->|Tuning| N[Analysis Store]
-    M --> O[Future Fine-Tuning Data]
-    O --> P[Updated Extraction Stage]
-            </div>
-          </div>
-          <div class="signal-band">
-            <div class="signal correction">
-              <strong>Correction -> trainable</strong>
-              <span>Verified error feedback is preserved as future retraining signal.</span>
-            </div>
-            <div class="signal tuning">
-              <strong>Tuning -> analysis only</strong>
-              <span>Alternative variants remain logged, but stay out of the trainable dataset by default.</span>
-            </div>
-            <div class="signal export">
-              <strong>Correction export -> FT dataset</strong>
-              <span>The system closes the loop by turning validated corrections back into structured training data.</span>
-            </div>
-          </div>
-          <div class="quality-note">
-            <div class="quality-note-title">Why this split matters</div>
-            <div class="quality-note-copy">
-              Separating Correction from Tuning keeps preference edits out of the retraining path. That makes the exported dataset cleaner, easier to trust, and more useful for future fine-tuning.
-            </div>
-          </div>
-        </article>
-      </div>
-    </section>
+            <pre class="mermaid">
+flowchart LR
+    subgraph Frontend
+        UI["Web UI\nindex.html"]
+        AdminUI["Admin Dashboard"]
+        AboutUI["About Page"]
+    end
 
-    <section id="explore">
-      <div class="eyebrow">Explore the System</div>
-      <h2 class="section-title">Interactive Interface Backed by an Evaluation Layer</h2>
-      <p class="section-copy">
-        The project is split into a user-facing generation flow and an evidence layer for evaluation, export, and analysis.
-      </p>
+    subgraph Backend["server.py"]
+        SSE["SSE Streaming"]
+        API["REST API"]
+    end
 
-      <div class="cards explore-grid">
-        <article class="card explore-card">
-          <div>
-            <div class="explore-meta">Demo</div>
-            <h3 class="explore-title">Interactive Generation Flow</h3>
-            <p class="explore-copy">
-              Use the main interface to generate scenarios from natural-language requests and continue the same session through correction or tuning.
+    subgraph LLM["LLM Layer"]
+        FT["Fine-tuned Model\ngpt-4.1-mini FT"]
+        Base["Base LLM\nGPT / Gemini / Claude"]
+        Agent["Tool-Calling Agent\n11 tools"]
+    end
+
+    subgraph Tools
+        OSM["OSM Network"]
+        SUMO["SUMO Generator"]
+        TOPIS["TOPIS API"]
+        Valid["Validator"]
+    end
+
+    subgraph Data
+        DB[("SQLite DB")]
+        JSONL["Training JSONL"]
+    end
+
+    UI -->|"POST /api/simulate"| SSE
+    AdminUI -->|"GET /api/admin/*"| API
+    SSE --> FT --> Base --> SUMO
+    Agent --> Tools
+    SUMO --> DB
+    DB -->|"export"| JSONL
+            </pre>
+          </div>
+        </div>
+
+        <div id="arch-pipeline" class="arch-panel arch-hidden">
+          <div class="pipeline-example">
+            <div class="pipeline-input">
+              <div class="pipeline-label">Input</div>
+              <div class="pipeline-code">"Create a congested morning intersection in front of a middle school."</div>
+            </div>
+            <div class="pipeline-arrow">&#8595;</div>
+            <div class="pipeline-step">
+              <div class="pipeline-label">1. FT Model — Parameter Extraction</div>
+              <pre class="pipeline-json">{
+  "speed_kmh": 18.5,
+  "volume_vph": 2400,
+  "lanes": 2,
+  "speed_limit_kmh": 30,
+  "sigma": 0.72,
+  "tau": 0.9,
+  "avg_block_m": 120,
+  "reasoning": "School zone, 30km/h limit. Morning drop-off congestion, V/C ~0.85."
+}</pre>
+            </div>
+            <div class="pipeline-arrow">&#8595;</div>
+            <div class="pipeline-step">
+              <div class="pipeline-label">2. Network Build</div>
+              <div class="pipeline-code">OSM or LLM-generated XML &#8594; netconvert &#8594; .net.xml</div>
+            </div>
+            <div class="pipeline-arrow">&#8595;</div>
+            <div class="pipeline-step">
+              <div class="pipeline-label">3. SUMO Execution</div>
+              <div class="pipeline-code">avg speed 16.2 km/h &middot; 2,380 vehicles inserted</div>
+            </div>
+            <div class="pipeline-arrow">&#8595;</div>
+            <div class="pipeline-result">
+              <div class="pipeline-label">4. Validation</div>
+              <div class="pipeline-code">FT predicted 18.5 km/h vs SUMO 16.2 km/h &#8594; error −12.4% &#8594; <strong>Grade B</strong></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="prompting">
+        <div class="eyebrow">Prompt Engineering</div>
+        <h2 class="section-title">Constrained prompts turned format errors from 15% to zero</h2>
+        <p class="section-copy">
+          The fine-tuned model uses a structured system prompt that enforces strict JSON output, required fields, and value-range constraints.
+          This is not a minor implementation detail — without these constraints the model intermittently returned prose, markdown, or partial JSON,
+          making the downstream pipeline unreliable.
+        </p>
+
+        <div class="prompt-grid">
+          <div class="panel">
+            <div class="panel-heading" style="color:var(--accent);">System prompt constraints (ft-v1)</div>
+            <ul class="prompt-list">
+              <li>Strict JSON-only output — no prose, no markdown, no commentary</li>
+              <li>All 8 numeric fields required in every response — never empty or <code>"-"</code></li>
+              <li>Value ranges enforced: <code>sigma</code> 0–1, <code>tau</code> 0.5–3, <code>lanes</code> 1–8</li>
+              <li>Domain reasoning required in the <code>reasoning</code> field</li>
+              <li>Korean road names and locations supported</li>
+            </ul>
+            <div class="panel-heading" style="color:var(--accent); margin-top:18px;">Domain calibration rules in prompt</div>
+            <ul class="prompt-list">
+              <li><strong>School zone</strong> — <code>speed_limit_kmh=30</code>, sigma high (0.6+)</li>
+              <li><strong>Highway / expressway</strong> — <code>speed_limit_kmh=80–100</code>, <code>avg_block_m</code> 500+</li>
+              <li><strong>Side street / alley</strong> — <code>speed_limit_kmh=30</code>, lanes=1, <code>avg_block_m</code> 50–80</li>
+              <li><strong>Rush hour</strong> — volume high, speed low</li>
+              <li><strong>Late night</strong> — volume very low, speed high</li>
+            </ul>
+          </div>
+
+          <div class="panel">
+            <div class="panel-heading" style="color:var(--accent);">Actual system prompt (ft-v1)</div>
+            <pre class="pipeline-json" style="font-size:0.75rem; line-height:1.55;">You are a traffic engineering expert and SUMO simulation engineer.
+When the user describes a road/traffic situation, return only JSON
+with the parameters needed for SUMO simulation.
+You must fill all 8 fields below with numbers.
+Never use empty values or the string '-'.
+
+Output format:
+{"speed_kmh": number, "volume_vph": number,
+ "lanes": one-way lane count,
+ "speed_limit_kmh": number,
+ "sigma": between 0~1, "tau": between 0.5~3,
+ "avg_block_m": intersection spacing (m),
+ "reasoning": "rationale"}</pre>
+
+            <div class="panel-heading" style="color:var(--accent); margin-top:18px;">Prompt evolution</div>
+            <table class="ft-table">
+              <thead><tr><th>Version</th><th>Approach</th><th>Result</th></tr></thead>
+              <tbody>
+                <tr><td><code>rule-v1</code></td><td>Rule-based keyword matching, no LLM</td><td>Baseline; no domain reasoning</td></tr>
+                <tr><td><code>ft-v1</code></td><td>Fine-tuned with structured constraints</td><td><strong>0% format errors</strong>, 10.6% MAPE</td></tr>
+              </tbody>
+            </table>
+            <p class="section-copy" style="margin-top:14px; max-width:100%; font-size:0.88rem;">
+              The critical shift was not the model change — it was adding output constraints to the system prompt.
+              Free-form prompting with the same fine-tuned model still produced ~15% JSON failures.
             </p>
-            <p class="panel-note" style="margin-top:12px;">
-              A shared server Gemini fallback is available. Using your own base-model API key lets you choose the provider model directly and avoids shared quota limits.
-            </p>
           </div>
-          <a class="btn btn-primary" href="/">View Live System</a>
-        </article>
+        </div>
+      </section>
 
-        <article class="card explore-card">
-          <div>
-            <div class="explore-meta">Evidence</div>
-            <h3 class="explore-title">Admin Dashboard</h3>
-            <p class="explore-copy">
-              Inspect correction logs, evaluation summaries, field error counts, geometry categories, and downloadable retraining exports.
-            </p>
+      <section id="engineering">
+        <div class="eyebrow">Engineering Detail</div>
+        <h2 class="section-title">How each subsystem actually works</h2>
+
+        <div class="accordion">
+
+          <!-- 1. Greenshields reverse-estimation -->
+          <details>
+            <summary>
+              <span class="summary-title">Greenshields reverse-estimation for sigma and tau</span>
+              <span class="summary-sub">speed → V/C → driver behavior calibration</span>
+            </summary>
+            <div class="accordion-body">
+              <p class="accordion-lead"><strong>Driver imperfection (sigma) and desired headway (tau) cannot be directly measured</strong> from detector data. They are reverse-estimated from observed speed via the Greenshields model.</p>
+              <div class="overview-grid">
+                <div>
+                  <p class="section-copy">The observed speed is divided by free-flow speed to get a speed ratio, which is mapped to a V/C ratio. The V/C ratio determines the congestion band, and sigma and tau are calibrated accordingly.</p>
+                  <div class="formula-block">
+                    speed_ratio = v_observed / v_free<br>
+                    V/C ≈ max(0.05, 1.0 − speed_ratio × 0.85)
+                  </div>
+                  <p class="section-copy">For example: observed 15 km/h on a 50 km/h limit road → speed_ratio = 0.33 → V/C = 0.72 → congested band → sigma 0.6–0.8, tau 0.8–1.2 s.</p>
+                </div>
+                <div>
+                  <table class="ft-table">
+                    <thead><tr><th>V/C range</th><th>sigma</th><th>tau</th></tr></thead>
+                    <tbody>
+                      <tr><td>&gt; 0.8 (congested)</td><td>0.6 – 0.8</td><td>0.8 – 1.2 s</td></tr>
+                      <tr><td>0.5 – 0.8 (moderate)</td><td>0.4 – 0.6</td><td>1.0 – 1.5 s</td></tr>
+                      <tr><td>&lt; 0.5 (free-flow)</td><td>0.2 – 0.4</td><td>1.5 – 2.5 s</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <!-- Tool-calling agent -->
+          <details>
+            <summary>
+              <span class="summary-title">Tool-calling agent — 11-tool orchestration</span>
+              <span class="summary-sub">LLM tool-use · autonomous selection</span>
+            </summary>
+            <div class="accordion-body">
+              <p class="accordion-lead"><strong>The agent autonomously selects and executes tools</strong> based on user requests, using the LLM tool-use feature.</p>
+              <div class="overview-grid">
+                <div>
+                  <table class="ft-table">
+                    <thead><tr><th>Tool</th><th>Description</th></tr></thead>
+                    <tbody>
+                      <tr><td><code>search_location</code></td><td>Geocode area names to coordinates</td></tr>
+                      <tr><td><code>build_road_network</code></td><td>Build SUMO network from OSM</td></tr>
+                      <tr><td><code>get_traffic_stats</code></td><td>Query local Seoul traffic statistics</td></tr>
+                      <tr><td><code>generate_simulation</code></td><td>Generate SUMO config files</td></tr>
+                      <tr><td><code>run_sumo</code></td><td>Execute simulation</td></tr>
+                      <tr><td><code>query_topis_speed</code></td><td>Real-time Seoul traffic API</td></tr>
+                      <tr><td><code>load_csv_data</code></td><td>Load external traffic data</td></tr>
+                      <tr><td><code>recommend_road</code></td><td>Suggest similar roads</td></tr>
+                      <tr><td><code>find_similar_roads</code></td><td>Find roads matching criteria</td></tr>
+                      <tr><td><code>validate_simulation</code></td><td>Validate simulation output</td></tr>
+                      <tr><td><code>calibrate_params</code></td><td>Calibrate parameters from results</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div>
+                  <p class="section-copy"><strong>Example:</strong> input "simulate a congested commute road"</p>
+                  <div class="formula-block">
+                    1. search_location("commute road") → no location<br>
+                    2. get_traffic_stats("arterial","rush hour") → refs<br>
+                    3. generate_simulation(params) → .net/.rou/.sumocfg<br>
+                    4. run_sumo(config) → avg 22.3 km/h, 1850 veh<br>
+                    5. validate_simulation(results) → grade B, −8.2%
+                  </div>
+                  <p class="section-copy" style="margin-top:12px">The agent layer uses LLM tool-use. The base LLM is configurable across Claude, GPT, and Gemini.</p>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <!-- 4. Role-separated LLM design -->
+          <details>
+            <summary>
+              <span class="summary-title">Role-separated LLM design — 4 components</span>
+              <span class="summary-sub">FT extractor · geometry LLM · agent · logging</span>
+            </summary>
+            <div class="accordion-body">
+              <p class="accordion-lead"><strong>Each component owns one responsibility.</strong> The fine-tuned model does not attempt geometry; the geometry LLM does not attempt structured extraction.</p>
+              <div class="cards-four" style="margin-top:4px">
+                <div class="card">
+                  <div class="metric-label">llm_parser.py</div>
+                  <p class="card-title" style="font-size:15px">Fine-tuned extractor</p>
+                  <p class="card-desc">Parses natural language into structured simulation parameters. Provides the machine-readable target for the rest of the pipeline.</p>
+                </div>
+                <div class="card">
+                  <div class="metric-label">base_llm.py</div>
+                  <p class="card-title" style="font-size:15px">Geometry LLM</p>
+                  <p class="card-desc">Classifies each user edit as parameter, geometry, or mixed. Handles road layout reasoning and generates fallback XML when OSM fails.</p>
+                </div>
+                <div class="card">
+                  <div class="metric-label">agent.py</div>
+                  <p class="card-title" style="font-size:15px">Tool-calling agent</p>
+                  <p class="card-desc">11-tool orchestration via LLM tool-use. Autonomous tool selection based on user intent with multi-turn execution.</p>
+                </div>
+                <div class="card">
+                  <div class="metric-label">session_db.py</div>
+                  <p class="card-title" style="font-size:15px">Logging and export</p>
+                  <p class="card-desc">Stores simulation runs and modification sessions. Separates trainable corrections from non-trainable tuning. Exports retraining JSONL.</p>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <!-- 5. Error pattern analysis -->
+          <details>
+            <summary>
+              <span class="summary-title">Error pattern analysis — directional bias across 30 samples</span>
+              <span class="summary-sub">base overpredicts speed +68%, block spacing +165%</span>
+            </summary>
+            <div class="accordion-body">
+              <p class="accordion-lead"><strong>Directional bias reveals where each model systematically over- or under-predicts,</strong> beyond just the MAPE number.</p>
+              <table class="ft-table">
+                <thead><tr><th>Field</th><th>FT Bias</th><th>FT Accurate</th><th>Base Bias</th><th>Base Accurate</th></tr></thead>
+                <tbody>
+                  <tr><td><code>speed_kmh</code></td><td>+0.5% (balanced)</td><td>21/30</td><td><strong>+68.3% (overpredict)</strong></td><td>0/30</td></tr>
+                  <tr><td><code>volume_vph</code></td><td>+25.9% (over)</td><td>13/30</td><td>+21.4% (over)</td><td>3/30</td></tr>
+                  <tr><td><code>speed_limit_kmh</code></td><td>−1.7% (balanced)</td><td>29/30</td><td>+15.7% (over)</td><td>11/30</td></tr>
+                  <tr><td><code>sigma</code></td><td>−0.9% (balanced)</td><td>24/30</td><td>+9.9% (over)</td><td>6/30</td></tr>
+                  <tr><td><code>tau</code></td><td>+1.6% (balanced)</td><td>20/30</td><td>+0.9% (over)</td><td>3/30</td></tr>
+                  <tr><td><code>avg_block_m</code></td><td>−0.6% (balanced)</td><td>20/30</td><td><strong>+165.0% (overpredict)</strong></td><td>1/30</td></tr>
+                </tbody>
+              </table>
+              <p class="section-copy" style="margin-top:14px">
+                <strong>Key finding:</strong> the base model defaults to free-flow speeds (+68.3% bias, 0/30 accurate) and lacks urban block-structure knowledge (+165% spacing).
+                Fine-tuning corrects both. The remaining weak point is <code>volume_vph</code> (34.8% MAPE) — the most context-dependent field that would benefit from additional training data.
+              </p>
+            </div>
+          </details>
+
+          <!-- 6. Modification classification -->
+          <details>
+            <summary>
+              <span class="summary-title">Modification classification — parameter, geometry, or mixed</span>
+              <span class="summary-sub">LLM classifier · keyword fallback</span>
+            </summary>
+            <div class="accordion-body">
+              <p class="accordion-lead"><strong>When a user requests a change, the geometry LLM first classifies it</strong> before routing to the correct handler.</p>
+              <div class="overview-grid">
+                <div>
+                  <p class="section-copy">The geometry LLM receives the user's edit request and returns one word: <code>parameter</code>, <code>geometry</code>, or <code>mixed</code>. If the LLM call fails, a keyword heuristic takes over.</p>
+                  <div class="formula-block">
+                    User edit → Geometry LLM classifier<br>
+                    &nbsp;&nbsp;→ "parameter" → update speed/volume/sigma/tau<br>
+                    &nbsp;&nbsp;→ "geometry" → regenerate .nod.xml / .edg.xml<br>
+                    &nbsp;&nbsp;→ "mixed" → both paths, then rebuild
+                  </div>
+                </div>
+                <div>
+                  <table class="ft-table">
+                    <thead><tr><th>Type</th><th>Examples</th></tr></thead>
+                    <tbody>
+                      <tr><td><strong>parameter</strong></td><td>"lower the speed", "increase volume to 3000", "make it more congested"</td></tr>
+                      <tr><td><strong>geometry</strong></td><td>"add an intersection", "bend the road", "make it a 4-way crossing"</td></tr>
+                      <tr><td><strong>mixed</strong></td><td>"set speed limit to 70 and make road straight", "add lane and raise volume"</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <!-- 7. Correction pipeline -->
+          <details>
+            <summary>
+              <span class="summary-title">Correction pipeline — human fixes stored in SQLite, exported as retraining data</span>
+              <span class="summary-sub">correction vs tuning · trainable flag · JSONL export</span>
+            </summary>
+            <div class="accordion-body">
+              <p class="accordion-lead"><strong>Every modification is stored in SQLite</strong> with before/after snapshots, modification type, edit intent, and a trainability flag. Only correction-intent records are exported for retraining.</p>
+              <div class="overview-grid">
+                <div>
+                  <div class="formula-block">
+                    prompt → FT prediction → simulation → user review<br>
+                    &nbsp;&nbsp;→ <strong>Correction</strong>: stored with trainable=1<br>
+                    &nbsp;&nbsp;→ <strong>Tuning</strong>: stored with trainable=0<br><br>
+                    export_corrections_for_training()<br>
+                    &nbsp;&nbsp;→ SELECT WHERE trainable=1 AND intent='correction'<br>
+                    &nbsp;&nbsp;→ sessions_corrections_openai.jsonl<br>
+                    &nbsp;&nbsp;→ merge with train_real_openai.jsonl → re-fine-tune
+                  </div>
+                  <p class="section-copy" style="margin-top:12px">
+                    This separation prevents preference-driven edits from polluting the fine-tuning signal.
+                    The admin dashboard at <code>/admin</code> shows correction history, modification breakdowns, and downloadable exports.
+                  </p>
+                </div>
+                <div>
+                  <table class="ft-table">
+                    <thead><tr><th>SQLite field</th><th>Purpose</th></tr></thead>
+                    <tbody>
+                      <tr><td><code>edit_intent</code></td><td>"correction" or "tuning"</td></tr>
+                      <tr><td><code>trainable</code></td><td>1 = exportable, 0 = analysis only</td></tr>
+                      <tr><td><code>modification_type</code></td><td>parameter / geometry / mixed</td></tr>
+                      <tr><td><code>details_json</code></td><td>Before/after parameter snapshots</td></tr>
+                    </tbody>
+                  </table>
+                  <table class="ft-table" style="margin-top:14px">
+                    <thead><tr><th>Data source</th><th>Samples</th><th>Ground truth</th></tr></thead>
+                    <tbody>
+                      <tr><td>Real-data (Seoul)</td><td>~2,450</td><td>Observed speed/volume</td></tr>
+                      <tr><td>Corrections (SQL)</td><td>grows over time</td><td>Human expert fixes on FT outputs</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <!-- 8. Runtime parameter wiring -->
+          <details>
+            <summary>
+              <span class="summary-title">Runtime parameter wiring — how FT output becomes a SUMO simulation</span>
+              <span class="summary-sub">network XML · vType injection · two kinds of "speed"</span>
+            </summary>
+            <div class="accordion-body">
+              <p class="accordion-lead"><strong>The FT model predicts eight fields.</strong> Some define the physical road, some describe driver behavior, and one — <code>speed_kmh</code> — is a prediction of what the simulation <em>should produce</em>, not an input to it.</p>
+              <div class="overview-grid">
+                <div>
+                  <table class="ft-table">
+                    <thead><tr><th>FT field</th><th>Target</th><th>SUMO mechanism</th></tr></thead>
+                    <tbody>
+                      <tr><td><code>speed_limit_kmh</code></td><td>.net.xml</td><td>Rewrite lane/edge speed after netconvert</td></tr>
+                      <tr><td><code>lanes</code></td><td>.net.xml</td><td>Network topology / capacity</td></tr>
+                      <tr><td><code>avg_block_m</code></td><td>.net.xml</td><td>Intersection spacing (generated geometry)</td></tr>
+                      <tr><td><code>sigma</code></td><td>.rou.xml vType</td><td>Krauss driver imperfection (0–1)</td></tr>
+                      <tr><td><code>tau</code></td><td>.rou.xml vType</td><td>Desired headway in seconds</td></tr>
+                      <tr><td><code>volume_vph</code></td><td>randomTrips.py</td><td>Trip generation rate</td></tr>
+                      <tr><td><code>max_speed</code></td><td>.rou.xml vType</td><td>Capped at limit &times; 1.05</td></tr>
+                      <tr><td><code>speed_kmh</code></td><td><strong>Nowhere</strong></td><td>Validation target only</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div>
+                  <div class="panel-heading" style="color:var(--accent);">Two kinds of "speed"</div>
+                  <p class="section-copy"><code>speed_limit_kmh</code> is a legal/physical cap — "cars cannot go faster than this." Written into network XML.</p>
+                  <p class="section-copy"><code>speed_kmh</code> is a predicted outcome — "under these conditions, cars will average this speed." Never written to SUMO. If you wrote it into lane speeds, you'd confuse congested average with legal maximum.</p>
+                  <div class="panel-heading" style="color:var(--accent); margin-top:14px;">Validation error</div>
+                  <div class="formula-block">
+                    error = (sim_speed − FT_speed) / FT_speed × 100%<br><br>
+                    A ≤ 10% · B ≤ 20% · C ≤ 30% · D ≤ 50% · F &gt; 50%
+                  </div>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <!-- 9. Automatic calibration loop -->
+          <details>
+            <summary>
+              <span class="summary-title">Automatic calibration loop — proportional control with bounded drift</span>
+              <span class="summary-sub">volume · sigma · tau · max 3 iterations · ±20% drift cap</span>
+            </summary>
+            <div class="accordion-body">
+              <p class="accordion-lead"><strong>When validation error exceeds ±10%, the calibration loop nudges behavioral parameters</strong> so the simulated speed converges toward the FT-predicted target.</p>
+              <div class="overview-grid">
+                <div>
+                  <div class="panel-heading" style="color:var(--accent);">Algorithm</div>
+                  <div class="formula-block">
+                    1. Compute error = (sim − target) / target<br>
+                    2. If |error| ≤ 10% → converged, stop<br>
+                    3. Adjust proportionally:<br>
+                    &nbsp;&nbsp;volume × (1 + 0.4 × error)<br>
+                    &nbsp;&nbsp;sigma + 0.15 × error<br>
+                    &nbsp;&nbsp;tau + 0.25 × error<br>
+                    4. Clamp to drift bounds<br>
+                    5. Re-run SUMO → repeat (max 3)
+                  </div>
+                  <p class="section-copy" style="margin-top:12px">Gains are derived from SUMO Krauss model sensitivity analysis. If all parameters hit drift caps without converging, the loop stops early — the error signals a geometry mismatch rather than a parameter error.</p>
+                </div>
+                <div>
+                  <table class="ft-table">
+                    <thead><tr><th>Parameter</th><th>Drift limit</th><th>Effect</th></tr></thead>
+                    <tbody>
+                      <tr><td><code>volume_vph</code></td><td>±20%</td><td>Primary congestion lever</td></tr>
+                      <tr><td><code>sigma</code></td><td>±0.15</td><td>Driver imperfection → capacity</td></tr>
+                      <tr><td><code>tau</code></td><td>±0.3 s</td><td>Headway → throughput</td></tr>
+                    </tbody>
+                  </table>
+                  <div class="panel-heading" style="color:var(--accent); margin-top:14px;">Fixed during calibration</div>
+                  <p class="section-copy"><code>speed_limit_kmh</code>, <code>lanes</code>, <code>avg_block_m</code>, and network geometry are never modified. They define the physical road. Calibration only adjusts <em>how vehicles behave</em> on it.</p>
+                  <div class="panel-heading" style="color:var(--accent); margin-top:14px;">Data separation</div>
+                  <p class="section-copy">Calibrated values are stored in <code>calibrated_params_json</code> — separate from the original FT output. This prevents calibration artifacts from contaminating retraining data.</p>
+                </div>
+              </div>
+            </div>
+          </details>
+
+        </div>
+      </section>
+
+
+      <section id="explore">
+        <div class="eyebrow">Simulation UI</div>
+        <h2 class="section-title">Generate, correct, and tune — all in one conversation</h2>
+        <p class="section-copy">
+          One chat session covers the full cycle. First, pick which LLM handles geometry reasoning.
+          Then describe a traffic scene — the fine-tuned model extracts structured parameters, the system builds the road network, and SUMO executes the scenario.
+          If the result is wrong, open <strong>Correction</strong> mode: fix the parameter or geometry error, and the delta becomes retraining data for the next fine-tuning round.
+          If the result is acceptable but you want a variant, use <strong>Tuning</strong> mode instead — the change is logged for analysis but kept out of the training signal so preference edits never pollute the dataset.
+          Click <strong>Calibrate</strong> to automatically adjust volume, sigma, and tau so the simulated speed converges toward the FT-predicted target.
+        </p>
+        <p class="section-copy">
+          The browser flow is also a real working interface, not just a demo shell: simulation progress streams live,
+          the generated network is previewed in-chat, the latest SUMO artifact set can be downloaded as a ZIP,
+          and, in local environments, completed scenarios can be reopened in <code>sumo-gui</code> for manual inspection.
+        </p>
+
+        <div class="demo-showcase">
+          <div class="demo-steps">
+            <button class="demo-step active" data-demo="llm" onclick="switchDemo(this)">
+              <div class="demo-step-num">1</div>
+              <div class="demo-step-body">
+                <strong>LLM Selection</strong>
+                <span>Base LLM to use for geometry reasoning. Server Gemini, local CLI (claude/gemini/codex), or bring your own API key.</span>
+              </div>
+            </button>
+            <button class="demo-step" data-demo="runonly" onclick="switchDemo(this)">
+              <div class="demo-step-num">2</div>
+              <div class="demo-step-body">
+                <strong>Prompt &amp; Run</strong>
+                <span>Describe a traffic scenario in natural language. The fine-tuned model extracts parameters, builds network geometry, and runs SUMO.</span>
+              </div>
+            </button>
+            <button class="demo-step" data-demo="param" onclick="switchDemo(this)">
+              <div class="demo-step-num">3</div>
+              <div class="demo-step-body">
+                <strong>Parameter Correction</strong>
+                <span>Review extracted parameters and correct errors. Trainable corrections feed back into the fine-tuning dataset.</span>
+              </div>
+            </button>
+            <button class="demo-step" data-demo="geo" onclick="switchDemo(this)">
+              <div class="demo-step-num">4</div>
+              <div class="demo-step-body">
+                <strong>Geometry Modification</strong>
+                <span>Edit road geometry, add intersections, or change lane structure. The base LLM regenerates the network XML.</span>
+              </div>
+            </button>
+            <button class="demo-step" data-demo="calibrate" onclick="switchDemo(this)">
+              <div class="demo-step-num">5</div>
+              <div class="demo-step-body">
+                <strong>Calibration</strong>
+                <span>Auto-adjust volume, sigma, and tau so simulated speed converges toward the FT-predicted target. Up to 3 iterations with bounded drift.</span>
+              </div>
+            </button>
           </div>
-          <a class="btn btn-secondary" href="/admin">Admin Dashboard</a>
-        </article>
 
-        <article class="card explore-card">
-          <div>
-            <div class="explore-meta">Documentation</div>
-            <h3 class="explore-title">Technical README</h3>
-            <p class="explore-copy">
-              Read the full implementation breakdown, dataset paths, deployment setup, and workflow details behind the portfolio view.
-            </p>
+          <div class="demo-player">
+            <img id="demo-gif" src="/docs/LLM-select.gif" alt="LLM selection demo" loading="lazy">
           </div>
-          <a class="btn btn-secondary" href="/readme">Read README</a>
-        </article>
+        </div>
+      </section>
+
+      <section id="admin">
+        <div class="eyebrow">Admin Dashboard</div>
+        <h2 class="section-title">Monitor corrections, inspect error patterns, and export retraining data</h2>
+        <p class="section-copy">
+          The admin dashboard at <code>/admin</code> closes the feedback loop by surfacing what the model got wrong and making correction data directly exportable.
+          Every correction is traceable end to end: user edit, SQLite log, admin panel, exported JSONL, re-fine-tune.
+        </p>
+        <div class="section-shell">
+          <div class="pipeline-top">
+            <div class="narrative-body story-panel">
+              <div class="panel-heading" style="color:var(--accent);">Why the admin surface matters</div>
+              <p class="section-copy">
+                Without an inspection layer, corrections disappear into chat history.
+                The admin dashboard makes error patterns visible — which fields drift, which geometry types fail,
+                and how often corrections are trainable — so the next fine-tuning round targets the right gaps.
+              </p>
+              <p class="section-copy">
+                Three downloadable exports close the loop:
+                <strong>Corrections JSONL</strong> for re-fine-tuning,
+                <strong>Evaluation Report</strong> for grade distribution and fidelity,
+                and <strong>LLM Evaluation Report</strong> for field-level error analysis and parameter deltas.
+              </p>
+            </div>
+            <a class="pipeline-preview" href="/admin">
+              <img src="/docs/admin.png" alt="Admin dashboard showing correction rate, field error bars, and recent modifications">
+              <div class="pipeline-preview-copy">
+                <div class="metric-label">Dashboard Preview</div>
+                <div class="pipeline-preview-title">Correction rates, error bars, and modification logs in one place</div>
+                <p class="pipeline-preview-desc">Top-level cards show correction rate and fail rate. The LLM evaluation panel breaks down per-field errors and geometry correction types.</p>
+                <span class="pipeline-preview-link">Open admin dashboard</span>
+              </div>
+            </a>
+          </div>
+          <div class="cards-four" style="margin-top:14px">
+            <div class="card">
+              <div class="metric-label">Overview</div>
+              <p class="card-title-sm">Top cards</p>
+              <p class="card-desc">Correction rate, mixed fail rate, total simulations, parameter/geometry correction counts at a glance.</p>
+            </div>
+            <div class="card">
+              <div class="metric-label">Error Analysis</div>
+              <p class="card-title-sm">LLM Correction Evaluation</p>
+              <p class="card-desc">Per-field error bar charts, geometry correction type breakdown, and average parameter deltas.</p>
+            </div>
+            <div class="card">
+              <div class="metric-label">History</div>
+              <p class="card-title-sm">Recent Simulations</p>
+              <p class="card-desc">Prompt, grade (A/B/C/D), and timestamp for the latest 30 runs.</p>
+            </div>
+            <div class="card">
+              <div class="metric-label">Modifications</div>
+              <p class="card-title-sm">Recent Modifications</p>
+              <p class="card-desc">Edit intent, modification type, trainable flag, and user input for the latest 50 edits.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="lessons">
+        <div class="eyebrow">Lessons Learned</div>
+        <h2 class="section-title">What worked, what stayed fragile, and what the project actually proves</h2>
+        <p class="section-copy">
+          The main win is not perfect scenario generation. It is that the system makes evaluation and future improvement structurally possible after deployment.
+        </p>
+        <div class="panel panel-accent">
+          <strong class="panel-accent-title">The contribution is the workflow split, not just the benchmark number.</strong>
+          <p class="accent-copy">
+            Fine-tuning works best on constrained, structured outputs. Geometry and XML generation is handled by a
+            general-purpose LLM because fine-tuning it was not feasible within the project's budget — this is
+            the clearest remaining limitation. The second contribution is the review loop:
+            the system preserves correction intent, session history, and export eligibility so human review
+            can become clean retraining signal rather than one-off conversation debris.
+          </p>
+        </div>
+        <div class="grid-two">
+          <div class="panel lesson-panel">
+            <strong>Geometry generation is the clearest fine-tuning gap.</strong>
+            <p class="lesson-copy">Road layout and XML generation still rely on in-context prompting with the geometry LLM. Fine-tuning this layer would require structured geometry datasets and significantly more API budget — a clear next step if resources allow.</p>
+          </div>
+          <div class="panel lesson-panel">
+            <strong>Structured extraction converges fast even with limited data.</strong>
+            <p class="lesson-copy">Parameter prediction with constrained JSON converged quickly on ~2,450 samples, while open-ended geometry remained too brittle to treat as the main supervised surface.</p>
+          </div>
+          <div class="panel lesson-panel">
+            <strong>Correction versus tuning is a data-quality decision.</strong>
+            <p class="lesson-copy">Without that split, preference-driven edits would silently pollute the exported retraining dataset and weaken future fine-tuning quality.</p>
+          </div>
+          <div class="panel lesson-panel">
+            <strong>Fallbacks are part of the product, not backup code.</strong>
+            <p class="lesson-copy">OSM lookups and external dependencies fail often enough that XML and geometry fallback must remain visible, supported workflow paths rather than hidden error handlers.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div>LLM-guided synthetic driving scenario generation workflow</div>
+      <div>
+        <a href="/">Demo</a> /
+        <a href="/admin">Admin</a> /
+        <a href="/readme">README</a> /
+        <a href="https://github.com/ParkSewon-PM/sumo-traffic-agent" target="_blank" rel="noreferrer">GitHub</a>
       </div>
-    </section>
+    </footer>
+  </div>
 
-    <section id="lessons">
-      <div class="eyebrow">Lessons Learned</div>
-      <h2 class="section-title">What Worked, What Didn't, and What Comes Next</h2>
-      <p class="section-copy">
-        The strongest parts are workflow design, correction logging, and retraining structure. The remaining gaps are around robustness and evaluation breadth rather than missing pipeline pieces.
-      </p>
+  <script>
+  function switchArch(view, btn) {
+    ['arch-diagram', 'arch-system', 'arch-pipeline'].forEach(id => {
+      const el = document.getElementById(id);
+      if (id === 'arch-' + (view === 'diagram' ? 'diagram' : view)) {
+        el.classList.remove('arch-hidden');
+      } else {
+        el.classList.add('arch-hidden');
+      }
+    });
+    document.querySelectorAll('.arch-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+  }
 
-      <div class="limits">
-        <div class="limit-item"><strong>Structured extraction is a better fine-tuning target than open-ended generation.</strong> Parameter extraction with constrained JSON output converged quickly (~70 samples), while geometry/XML generation remains fragile and better suited to a base LLM.</div>
-        <div class="limit-item"><strong>Correction vs tuning separation matters for data quality.</strong> Without this split, preference-driven edits would pollute the retraining signal. Simple to implement, large effect on exported dataset quality.</div>
-        <div class="limit-item"><strong>External dependencies need graceful fallback.</strong> OSM lookups and public traffic APIs fail often enough that the LLM-generated XML fallback path is not optional — it is a core part of the pipeline.</div>
-        <div class="limit-item"><strong>Volume is the hardest field to predict.</strong> At 34.8% MAPE it is the model's weakest point — the most context-dependent parameter that would benefit most from additional training data.</div>
-      </div>
-    </section>
+  const DEMO_MAP = {
+    llm:       { src: '/docs/LLM-select.gif',      alt: 'LLM model selection demo' },
+    runonly:    { src: '/docs/Runonly.gif',           alt: 'Prompt input and execution demo' },
+    param:     { src: '/docs/Perimeter-edit.gif',    alt: 'Parameter correction demo' },
+    geo:       { src: '/docs/Geometry-edit.gif',     alt: 'Geometry modification demo' },
+    calibrate: { src: '/docs/Calibrate.gif',         alt: 'Automatic calibration loop demo' }
+  };
 
-    <section id="cta" class="cta">
-      <div class="eyebrow">Try It</div>
-      <h2 class="section-title">Run the Full Pipeline</h2>
-      <div class="cta-actions">
-        <a class="btn btn-primary" href="/">Try Live System</a>
-        <a class="btn btn-secondary" href="/admin">Admin Dashboard</a>
-      </div>
-    </section>
-  </main>
+  // Cache blobs so each GIF only downloads once
+  const blobCache = {};
 
-  <footer>
-    <div>LLM-guided synthetic driving scenario generation workflow</div>
-    <div>
-      <a href="/">Demo</a> /
-      <a href="/admin">Admin</a> /
-      <a href="https://github.com/ParkSewon-PM/sumo-traffic-agent" target="_blank">GitHub</a>
-    </div>
-  </footer>
-</div>
-<script>
-  const workflowTabs = document.querySelectorAll('.workflow-tab');
-  const workflowCards = document.querySelectorAll('.workflow-card');
+  async function loadGifOnce(url) {
+    if (blobCache[url]) {
+      // Revoke old object URL and create fresh one to restart playback
+      URL.revokeObjectURL(blobCache[url].objUrl);
+    }
+    if (!blobCache[url] || !blobCache[url].blob) {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      blobCache[url] = { blob };
+    }
+    const objUrl = URL.createObjectURL(blobCache[url].blob);
+    blobCache[url].objUrl = objUrl;
+    return objUrl;
+  }
 
-  workflowTabs.forEach((tab) => {
-    tab.addEventListener('click', () => {
-      const targetId = tab.dataset.target;
-      workflowTabs.forEach((btn) => {
-        const active = btn === tab;
-        btn.classList.toggle('active', active);
-        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+  async function switchDemo(btn) {
+    const key = btn.dataset.demo;
+    const info = DEMO_MAP[key];
+    if (!info) return;
+
+    document.querySelectorAll('.demo-step').forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+
+    const img = document.getElementById('demo-gif');
+    img.alt = info.alt;
+    img.src = '';
+    const objUrl = await loadGifOnce(info.src);
+    img.src = objUrl;
+  }
+
+  // Auto-load first GIF on page load
+  (function() {
+    const firstBtn = document.querySelector('.demo-step.active');
+    if (firstBtn) switchDemo(firstBtn);
+  })();
+  </script>
+
+  <script>
+  (function() {
+    const anim = document.getElementById('promptAnim');
+    const source = document.getElementById('paSource');
+    const targets = document.getElementById('paTargets');
+    const replay = document.getElementById('paReplay');
+    if (!anim || !source || !targets) return;
+
+    let running = false;
+
+    function clearClones() {
+      document.querySelectorAll('.pa-clone').forEach(c => c.remove());
+    }
+
+    function resetState() {
+      clearClones();
+      anim.classList.remove('pa-anim-active', 'pa-anim-landed');
+    }
+
+    function runAnimation() {
+      if (running) return;
+      running = true;
+      resetState();
+
+      const srcTokens = source.querySelectorAll('.pa-tok');
+      const allSlots = targets.querySelectorAll('.pa-slot');
+
+      // Build map: field -> source element rect
+      const srcMap = {};
+      srcTokens.forEach(tok => {
+        const field = tok.dataset.field;
+        const r = tok.getBoundingClientRect();
+        srcMap[field] = { el: tok, rect: r, text: tok.textContent };
       });
-      workflowCards.forEach((card) => {
-        card.classList.toggle('hidden', card.id !== targetId);
+
+      // For each slot, create a flying clone from source to target
+      const clones = [];
+      allSlots.forEach((slot, i) => {
+        const field = slot.dataset.field;
+        const src = srcMap[field];
+        if (!src) return;
+
+        const clone = document.createElement('span');
+        clone.className = 'pa-clone';
+        clone.dataset.field = field;
+        clone.textContent = src.text;
+        document.body.appendChild(clone);
+
+        // Position at source
+        clone.style.left = src.rect.left + 'px';
+        clone.style.top = src.rect.top + 'px';
+        clone.style.opacity = '1';
+
+        // Determine row index for stagger
+        const row = slot.closest('.pa-row');
+        const rowIdx = row ? Array.from(targets.children).indexOf(row) : 0;
+
+        clones.push({ clone, slot, rowIdx, field });
+      });
+
+      // Start: fade source, fly clones
+      requestAnimationFrame(() => {
+        anim.classList.add('pa-anim-active');
+
+        clones.forEach(({ clone, slot, rowIdx }) => {
+          const target = slot.getBoundingClientRect();
+          const delay = rowIdx * 100 + 50;
+
+          clone.style.transitionDelay = delay + 'ms';
+
+          requestAnimationFrame(() => {
+            clone.style.left = target.left + 'px';
+            clone.style.top = target.top + 'px';
+          });
+
+          // Fade out clone after landing
+          setTimeout(() => {
+            clone.style.opacity = '0';
+          }, 700 + delay + 100);
+        });
+
+        // After all clones land & fade: remove clones, show slots
+        const lastCloneEnd = 5 * 100 + 50 + 700 + 200;
+        setTimeout(() => {
+          clearClones();
+          anim.classList.add('pa-anim-landed');
+        }, lastCloneEnd);
+
+        // Done
+        setTimeout(() => {
+          running = false;
+        }, lastCloneEnd + 600);
+      });
+    }
+
+    // Trigger on scroll into view
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          setTimeout(runAnimation, 300);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.4 });
+
+    observer.observe(anim);
+
+    // Replay button
+    replay.addEventListener('click', () => {
+      resetState();
+      setTimeout(runAnimation, 100);
+    });
+  })();
+
+  // Demo GIF tab switcher
+  (function() {
+    const steps = [
+      { src: '/docs/RUN.gif', caption: '<strong>Run:</strong> Describe a traffic scene in natural language. The fine-tuned model extracts parameters, the agent builds the network and runs SUMO, then validation scores the result.' },
+      { src: '/docs/parameter_edit.gif', caption: '<strong>Correct Parameters:</strong> Press Adjust → Error Correction, then describe the fix ("speed is too high, reduce to under 20 km/h"). The geometry LLM classifies it as a parameter edit and applies the change.' },
+      { src: '/docs/geometry_edit.gif', caption: '<strong>Edit Geometry:</strong> Press Adjust → Error Correction, then describe the layout change ("add an intersection on the right side"). The geometry LLM classifies it as a geometry edit and regenerates the XML.' },
+    ];
+    const tabs = document.querySelectorAll('#demoTabs .demo-tab');
+    const img = document.getElementById('demoGif');
+    const cap = document.getElementById('demoCaption');
+    if (!tabs.length || !img || !cap) return;
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const i = parseInt(tab.dataset.step);
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        img.src = steps[i].src;
+        img.alt = steps[i].caption.replace(/<[^>]*>/g, '');
+        cap.innerHTML = steps[i].caption;
       });
     });
-  });
-</script>
+  })();
+  </script>
 </body>
 </html>
