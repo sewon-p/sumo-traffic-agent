@@ -71,12 +71,6 @@ jobs:
           docker build -t $IMAGE .
           docker push $IMAGE
 
-      - name: Ensure GCS bucket for persistent data
-        run: |
-          BUCKET=${PROJECT_ID}-sumo-data
-          gcloud storage buckets describe gs://${BUCKET} 2>/dev/null \
-            || gcloud storage buckets create gs://${BUCKET} --location=${REGION} --uniform-bucket-level-access
-
       - name: Deploy to Cloud Run
         run: |
           IMAGE=${REGION}-docker.pkg.dev/${PROJECT_ID}/docker-repo/${SERVICE_NAME}:${GITHUB_SHA::7}
