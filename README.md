@@ -495,10 +495,7 @@ flowchart LR
 
 `sigma` (driver imperfection) and `tau` (desired headway) cannot be directly measured from detector data. They are reverse-estimated from observed speed:
 
-```
-speed_ratio = v_observed / v_free
-V/C ≈ max(0.05, 1.0 − speed_ratio × 0.85)
-```
+$$\text{speed\\_ratio} = \frac{v\_{\text{observed}}}{v\_{\text{free}}} \quad,\quad V/C \approx \max\bigl(0.05,\ 1.0 - \text{speed\\_ratio} \times 0.85\bigr)$$
 
 Then `sigma` and `tau` are calibrated by congestion level (V/C ratio):
 
