@@ -680,7 +680,7 @@ python -m evaluation.benchmark --all
 
 ### Path 1: Synthetic generation — [training/generate_dataset.py](training/generate_dataset.py)
 
-15 roads (10 Seoul + 5 international) x 6 time periods x 4 weather conditions + abstract scenarios = 50 pairs. Speed/volume estimated via BPR model; driver parameters calibrated by congestion level. Used for initial fine-tuning.
+10 Seoul roads x 6 time periods x 4 weather conditions + abstract scenarios = 50 synthetic pairs. Speed/volume estimated via BPR model; driver parameters calibrated by congestion level. Used for initial fine-tuning before real data was available.
 
 ### Path 2: Real-data-derived — [training/build_from_real_data.py](training/build_from_real_data.py)
 
