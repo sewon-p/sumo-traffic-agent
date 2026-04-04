@@ -449,6 +449,24 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         elif parsed.path == "/readme":
             self._handle_readme()
 
+        elif parsed.path.startswith("/docs/"):
+            # Serve docs/ from project root (not web/)
+            doc_path = os.path.join(os.path.dirname(__file__), parsed.path.lstrip("/"))
+            if os.path.isfile(doc_path):
+                with open(doc_path, "rb") as f:
+                    data = f.read()
+                ext = os.path.splitext(doc_path)[1].lower()
+                ctype = {".gif": "image/gif", ".png": "image/png", ".jpg": "image/jpeg",
+                         ".svg": "image/svg+xml"}.get(ext, "application/octet-stream")
+                self.send_response(200)
+                self.send_header("Content-Type", ctype)
+                self.send_header("Content-Length", len(data))
+                self.end_headers()
+                self.wfile.write(data)
+            else:
+                self.send_error(404)
+            return
+
         elif parsed.path == "/" or parsed.path == "/index.html":
             # Prevent caching: no-cache header
             self.path = "/index.html"

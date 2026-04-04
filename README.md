@@ -175,29 +175,24 @@ flowchart TD
 ```mermaid
 flowchart LR
     subgraph Sources
-        S1[Synthetic Scenarios]
         S2[Seoul Traffic Data]
         S3[User Corrections]
     end
 
     subgraph Training
-        T1[generate_dataset.py]
         T2[build_from_real_data.py]
         T3[session_db.py export]
     end
 
     subgraph Output
-        O1[train_openai.jsonl]
-        O2[train_real_openai.jsonl]
+        O2[train_real_openai.jsonl\n2,205 pairs]
         O3[corrections.jsonl]
     end
 
-    S1 --> T1 --> O1
     S2 --> T2 --> O2
     S3 --> T3 --> O3
 
-    O1 --> FT[OpenAI Fine-Tuning API]
-    O2 --> FT
+    O2 --> FT[OpenAI Fine-Tuning API]
     O3 --> FT
     FT --> MODEL[Fine-Tuned Model]
     MODEL --> DEPLOY[Parameter Extraction in Production]
@@ -674,15 +669,9 @@ python -m evaluation.benchmark --all
 
 | Source | Samples | Format | Ground Truth |
 |--------|---------|--------|--------------|
-| Synthetic | 50 | OpenAI JSONL | BPR function + traffic engineering heuristics |
 | Real-data (Seoul) | 2,205 train + 245 val | OpenAI JSONL | Observed speed/volume from Seoul traffic data |
 | Corrections | grows | Exportable JSONL | Human expert corrections on FT outputs |
-
-### Path 1: Synthetic generation — [training/generate_dataset.py](training/generate_dataset.py)
-
-15 roads (10 Seoul + 5 international) x 6 time periods x 4 weather conditions, randomly sampled to 37 road-specific + 13 abstract scenarios = **50 synthetic pairs**. Speed/volume estimated via BPR model; driver parameters calibrated by congestion level. Used for initial fine-tuning before real data was available.
-
-### Path 2: Real-data-derived — [training/build_from_real_data.py](training/build_from_real_data.py)
+### Real-data-derived — [training/build_from_real_data.py](training/build_from_real_data.py)
 
 ~70 road segments from Seoul traffic detectors × 7 time periods × 5 prompt variants = ~2,450 pairs (2,205 train + 245 validation). Observed speed/volume paired with rule-based natural language prompts in multiple styles (road name, situational description, mixed). Driver parameters reverse-estimated from observed speed. The model learns situation-to-parameter mapping, not road name lookup.
 
