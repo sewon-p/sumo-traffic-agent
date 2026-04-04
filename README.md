@@ -913,4 +913,4 @@ Covers configuration loading, validation logic, correction storage/export, and c
 
 ## License
 
-This project is developed as a personal portfolio project and is not currently licensed for redistribution.
+All rights reserved. This repository is shared for portfolio and evaluation purposes only. See [LICENSE](LICENSE).
