@@ -2422,7 +2422,7 @@ Output format:
               <span class="summary-sub">network XML · vType injection · two kinds of "speed"</span>
             </summary>
             <div class="accordion-body">
-              <p class="accordion-lead"><strong>The FT model predicts eight fields.</strong> Some define the physical road, some describe driver behavior, and one — <code>speed_kmh</code> — is a prediction of what the simulation <em>should produce</em>, not an input to it.</p>
+              <p class="accordion-lead"><strong>The FT model predicts eight fields.</strong> Some define the physical road, some describe driver behavior, and <code>speed_kmh</code> serves as the validation target for calibration.</p>
               <div class="overview-grid">
                 <div>
                   <table class="ft-table">
@@ -2442,7 +2442,7 @@ Output format:
                 <div>
                   <div class="panel-heading" style="color:var(--accent);">Two kinds of "speed"</div>
                   <p class="section-copy"><code>speed_limit_kmh</code> is a legal/physical cap — "cars cannot go faster than this." Written into network XML.</p>
-                  <p class="section-copy"><code>speed_kmh</code> is a predicted outcome — "under these conditions, cars will average this speed." Never written to SUMO. If you wrote it into lane speeds, you'd confuse congested average with legal maximum.</p>
+                  <p class="section-copy"><code>speed_kmh</code> is the predicted average speed under congestion — used for validation and calibration, not written into SUMO files.</p>
                   <div class="panel-heading" style="color:var(--accent); margin-top:14px;">Validation error</div>
                   <div class="formula-block">
                     error = (sim_speed − FT_speed) / FT_speed × 100%<br><br>

@@ -329,7 +329,7 @@ The critical shift was not the model change — it was adding output constraints
 
 ## Runtime Parameter Wiring and Calibration
 
-The FT model predicts eight fields. Some define the physical road (and are written into SUMO network/route files), some describe driver behavior (and are injected into vehicle type definitions), and one — `speed_kmh` — is a prediction of what the simulation *should produce*, not an input to it.
+The FT model predicts eight fields. Some define the physical road, some describe driver behavior, and `speed_kmh` serves as the validation target for calibration.
 
 ### How FT parameters enter the simulation
 
@@ -356,7 +356,7 @@ flowchart TD
     end
 
     subgraph Target["Validation only"]
-        SK["speed_kmh → NOT written to SUMO\ncompared against simulation output"]
+        SK["speed_kmh → validation target"]
     end
 ```
 
@@ -369,13 +369,11 @@ flowchart TD
 | `tau` | `.rou.xml` — `vType` `tau` attribute | Desired time headway in seconds. Higher tau → larger gaps → lower capacity |
 | `volume_vph` | `randomTrips.py` trip generation period | `period = duration / total_vehicles`. More vehicles → higher demand → more congestion |
 | `max_speed` | `.rou.xml` — `vType` `maxSpeed` | Capped at `speed_limit_kmh / 3.6 × 1.05` to prevent vehicles from exceeding the legal limit |
-| `speed_kmh` | **Not written anywhere** | This is the FT model's prediction of the average realized speed. It serves as the validation target and calibration reference |
+| `speed_kmh` | Validation target | Compared against simulated average speed; used as calibration reference |
 
-### Two kinds of "speed" — and why they must not be confused
+### `speed_limit_kmh` vs `speed_kmh`
 
-`speed_limit_kmh` is a legal/physical cap: "cars cannot go faster than this." It is written into the network XML.
-
-`speed_kmh` is a predicted outcome: "under these congestion conditions, cars will average this speed." It is never written into any SUMO file. If you wrote `speed_kmh` into lane speeds, you would confuse "average realized speed under congestion" with "legal speed cap" — a physically meaningless operation.
+`speed_limit_kmh` is the legal speed cap — written into network lane speeds. `speed_kmh` is the predicted average speed under congestion — used only for validation and calibration, not written into SUMO files.
 
 ### What the validation error means
 
@@ -420,7 +418,6 @@ flowchart TD
 - **Fixed during calibration**: `speed_limit_kmh`, `lanes`, `avg_block_m`, network geometry — these define the physical road and must not change
 - **Tunable during calibration**: `volume_vph` (±20%), `sigma` (±0.15), `tau` (±0.3) — these are behavioral parameters with bounded drift
 - **Drift caps** prevent calibration from rewriting the FT prediction: even after 3 iterations, parameters stay close to what the model originally predicted
-- **`speed_kmh` is never written into SUMO** — it remains purely a comparison target
 
 **Why calibration has limits:** calibration adjusts *how vehicles behave* on a given road, not *what the road looks like*. If the network geometry is fundamentally different from what the FT model assumed (e.g., a sparse generated network vs a dense urban grid), no amount of behavioral tuning can close the gap. In those cases, the error signals a geometry mismatch rather than a parameter error.
 
