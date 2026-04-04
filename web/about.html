@@ -2461,6 +2461,9 @@ Output format:
             </summary>
             <div class="accordion-body">
               <p class="accordion-lead"><strong>When validation error exceeds ±10%, the calibration loop nudges behavioral parameters</strong> so the simulated speed converges toward the FT-predicted target.</p>
+              <div style="margin-bottom:16px">
+                <img src="/docs/Calibrate.gif" alt="Calibration loop demo" style="width:100%; border-radius:8px; border:1px solid var(--surface-border);" loading="lazy">
+              </div>
               <div class="overview-grid">
                 <div>
                   <div class="panel-heading" style="color:var(--accent);">Algorithm</div>
@@ -2506,7 +2509,7 @@ Output format:
           Then describe a traffic scene — the fine-tuned model extracts structured parameters, the system builds the road network, and SUMO executes the scenario.
           If the result is wrong, open <strong>Correction</strong> mode: fix the parameter or geometry error, and the delta becomes retraining data for the next fine-tuning round.
           If the result is acceptable but you want a variant, use <strong>Tuning</strong> mode instead — the change is logged for analysis but kept out of the training signal so preference edits never pollute the dataset.
-          Click <strong>Calibrate</strong> to automatically adjust volume, sigma, and tau so the simulated speed converges toward the FT-predicted target.
+          An optional <strong>Calibrate</strong> button auto-adjusts behavioral parameters so the simulated speed converges toward the FT-predicted target.
         </p>
         <p class="section-copy">
           The browser flow is also a real working interface, not just a demo shell: simulation progress streams live,
@@ -2542,13 +2545,6 @@ Output format:
               <div class="demo-step-body">
                 <strong>Geometry Modification</strong>
                 <span>Edit road geometry, add intersections, or change lane structure. The base LLM regenerates the network XML.</span>
-              </div>
-            </button>
-            <button class="demo-step" data-demo="calibrate" onclick="switchDemo(this)">
-              <div class="demo-step-num">5</div>
-              <div class="demo-step-body">
-                <strong>Calibration</strong>
-                <span>Auto-adjust volume, sigma, and tau so simulated speed converges toward the FT-predicted target. Up to 3 iterations with bounded drift.</span>
               </div>
             </button>
           </div>
@@ -2681,10 +2677,9 @@ Output format:
 
   const DEMO_MAP = {
     llm:       { src: '/docs/LLM-select.gif',      alt: 'LLM model selection demo' },
-    runonly:    { src: '/docs/RUN.gif',               alt: 'Prompt input and execution demo' },
+    runonly:    { src: '/docs/Run.gif',               alt: 'Prompt input and execution demo' },
     param:     { src: '/docs/Perimeter-edit.gif',    alt: 'Parameter correction demo' },
-    geo:       { src: '/docs/Geometry-edit.gif',     alt: 'Geometry modification demo' },
-    calibrate: { src: '/docs/Calibrate.gif',         alt: 'Automatic calibration loop demo' }
+    geo:       { src: '/docs/Geometry-edit.gif',     alt: 'Geometry modification demo' }
   };
 
   // Cache blobs so each GIF only downloads once
@@ -2845,8 +2840,8 @@ Output format:
   (function() {
     const steps = [
       { src: '/docs/Runonly.gif', caption: '<strong>Run:</strong> Describe a traffic scene in natural language. The fine-tuned model extracts parameters, the agent builds the network and runs SUMO, then validation scores the result.' },
-      { src: '/docs/parameter_edit.gif', caption: '<strong>Correct Parameters:</strong> Press Adjust → Error Correction, then describe the fix ("speed is too high, reduce to under 20 km/h"). The geometry LLM classifies it as a parameter edit and applies the change.' },
-      { src: '/docs/geometry_edit.gif', caption: '<strong>Edit Geometry:</strong> Press Adjust → Error Correction, then describe the layout change ("add an intersection on the right side"). The geometry LLM classifies it as a geometry edit and regenerates the XML.' },
+      { src: '/docs/Perimeter-edit.gif', caption: '<strong>Correct Parameters:</strong> Press Adjust → Error Correction, then describe the fix ("Increase traffic volume to 1700 veh/h"). The geometry LLM classifies it as a parameter edit and applies the change.' },
+      { src: '/docs/Geometry-edit.gif', caption: '<strong>Edit Geometry:</strong> Press Adjust → Error Correction, then describe the layout change ("Add an intersection on the right side"). The geometry LLM classifies it as a geometry edit and regenerates the XML.' },
     ];
     const tabs = document.querySelectorAll('#demoTabs .demo-tab');
     const img = document.getElementById('demoGif');

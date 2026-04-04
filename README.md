@@ -7,7 +7,7 @@ A fine-tuned model handles parameter extraction (overall MAPE 10.6% vs 51.5% bas
 **[Live Demo](https://sumo-traffic-agent-66pav72ktq-an.a.run.app/about)** · **[GitHub](https://github.com/sewon-p/sumo-traffic-agent)**
 
 <p align="center">
-  <img src="docs/Runonly.gif" width="80%" alt="End-to-end traffic simulation generation from natural language">
+  <img src="docs/Run.gif" width="80%" alt="End-to-end traffic simulation generation from natural language">
 </p>
 
 ---
@@ -74,12 +74,6 @@ Describe a traffic scene in natural language. The fine-tuned model extracts para
 
 - **Correction** — marks the result as wrong; the delta becomes retraining data
 - **Tuning** — requests a variant; logged but excluded from retraining
-
-### 4. Calibration
-
-![Calibration](docs/Calibrate.gif)
-
-After simulation, click **Calibrate** to automatically adjust volume, sigma, and tau so the simulated speed converges toward the FT-predicted target. The loop runs up to 3 iterations with bounded drift.
 
 ---
 
@@ -404,6 +398,8 @@ A high error does not necessarily mean the FT model is wrong — it can also mea
 ### Automatic calibration loop
 
 When the validation error exceeds ±10%, the system can run a closed-loop calibration that nudges behavioral parameters toward the FT-predicted speed target.
+
+![Calibration loop](docs/Calibrate.gif)
 
 ```mermaid
 flowchart TD
