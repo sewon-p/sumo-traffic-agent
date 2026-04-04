@@ -1367,7 +1367,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             "--duration-log.statistics", "--no-step-log",
             "--tripinfo-output", tripinfo_path,
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        try:
+            sumo_timeout = max(10, int(os.environ.get("SUMO_TIMEOUT_SEC", "300")))
+        except (ValueError, TypeError):
+            sumo_timeout = 300
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=sumo_timeout)
         output = result.stdout + result.stderr
 
         stats = {}
@@ -1411,7 +1415,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 
 def main():
-    server = http.server.HTTPServer(("0.0.0.0", PORT), Handler)
+    server = http.server.ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
     print(f"\n{'='*50}")
     print(f"  🚗 SUMO Traffic Simulation Agent")
     print(f"  http://localhost:{PORT}")
