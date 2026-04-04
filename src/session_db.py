@@ -20,6 +20,53 @@ DB_PATH = os.environ.get(
     os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "sessions.db"),
 )
 
+_GCS_BUCKET = os.environ.get("GCS_DB_BUCKET", "")
+_GCS_BLOB = "sessions.db"
+
+
+def _gcs_client():
+    try:
+        from google.cloud import storage
+        return storage.Client()
+    except Exception:
+        return None
+
+
+def _sync_from_gcs():
+    """Download DB from GCS on startup (if configured)."""
+    if not _GCS_BUCKET:
+        return
+    client = _gcs_client()
+    if not client:
+        return
+    try:
+        bucket = client.bucket(_GCS_BUCKET)
+        blob = bucket.blob(_GCS_BLOB)
+        if blob.exists():
+            os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+            blob.download_to_filename(DB_PATH)
+    except Exception:
+        pass
+
+
+def sync_to_gcs():
+    """Upload DB to GCS (called after writes)."""
+    if not _GCS_BUCKET or not os.path.exists(DB_PATH):
+        return
+    client = _gcs_client()
+    if not client:
+        return
+    try:
+        bucket = client.bucket(_GCS_BUCKET)
+        blob = bucket.blob(_GCS_BLOB)
+        blob.upload_from_filename(DB_PATH)
+    except Exception:
+        pass
+
+
+# Download DB from GCS on module load
+_sync_from_gcs()
+
 
 def _get_conn():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
@@ -108,6 +155,7 @@ def save_simulation(user_input, params_dict, ft_dict, network_type,
     conn.commit()
     sim_id = cur.lastrowid
     conn.close()
+    sync_to_gcs()
     return sim_id
 
 
@@ -135,6 +183,7 @@ def save_modification(sim_id, user_input, field, old_val, new_val, sim_speed=Non
     ))
     conn.commit()
     conn.close()
+    sync_to_gcs()
 
 
 def update_simulation_params(sim_id, params_dict, ft_dict, sim_speed=None, error_pct=None, grade=None):
@@ -154,6 +203,7 @@ def update_simulation_params(sim_id, params_dict, ft_dict, sim_speed=None, error
     ))
     conn.commit()
     conn.close()
+    sync_to_gcs()
 
 
 def save_calibration(sim_id, calibrated_params, calibration_meta):
@@ -170,6 +220,7 @@ def save_calibration(sim_id, calibrated_params, calibration_meta):
     ))
     conn.commit()
     conn.close()
+    sync_to_gcs()
 
 
 SYSTEM_PROMPT = (

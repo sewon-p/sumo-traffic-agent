@@ -79,14 +79,11 @@ jobs:
             --image $IMAGE \
             --region $REGION \
             --platform managed \
-            --execution-environment gen2 \
             --port 8080 \
             --memory 2Gi \
             --cpu 1 \
             --timeout 600 \
             --max-instances 3 \
-            --set-env-vars "SUMO_SERVER_SKIP_VENV_REEXEC=1,BASE_LLM_SHARED_PROVIDER=gemini,SESSION_DB_PATH=/mnt/gcs/sessions.db,SIM_WARMUP_SECONDS=120" \
+            --set-env-vars "SUMO_SERVER_SKIP_VENV_REEXEC=1,BASE_LLM_SHARED_PROVIDER=gemini,GCS_DB_BUCKET=${BUCKET},SIM_WARMUP_SECONDS=120" \
             --set-secrets "OPENAI_API_KEY=openai-api-key:latest,TOPIS_API_KEY=topis-api-key:latest,OPENAI_FT_MODEL=openai-ft-model:latest,GEMINI_API_KEY=gemini-api-key:latest,BASE_LLM_SHARED_KEY=gemini-api-key:latest" \
-            --add-volume name=gcs-data,type=cloud-storage,bucket=${BUCKET} \
-            --add-volume-mount volume=gcs-data,mount-path=/mnt/gcs \
             --allow-unauthenticated
