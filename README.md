@@ -327,6 +327,21 @@ Output format:
 
 The critical shift was not the model change — it was adding output constraints to the system prompt. Free-form prompting with the same fine-tuned model still produced ~15% JSON failures.
 
+### Why the prompt is minimal
+
+The system prompt only enforces output format and a few domain anchors (school zone, highway, rush hour). It does not encode the full parameter interdependency logic — that is learned from the 2,450 training pairs. Adding more rules to the prompt risks conflicting with patterns the model has already internalized from data. If the system prompt tried to specify, for example, exactly how sigma should relate to V/C ratio, it would duplicate (and potentially contradict) what the training data already teaches.
+
+Future prompt extensions would only be needed when the model's scope expands beyond what the current training data covers:
+
+| Extension | When needed |
+|-----------|-------------|
+| Per-vehicle-class sigma/tau ranges | If FT predicts per-class behavior instead of scene-wide |
+| Weather/incident correction rules | If training data includes weather-conditioned scenarios |
+| Cross-city calibration hints | If expanding beyond Seoul to other cities |
+| Output consistency constraints (e.g., `speed_kmh < speed_limit_kmh`) | If error pattern analysis reveals systematic violations |
+
+Until then, the next improvement lever is training data expansion, not prompt complexity.
+
 ## Runtime Parameter Wiring and Calibration
 
 The FT model predicts eight fields. Some define the physical road, some describe driver behavior, and `speed_kmh` serves as the validation target for calibration.
