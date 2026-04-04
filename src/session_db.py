@@ -15,7 +15,10 @@ import sqlite3
 from collections import Counter
 from datetime import datetime
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "sessions.db")
+DB_PATH = os.environ.get(
+    "SESSION_DB_PATH",
+    os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "sessions.db"),
+)
 
 
 def _get_conn():

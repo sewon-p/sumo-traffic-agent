@@ -71,18 +71,28 @@ jobs:
           docker build -t $IMAGE .
           docker push $IMAGE
 
+      - name: Ensure GCS bucket for persistent data
+        run: |
+          BUCKET=${PROJECT_ID}-sumo-data
+          gcloud storage buckets describe gs://${BUCKET} 2>/dev/null \
+            || gcloud storage buckets create gs://${BUCKET} --location=${REGION} --uniform-bucket-level-access
+
       - name: Deploy to Cloud Run
         run: |
           IMAGE=${REGION}-docker.pkg.dev/${PROJECT_ID}/docker-repo/${SERVICE_NAME}:${GITHUB_SHA::7}
+          BUCKET=${PROJECT_ID}-sumo-data
           gcloud run deploy $SERVICE_NAME \
             --image $IMAGE \
             --region $REGION \
             --platform managed \
+            --execution-environment gen2 \
             --port 8080 \
             --memory 1Gi \
             --cpu 1 \
             --timeout 300 \
             --max-instances 3 \
-            --set-env-vars "SUMO_SERVER_SKIP_VENV_REEXEC=1" \
-            --set-secrets "OPENAI_API_KEY=openai-api-key:latest,TOPIS_API_KEY=topis-api-key:latest,OPENAI_FT_MODEL=openai-ft-model:latest" \
+            --set-env-vars "SUMO_SERVER_SKIP_VENV_REEXEC=1,BASE_LLM_SHARED_PROVIDER=gemini,SESSION_DB_PATH=/mnt/gcs/sessions.db" \
+            --set-secrets "OPENAI_API_KEY=openai-api-key:latest,TOPIS_API_KEY=topis-api-key:latest,OPENAI_FT_MODEL=openai-ft-model:latest,GEMINI_API_KEY=gemini-api-key:latest,BASE_LLM_SHARED_KEY=gemini-api-key:latest" \
+            --add-volume name=gcs-data,type=cloud-storage,bucket=${BUCKET} \
+            --add-volume-mount volume=gcs-data,mount-path=/mnt/gcs \
             --allow-unauthenticated
