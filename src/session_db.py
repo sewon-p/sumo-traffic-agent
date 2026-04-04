@@ -49,10 +49,8 @@ def _sync_from_gcs():
         pass
 
 
-def sync_to_gcs():
-    """Upload DB to GCS (called after writes)."""
-    if not _GCS_BUCKET or not os.path.exists(DB_PATH):
-        return
+def _sync_to_gcs_impl():
+    """Actual GCS upload (runs in background thread)."""
     client = _gcs_client()
     if not client:
         return
@@ -62,6 +60,14 @@ def sync_to_gcs():
         blob.upload_from_filename(DB_PATH)
     except Exception:
         pass
+
+
+def sync_to_gcs():
+    """Upload DB to GCS in background (non-blocking)."""
+    if not _GCS_BUCKET or not os.path.exists(DB_PATH):
+        return
+    import threading
+    threading.Thread(target=_sync_to_gcs_impl, daemon=True).start()
 
 
 # Download DB from GCS on module load
