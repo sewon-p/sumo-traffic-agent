@@ -63,6 +63,8 @@ Choose the base model for geometry reasoning — shared server Gemini, local CLI
 
 ![Simulation demo](docs/Runonly.gif)
 
+`Simulate a congested 6-lane arterial road during evening rush hour`
+
 Describe a traffic scene in natural language. The fine-tuned model extracts parameters, the agent builds the network, and SUMO executes the scenario.
 
 ### 3. Correction & Tuning
