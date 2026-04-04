@@ -603,13 +603,15 @@ User input -> LLM selects tool -> tool execution -> result returned
 
 The agent layer uses LLM tool-use. The base LLM is configurable across Claude, GPT, and Gemini.
 
-### Example: abstract request
+### Example: agent-driven flow (separate from the FT pipeline)
+
+The agent autonomously selects tools — this is a different path from the FT-based pipeline used in server.py/chat.py. Here the LLM itself decides which tools to call:
 
 Input: `"simulate a congested commute road"`
 
 ```text
 1. search_location("commute road") -> no specific location found
-2. get_traffic_stats("arterial", "rush hour") -> capacity/speed references
+2. get_traffic_stats("arterial", "rush hour") -> query local statistics DB for reference values
 3. generate_simulation(params) -> .net.xml, .rou.xml, .sumocfg created
 4. run_sumo("output/generated.sumocfg") -> avg speed 22.3 km/h, 1850 vehicles
 5. validate_simulation(results) -> grade B, speed error -8.2%
@@ -654,12 +656,12 @@ Key findings:
 
 - **Base model systematically overpredicts speed** (+68.3% bias, 0/30 accurate). This is the strongest signal that fine-tuning corrects: the base model defaults to free-flow speeds while the FT model learns congested-condition patterns.
 - **Base model overpredicts intersection spacing** by 165%, suggesting it lacks domain knowledge about urban block structures.
-- **FT volume_vph** has the highest remaining error (MAPE 34.8%, +25.9% bias). This is expected with ~70 training samples — volume is the most context-dependent field and would benefit most from additional training data.
+- **FT volume_vph** has the highest remaining error (MAPE 34.8%, +25.9% bias). This is expected — volume is the most context-dependent field and would benefit most from additional training data covering a wider range of scenarios.
 - **FT speed_limit_kmh** is near-perfect (29/30 accurate), showing the model reliably maps road categories to legal speed limits.
 
 ### Improvement opportunity
 
-The fine-tuned model was trained on ~70 samples. The `volume_vph` field shows the most room for improvement and would benefit from additional training data covering a wider range of traffic volume scenarios.
+The `volume_vph` field shows the most room for improvement and would benefit from additional training data covering a wider range of traffic volume scenarios.
 
 Reproduce with:
 
@@ -672,17 +674,17 @@ python -m evaluation.benchmark --all
 
 | Source | Samples | Format | Ground Truth |
 |--------|---------|--------|--------------|
-| Synthetic | ~70 | OpenAI JSONL | BPR function + traffic engineering heuristics |
-| Real-data (Seoul) | ~245 | OpenAI JSONL | Observed speed/volume from Seoul traffic data |
+| Synthetic | 50 | OpenAI JSONL | BPR function + traffic engineering heuristics |
+| Real-data (Seoul) | 2,205 train + 245 val | OpenAI JSONL | Observed speed/volume from Seoul traffic data |
 | Corrections | grows | Exportable JSONL | Human expert corrections on FT outputs |
 
 ### Path 1: Synthetic generation — [training/generate_dataset.py](training/generate_dataset.py)
 
-10 Seoul roads x 6 time periods x 4 weather conditions + 15 abstract scenarios. Speed/volume estimated via BPR model; driver parameters calibrated by congestion level. Used for initial fine-tuning.
+15 roads (10 Seoul + 5 international) x 6 time periods x 4 weather conditions + abstract scenarios = 50 pairs. Speed/volume estimated via BPR model; driver parameters calibrated by congestion level. Used for initial fine-tuning.
 
 ### Path 2: Real-data-derived — [training/build_from_real_data.py](training/build_from_real_data.py)
 
-~70 road segments from Seoul traffic detectors. Observed speed/volume paired with rule-based natural language prompts in multiple styles (road name, situational description, mixed). Driver parameters reverse-estimated from observed speed. The model learns situation-to-parameter mapping, not road name lookup. Used for validation benchmark.
+~70 road segments from Seoul traffic detectors × 7 time periods × 5 prompt variants = ~2,450 pairs (2,205 train + 245 validation). Observed speed/volume paired with rule-based natural language prompts in multiple styles (road name, situational description, mixed). Driver parameters reverse-estimated from observed speed. The model learns situation-to-parameter mapping, not road name lookup.
 
 ### Path 3: Correction-derived — [src/session_db.py](src/session_db.py)
 
@@ -911,7 +913,7 @@ Covers configuration loading, validation logic, correction storage/export, and c
 
 ## Lessons Learned
 
-- **Structured extraction is a better fine-tuning target than open-ended generation.** Parameter extraction with constrained JSON output converged quickly (~70 samples), while geometry/XML generation is too open-ended to fine-tune with the same approach.
+- **Structured extraction is a better fine-tuning target than open-ended generation.** Parameter extraction with constrained JSON output converged quickly (~2,250 training pairs from ~70 road segments), while geometry/XML generation is too open-ended to fine-tune with the same approach.
 - **Geometry generation is the clearest fine-tuning gap.** Road layout and XML generation still rely on a general-purpose LLM with in-context examples because fine-tuning requires structured geometry datasets and significantly more API budget than was available. This is the most impactful next step if resources allow.
 - **LLM-generated geometry is good for bulk generation but not for precise reproduction.** The current system excels at producing plausible road networks from text descriptions at scale, but it cannot faithfully reconstruct the exact geometry a user has in mind. A future direction is a visual editor — drawing tool where users sketch road lines that become network XML directly, or a SimCity-style block composition interface where predefined road/intersection tiles snap together. This would complement the LLM pipeline: text-to-scenario for rapid generation, visual editor for precise control.
 - **Volume is the hardest field to predict.** At 34.8% MAPE it is the FT model's weakest point — volume is the most context-dependent parameter and would benefit most from additional training data covering a wider range of scenarios.
