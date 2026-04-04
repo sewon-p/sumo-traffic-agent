@@ -43,6 +43,24 @@
     box-shadow: 0 2px 12px rgba(43,45,66,0.04);
   }
   .header-top { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
+  .admin-nav {
+    display: flex;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+  }
+  .admin-nav a {
+    color: var(--muted);
+    text-decoration: none;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--surface-border);
+    transition: color 0.15s, background 0.15s;
+  }
+  .admin-nav a:hover {
+    color: var(--dark);
+    background: var(--surface);
+  }
   .header-copy { max-width: 62ch; }
   .header-kicker {
     margin-bottom: 6px;
@@ -228,11 +246,17 @@
         <h1>SUMO Admin Dashboard</h1>
         <p class="header-subtitle">Review correction patterns, recent runs, and retraining signals from the live scenario workflow. The top row is the fastest read on current quality.</p>
       </div>
-      <div class="actions toolbar">
-        <button class="secondary" onclick="refreshAll()">Refresh data</button>
-        <button class="secondary" onclick="downloadCorrections()">Export corrections</button>
-        <button class="secondary" onclick="downloadReport()">Download evaluation report</button>
-        <button class="secondary" onclick="downloadLlmReport()">Download LLM evaluation</button>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:10px;">
+        <nav class="admin-nav">
+          <a href="/">Live Demo</a>
+          <a href="/about">About</a>
+        </nav>
+        <div class="actions toolbar">
+          <button class="secondary" onclick="refreshAll()">Refresh data</button>
+          <button class="secondary" onclick="downloadCorrections()">Export corrections</button>
+          <button class="secondary" onclick="downloadReport()">Download evaluation report</button>
+          <button class="secondary" onclick="downloadLlmReport()">Download LLM evaluation</button>
+        </div>
       </div>
     </div>
     <div class="toolbar-note">Start with correction rate and mixed fail rate, then drill into the field and geometry breakdowns below.</div>
