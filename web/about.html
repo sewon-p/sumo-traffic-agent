@@ -2461,9 +2461,6 @@ Output format:
             </summary>
             <div class="accordion-body">
               <p class="accordion-lead"><strong>When validation error exceeds ±10%, the calibration loop nudges behavioral parameters</strong> so the simulated speed converges toward the FT-predicted target.</p>
-              <div style="margin-bottom:16px">
-                <img src="/docs/Calibrate.gif" alt="Calibration loop demo" style="width:100%; border-radius:8px; border:1px solid var(--surface-border);" loading="lazy">
-              </div>
               <div class="overview-grid">
                 <div>
                   <div class="panel-heading" style="color:var(--accent);">Algorithm</div>
@@ -2478,9 +2475,7 @@ Output format:
                     5. Re-run SUMO → repeat (max 3)
                   </div>
                   <p class="section-copy" style="margin-top:12px">Gains are derived from SUMO Krauss model sensitivity analysis. If all parameters hit drift caps without converging, the loop stops early — the error signals a geometry mismatch rather than a parameter error.</p>
-                </div>
-                <div>
-                  <table class="ft-table">
+                  <table class="ft-table" style="margin-top:14px">
                     <thead><tr><th>Parameter</th><th>Drift limit</th><th>Effect</th></tr></thead>
                     <tbody>
                       <tr><td><code>volume_vph</code></td><td>±20%</td><td>Primary congestion lever</td></tr>
@@ -2488,7 +2483,10 @@ Output format:
                       <tr><td><code>tau</code></td><td>±0.3 s</td><td>Headway → throughput</td></tr>
                     </tbody>
                   </table>
-                  <div class="panel-heading" style="color:var(--accent); margin-top:14px;">Fixed during calibration</div>
+                </div>
+                <div>
+                  <img src="/docs/Calibrate.gif" alt="Calibration loop demo" style="width:100%; border-radius:8px; border:1px solid var(--surface-border); margin-bottom:14px;" loading="lazy">
+                  <div class="panel-heading" style="color:var(--accent);">Fixed during calibration</div>
                   <p class="section-copy"><code>speed_limit_kmh</code>, <code>lanes</code>, <code>avg_block_m</code>, and network geometry are never modified. They define the physical road. Calibration only adjusts <em>how vehicles behave</em> on it.</p>
                   <div class="panel-heading" style="color:var(--accent); margin-top:14px;">Data separation</div>
                   <p class="section-copy">Calibrated values are stored in <code>calibrated_params_json</code> — separate from the original FT output. This prevents calibration artifacts from contaminating retraining data.</p>
