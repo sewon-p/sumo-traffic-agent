@@ -94,6 +94,24 @@
 
   header h1 span { color: var(--accent); }
 
+  .header-nav {
+    display: flex;
+    gap: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+  .header-nav a {
+    color: var(--muted);
+    text-decoration: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .header-nav a:hover {
+    color: var(--dark);
+    background: var(--surface);
+  }
+
   .status-bar {
     display: flex;
     gap: 16px;
@@ -757,6 +775,10 @@
     <div class="status-item"><span class="dot" id="dot-llm"></span> <span id="llm-status">Fine-Tuning LLM / Base LLM</span></div>
     <div class="status-item"><span class="dot" id="dot-data"></span> Data</div>
   </div>
+  <nav class="header-nav">
+    <a href="/about">About</a>
+    <a href="/admin">Admin</a>
+  </nav>
 </header>
 
 <main class="main">
