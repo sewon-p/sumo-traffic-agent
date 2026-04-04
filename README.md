@@ -61,7 +61,7 @@ Choose the base model for geometry reasoning — shared server Gemini, local CLI
 
 ### 2. Prompt & Run
 
-![Simulation demo](docs/Run.gif)
+![Simulation demo](docs/RUN.gif)
 
 Describe a traffic scene in natural language. The fine-tuned model extracts parameters, the agent builds the network, and SUMO executes the scenario.
 
