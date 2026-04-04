@@ -7,7 +7,7 @@ A fine-tuned model handles parameter extraction (overall MAPE 10.6% vs 51.5% bas
 **[Live Demo](https://sumo-traffic-agent-66pav72ktq-an.a.run.app/about)** · **[GitHub](https://github.com/sewon-p/sumo-traffic-agent)**
 
 <p align="center">
-  <img src="docs/RUN.gif" width="80%" alt="End-to-end traffic simulation generation from natural language">
+  <img src="docs/Runonly.gif" width="80%" alt="End-to-end traffic simulation generation from natural language">
 </p>
 
 ---
@@ -61,7 +61,7 @@ Choose the base model for geometry reasoning — shared server Gemini, local CLI
 
 ### 2. Prompt & Run
 
-![Simulation demo](docs/RUN.gif)
+![Simulation demo](docs/Runonly.gif)
 
 Describe a traffic scene in natural language. The fine-tuned model extracts parameters, the agent builds the network, and SUMO executes the scenario.
 
@@ -70,7 +70,7 @@ Describe a traffic scene in natural language. The fine-tuned model extracts para
 | Parameter Correction | Geometry Modification |
 |:---:|:---:|
 | ![Parameter edit](docs/Perimeter-edit.gif) | ![Geometry edit](docs/Geometry-edit.gif) |
-| `Reduce traffic volume to 1200 veh/h` | `Add an intersection on the right side` |
+| `Increase traffic volume to 1700 veh/h` | `Add an intersection on the right side` |
 
 - **Correction** — marks the result as wrong; the delta becomes retraining data
 - **Tuning** — requests a variant; logged but excluded from retraining
@@ -905,7 +905,7 @@ Covers configuration loading, validation logic, correction storage/export, and c
 
 - **Structured extraction is a better fine-tuning target than open-ended generation.** Parameter extraction with constrained JSON output converged quickly (~70 samples), while geometry/XML generation is too open-ended to fine-tune with the same approach.
 - **Geometry generation is the clearest fine-tuning gap.** Road layout and XML generation still rely on a general-purpose LLM with in-context examples because fine-tuning requires structured geometry datasets and significantly more API budget than was available. This is the most impactful next step if resources allow.
-- **Correction vs tuning separation matters for data quality.** Without this split, preference-driven edits would pollute the retraining signal. The distinction is simple to implement but has a large effect on exported dataset quality.
+- **LLM-generated geometry is good for bulk generation but not for precise reproduction.** The current system excels at producing plausible road networks from text descriptions at scale, but it cannot faithfully reconstruct the exact geometry a user has in mind. A future direction is a visual editor — drawing tool where users sketch road lines that become network XML directly, or a SimCity-style block composition interface where predefined road/intersection tiles snap together. This would complement the LLM pipeline: text-to-scenario for rapid generation, visual editor for precise control.
 - **Volume is the hardest field to predict.** At 34.8% MAPE it is the FT model's weakest point — volume is the most context-dependent parameter and would benefit most from additional training data covering a wider range of scenarios.
 - **External dependencies need graceful fallback.** OSM lookups and public APIs fail often enough that the LLM-generated XML fallback path is not optional — it is a core part of the pipeline.
 - **Evaluation should include cross-domain generalization.** The current benchmark covers Seoul roads; testing on unseen cities or road types would reveal how much the model has learned general traffic engineering vs Seoul-specific patterns.
