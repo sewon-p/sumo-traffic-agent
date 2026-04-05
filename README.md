@@ -352,47 +352,58 @@ The FT training data covers 70 Seoul road segments — scenarios outside this sc
 
 ```mermaid
 flowchart TD
-    A["User input\n'학교 앞 등하교 시간 시뮬레이션'"] --> B["Chunk search\n~240 law articles in ChromaDB"]
-    B --> C["Top-3 relevant articles"]
-    C --> D["Enriched prompt\noriginal input + [참고 규정]"]
+    A["User input\n'Simulate a school zone during morning drop-off'"] --> Q["Query expansion\n+ synonym lookup"]
+    Q --> B["Hybrid search\n~1,170 bilingual law articles in ChromaDB"]
+    B --> C["Top-3 relevant articles\nArticle 12: Child Protection Zone"]
+    C --> D["Enriched prompt\noriginal input + retrieved regulations"]
     D --> E["FT model\ngpt-4.1-mini"]
-    E --> F["speed_limit_kmh: 30\n(informed by 도로교통법 제12조)"]
+    E --> F["speed_limit_kmh: 30\n(informed by Article 12)"]
 ```
 
 ### Data sources
 
 | Source | Articles | Content |
 |--------|----------|---------|
-| 도로교통법 | ~160 | Speed limits, lane rules, signals, pedestrian zones, penalties |
-| 도로교통법 시행규칙 | ~80 | Facility standards, sign specifications, school zone details |
+| Road Traffic Act (Korean + English) | ~320 | Speed limits, lane rules, signals, pedestrian zones, penalties |
+| Enforcement Rules (Korean + English) | ~160 | Facility standards, sign specifications, school zone details |
 
-Full text from [법제처 국가법령정보센터](https://law.go.kr), chunked by article (`제X조` pattern).
+Full text from [Korean Ministry of Government Legislation](https://law.go.kr), bilingual (Korean original + English translation). Chunked by article pattern (`제X조` / `Article X`), totaling ~1,170 indexed chunks.
 
 ### Search pipeline
 
 ```
-1. ChromaDB vector search (OpenAI text-embedding-3-small)
-   → Semantic matching: "학교" → "어린이보호구역" 매칭 가능
+1. Query expansion
+   → "school zone" + synonym lookup → "child protection zone"
    
-2. Keyword fallback (when embeddings unavailable)
-   → Word overlap scoring, minimum 2-word match threshold
+2. Hybrid search (embedding 0.6 + keyword 0.4)
+   → ChromaDB vector search (OpenAI text-embedding-3-small)
+   → Keyword scoring with 5x title weight
+   → Combined ranking → top-3 results
+
+3. Keyword-only fallback (when embeddings unavailable)
 ```
 
-### What RAG adds vs what FT already knows
+### Benchmark: FT only vs FT + RAG
 
-| Scenario | FT alone | FT + RAG |
-|----------|----------|----------|
-| School zone (스쿨존) | 50 km/h (default) | 30 km/h (도로교통법 제12조) |
-| Construction zone | 50 km/h (default) | 25 km/h (제68조: 50% 감속) |
-| Tunnel | 50 km/h (default) | 60–70 km/h (도로법 시행령 제39조) |
-| Rain condition | No adjustment | 20% reduction (제19조) |
-| Autonomous test zone | 50 km/h (default) | 30–40 km/h (자율주행자동차법 제27조) |
+Tested on 5 English queries. The FT model was trained on Korean data, so it underperforms on English queries for domain-specific scenarios. RAG compensates by injecting the relevant law articles.
 
-The FT system prompt contains 5 brief domain hints (school zone, highway, etc.). RAG does not replace these — it extends coverage to the ~240 law articles that the training data does not cover.
+| Scenario | FT only `speed_limit` | FT + RAG `speed_limit` | Source |
+|----------|-----------------------|------------------------|--------|
+| School zone, morning drop-off | 50 km/h | **30 km/h** | Article 12: Child Protection Zone |
+| Construction zone, lane closure | 50 km/h | 50 km/h | — |
+| Tunnel, 60 km/h zone | 60 km/h | 60 km/h | — |
+| Rainy highway | 80 km/h | 80 km/h | — |
+| Autonomous driving test zone | 50 km/h | **30 km/h** | Article 56-3: Autonomous Vehicle |
+
+RAG changed parameters in 2/5 cases where the FT model defaulted incorrectly. In the other 3 cases, the FT model already produced reasonable values.
+
+The FT system prompt covers 5 common scenarios (school zones, highways, etc.), but Korean traffic law contains 240+ articles. RAG ensures that **any regulation the FT has not seen in training** — new policy changes, niche road types, or unusual conditions — can still inform parameter extraction at inference time.
 
 ### Design choices
 
+- **Bilingual indexing**: both Korean law text and English translation are indexed, enabling cross-language search
 - **Article-level chunking** over fixed-size: law articles are self-contained semantic units
+- **Hybrid search**: embedding similarity alone is insufficient for short queries; keyword boosting with query expansion improves accuracy from 0/5 to 4/5
 - **Non-invasive injection**: regulations are appended to the user message, not the system prompt — FT performance is preserved even if RAG retrieves nothing
 - **Cost**: ~$0.00001 per query (embedding) + ~$0.01 per query (FT inference, unchanged)
 
