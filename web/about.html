@@ -2495,6 +2495,55 @@ Output format:
             </div>
           </details>
 
+          <!-- 10. Regulation RAG -->
+          <details>
+            <summary>
+              <span class="summary-title">Regulation RAG — bilingual law retrieval for parameter enrichment</span>
+              <span class="summary-sub">ChromaDB · OpenAI embeddings · hybrid search · 1,170 articles</span>
+            </summary>
+            <div class="accordion-body">
+              <p class="accordion-lead"><strong>The FT training data covers 70 Seoul road segments.</strong> Scenarios outside this scope (school zones, construction, tunnels, autonomous zones) can produce inaccurate defaults. RAG retrieves relevant Korean traffic law articles and injects them into the FT prompt at inference time.</p>
+              <div class="overview-grid">
+                <div>
+                  <div class="panel-heading" style="color:var(--accent);">Search pipeline</div>
+                  <div class="formula-block">
+                    1. Query expansion (synonym lookup)<br>
+                    &nbsp;&nbsp;"school zone" &rarr; + "child protection zone"<br><br>
+                    2. Hybrid search (0.6 embedding + 0.4 keyword)<br>
+                    &nbsp;&nbsp;ChromaDB vector search + title-weighted keywords<br><br>
+                    3. Top-3 articles &rarr; appended to user prompt<br>
+                    &nbsp;&nbsp;FT sees: input + [Retrieved Regulations]
+                  </div>
+                  <div class="panel-heading" style="color:var(--accent); margin-top:14px;">Data sources</div>
+                  <table class="ft-table">
+                    <thead><tr><th>Source</th><th>Articles</th></tr></thead>
+                    <tbody>
+                      <tr><td>Road Traffic Act (KR + EN)</td><td>~320</td></tr>
+                      <tr><td>Enforcement Rules (KR + EN)</td><td>~160</td></tr>
+                      <tr><td><strong>Total indexed</strong></td><td><strong>~1,170</strong></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div>
+                  <div class="panel-heading" style="color:var(--accent);">Benchmark: FT only vs FT + RAG</div>
+                  <table class="ft-table">
+                    <thead><tr><th>Scenario</th><th>FT only</th><th>FT+RAG</th></tr></thead>
+                    <tbody>
+                      <tr><td>School zone</td><td>50 km/h</td><td><strong>30 km/h</strong></td></tr>
+                      <tr><td>Construction</td><td>50 km/h</td><td>50 km/h</td></tr>
+                      <tr><td>Tunnel</td><td>60 km/h</td><td>60 km/h</td></tr>
+                      <tr><td>Rainy highway</td><td>80 km/h</td><td>80 km/h</td></tr>
+                      <tr><td>Autonomous zone</td><td>50 km/h</td><td><strong>30 km/h</strong></td></tr>
+                    </tbody>
+                  </table>
+                  <p class="section-copy" style="margin-top:12px">RAG corrected 2/5 cases where the FT model defaulted to generic values. The system prompt covers 5 common scenarios, but Korean traffic law contains 240+ articles — RAG ensures any regulation the FT has not seen in training can still inform extraction.</p>
+                  <div class="panel-heading" style="color:var(--accent); margin-top:14px;">Design</div>
+                  <p class="section-copy">Bilingual indexing (Korean + English) enables cross-language search. Article-level chunking preserves semantic boundaries. Regulations are appended to the user message, not the system prompt — non-invasive by design.</p>
+                </div>
+              </div>
+            </div>
+          </details>
+
         </div>
       </section>
 
