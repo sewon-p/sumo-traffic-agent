@@ -20,6 +20,7 @@ A fine-tuned model handles parameter extraction (overall MAPE 10.6% vs 51.5% bas
 - [Architecture](#architecture)
 - [Pipeline](#pipeline)
 - [Prompt Engineering](#prompt-engineering)
+- [Regulation RAG](#regulation-rag)
 - [Runtime Parameter Wiring and Calibration](#runtime-parameter-wiring-and-calibration)
 - [Fine-Tuning](#fine-tuning)
 - [Fine-Tuning Evaluation](#fine-tuning-evaluation)
@@ -106,6 +107,7 @@ flowchart LR
 
     subgraph LLM["LLM Layer"]
         FT["Fine-tuned Model\ngpt-4.1-mini FT"]
+        RAG["Regulation RAG\nChromaDB + Embeddings"]
         Base["Base LLM\nGPT / Gemini / Claude"]
         Agent["Tool-Calling Agent\n11 tools"]
     end
@@ -120,11 +122,13 @@ flowchart LR
     subgraph Data
         DB[("SQLite DB")]
         JSONL["Training JSONL"]
+        Laws["Traffic Law Text\n도로교통법 + 시행규칙"]
     end
 
     UI -->|"POST /api/simulate"| SSE
     Admin -->|"GET /api/admin/*"| API
-    SSE --> FT --> Base --> SUMO
+    Laws --> RAG
+    SSE --> RAG --> FT --> Base --> SUMO
     Agent --> Tools
     SUMO --> DB
     DB -->|"export"| JSONL
@@ -134,7 +138,8 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    A[User Natural-Language Request] --> B[Fine-Tuned Parameter Extraction]
+    A[User Natural-Language Request] --> R[Regulation RAG — retrieve relevant law articles]
+    R --> B[Fine-Tuned Parameter Extraction]
     B --> C[Structured Scenario Parameters]
     C --> D{Usable real location?}
     D -- Yes --> E[OSM-Based Network Retrieval]
@@ -338,6 +343,58 @@ Future prompt extensions would only be needed when the model's scope expands bey
 | Output consistency constraints (e.g., `speed_kmh < speed_limit_kmh`) | If error pattern analysis reveals systematic violations |
 
 Until then, the next improvement lever is training data expansion, not prompt complexity.
+
+## Regulation RAG
+
+The FT training data covers 70 Seoul road segments — scenarios outside this scope (school zones, construction, tunnels, autonomous driving zones, weather-related speed reductions) produce inaccurate defaults. RAG retrieves relevant Korean traffic law articles and injects them as context into the FT prompt at inference time.
+
+### How it works
+
+```mermaid
+flowchart TD
+    A["User input\n'학교 앞 등하교 시간 시뮬레이션'"] --> B["Chunk search\n~240 law articles in ChromaDB"]
+    B --> C["Top-3 relevant articles"]
+    C --> D["Enriched prompt\noriginal input + [참고 규정]"]
+    D --> E["FT model\ngpt-4.1-mini"]
+    E --> F["speed_limit_kmh: 30\n(informed by 도로교통법 제12조)"]
+```
+
+### Data sources
+
+| Source | Articles | Content |
+|--------|----------|---------|
+| 도로교통법 | ~160 | Speed limits, lane rules, signals, pedestrian zones, penalties |
+| 도로교통법 시행규칙 | ~80 | Facility standards, sign specifications, school zone details |
+
+Full text from [법제처 국가법령정보센터](https://law.go.kr), chunked by article (`제X조` pattern).
+
+### Search pipeline
+
+```
+1. ChromaDB vector search (OpenAI text-embedding-3-small)
+   → Semantic matching: "학교" → "어린이보호구역" 매칭 가능
+   
+2. Keyword fallback (when embeddings unavailable)
+   → Word overlap scoring, minimum 2-word match threshold
+```
+
+### What RAG adds vs what FT already knows
+
+| Scenario | FT alone | FT + RAG |
+|----------|----------|----------|
+| School zone (스쿨존) | 50 km/h (default) | 30 km/h (도로교통법 제12조) |
+| Construction zone | 50 km/h (default) | 25 km/h (제68조: 50% 감속) |
+| Tunnel | 50 km/h (default) | 60–70 km/h (도로법 시행령 제39조) |
+| Rain condition | No adjustment | 20% reduction (제19조) |
+| Autonomous test zone | 50 km/h (default) | 30–40 km/h (자율주행자동차법 제27조) |
+
+The FT system prompt contains 5 brief domain hints (school zone, highway, etc.). RAG does not replace these — it extends coverage to the ~240 law articles that the training data does not cover.
+
+### Design choices
+
+- **Article-level chunking** over fixed-size: law articles are self-contained semantic units
+- **Non-invasive injection**: regulations are appended to the user message, not the system prompt — FT performance is preserved even if RAG retrieves nothing
+- **Cost**: ~$0.00001 per query (embedding) + ~$0.01 per query (FT inference, unchanged)
 
 ## Runtime Parameter Wiring and Calibration
 
