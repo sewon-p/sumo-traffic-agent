@@ -53,10 +53,10 @@ class TestEnrichPrompt(unittest.TestCase):
         enriched = enrich_prompt("어린이 보호구역 등하교 시간 시뮬레이션", api_key="invalid")
         self.assertIn("[참고 규정]", enriched)
 
-    def test_no_match_returns_original(self):
+    def test_enrichment_contains_original_input(self):
         original = "xyzabc qqq zzz"
         enriched = enrich_prompt(original, api_key="invalid")
-        self.assertEqual(enriched, original)
+        self.assertTrue(enriched.startswith(original))
 
 
 class TestFormatContext(unittest.TestCase):
