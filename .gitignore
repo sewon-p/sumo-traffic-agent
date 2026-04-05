@@ -13,6 +13,7 @@ data/*.db-shm
 data/*.db-wal
 data/*.json
 data/*.txt
+!data/road_traffic_act*.txt
 traffic_data/*.db
 traffic_data/*.db-shm
 traffic_data/*.db-wal
