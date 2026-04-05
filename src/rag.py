@@ -70,6 +70,8 @@ def _expand_query(query: str) -> str:
 _CHROMA_DIR = os.path.join(_DATA_DIR, "chroma_db")
 
 _LAW_FILES = [
+    ("Road Traffic Act", os.path.join(_DATA_DIR, "road_traffic_act_en.txt")),
+    ("Enforcement Rules", os.path.join(_DATA_DIR, "road_traffic_act_enforcement_en.txt")),
     ("도로교통법", os.path.join(_DATA_DIR, "road_traffic_act.txt")),
     ("도로교통법 시행규칙", os.path.join(_DATA_DIR, "road_traffic_act_enforcement.txt")),
 ]
@@ -80,8 +82,11 @@ _collection = None
 def _chunk_law_text(text: str, source: str) -> list[dict]:
     """Split law text into article-level chunks."""
     chunks = []
-    # Match 제X조, 제X조의2 patterns
-    pattern = re.compile(r'^(제\d+조(?:의\d+)?)\(([^)]+)\)', re.MULTILINE)
+    # Match Korean 제X조 or English Article X patterns
+    pattern = re.compile(
+        r'^(제\d+조(?:의\d+)?)\(([^)]+)\)|^(Article\s+\d+(?:-\d+)?)\s*\(([^)]+)\)',
+        re.MULTILINE,
+    )
 
     matches = list(pattern.finditer(text))
     seen_ids = {}
@@ -89,8 +94,9 @@ def _chunk_law_text(text: str, source: str) -> list[dict]:
         start = match.start()
         end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
 
-        article_id = match.group(1)
-        article_title = match.group(2)
+        # Korean groups: 1,2 / English groups: 3,4
+        article_id = match.group(1) or match.group(3)
+        article_title = match.group(2) or match.group(4)
         article_text = text[start:end].strip()
 
         # Skip very short articles (just a title with no content)
