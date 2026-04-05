@@ -237,13 +237,17 @@ def parse_with_finetuned(user_input: str, api_key: str = None) -> SimulationPara
     )
 
     try:
+        # Enrich prompt with relevant traffic regulations (RAG)
+        from src.rag import enrich_prompt
+        enriched_input = enrich_prompt(user_input, top_k=3, api_key=api_key)
+
         from openai import OpenAI
         client = OpenAI(api_key=api_key)
         resp = client.chat.completions.create(
             model=ft_model,
             messages=[
                 {"role": "system", "content": FT_SYSTEM_PROMPT},
-                {"role": "user", "content": user_input},
+                {"role": "user", "content": enriched_input},
             ],
             temperature=0.2,
             max_completion_tokens=300,
