@@ -371,16 +371,22 @@ Full text from [Korean Ministry of Government Legislation](https://law.go.kr), b
 
 ### Search pipeline
 
+Each law article is converted into a 1,536-dimensional vector using the OpenAI Embeddings API (`text-embedding-3-small`). Semantically similar texts (e.g., "school zone" and "Child Protection Zone") produce vectors with high cosine similarity. Vectors are stored in ChromaDB, a lightweight in-process vector database.
+
+At query time, the user input is also embedded, then compared against all stored vectors to find the closest matches. Only the top 3 articles are injected into the prompt — enough to provide relevant context without inflating token cost (~400 tokens added per query).
+
 ```
 1. Query expansion
    → "school zone" + synonym lookup → "child protection zone"
    
-2. Hybrid search (embedding 0.6 + keyword 0.4)
-   → ChromaDB vector search (OpenAI text-embedding-3-small)
-   → Keyword scoring with 5x title weight
+2. Embed query → 1,536-dim vector (OpenAI text-embedding-3-small)
+
+3. Hybrid search (embedding 0.6 + keyword 0.4)
+   → ChromaDB cosine similarity search (top-10)
+   → Keyword scoring with 5x title weight (top-10)
    → Combined ranking → top-3 results
 
-3. Keyword-only fallback (when embeddings unavailable)
+4. Keyword-only fallback (when embeddings unavailable)
 ```
 
 ### Benchmark: FT only vs FT + RAG

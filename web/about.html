@@ -1671,6 +1671,7 @@
         </div>
         <div class="highlights">
           <span class="highlight-pill">OpenAI Fine-Tuning</span>
+          <span class="highlight-pill">RAG</span>
           <span class="highlight-pill">SUMO</span>
           <span class="highlight-pill">SQLite</span>
           <span class="highlight-pill">Multi-LLM Routing</span>
@@ -2034,7 +2035,8 @@ flowchart LR
           <div class="mermaid-wrap">
             <pre class="mermaid">
 flowchart TD
-    A[User Natural-Language Request] --> B[Fine-Tuned Parameter Extraction]
+    A[User Natural-Language Request] --> R[Regulation RAG — retrieve relevant law articles]
+    R --> B[Fine-Tuned Parameter Extraction]
     B --> C[Structured Scenario Parameters]
     C --> D{Usable real location?}
     D -->|Yes| E[OSM-Based Network Retrieval]
@@ -2073,6 +2075,7 @@ flowchart LR
 
     subgraph LLM["LLM Layer"]
         FT["Fine-tuned Model\ngpt-4.1-mini FT"]
+        RAG["Regulation RAG\nChromaDB + Embeddings"]
         Base["Base LLM\nGPT / Gemini / Claude"]
         Agent["Tool-Calling Agent\n11 tools"]
     end
@@ -2087,11 +2090,13 @@ flowchart LR
     subgraph Data
         DB[("SQLite DB")]
         JSONL["Training JSONL"]
+        Laws["Traffic Law Text\nRoad Traffic Act + Rules"]
     end
 
     UI -->|"POST /api/simulate"| SSE
     AdminUI -->|"GET /api/admin/*"| API
-    SSE --> FT --> Base --> SUMO
+    Laws --> RAG
+    SSE --> RAG --> FT --> Base --> SUMO
     Agent --> Tools
     SUMO --> DB
     DB -->|"export"| JSONL
@@ -2236,82 +2241,7 @@ Output format:
             </div>
           </details>
 
-          <!-- Tool-calling agent -->
-          <details>
-            <summary>
-              <span class="summary-title">Tool-calling agent — 11-tool orchestration</span>
-              <span class="summary-sub">LLM tool-use · autonomous selection</span>
-            </summary>
-            <div class="accordion-body">
-              <p class="accordion-lead"><strong>The agent autonomously selects and executes tools</strong> based on user requests, using the LLM tool-use feature.</p>
-              <div class="overview-grid">
-                <div>
-                  <table class="ft-table">
-                    <thead><tr><th>Tool</th><th>Description</th></tr></thead>
-                    <tbody>
-                      <tr><td><code>search_location</code></td><td>Geocode area names to coordinates</td></tr>
-                      <tr><td><code>build_road_network</code></td><td>Build SUMO network from OSM</td></tr>
-                      <tr><td><code>get_traffic_stats</code></td><td>Query local Seoul traffic statistics</td></tr>
-                      <tr><td><code>generate_simulation</code></td><td>Generate SUMO config files</td></tr>
-                      <tr><td><code>run_sumo</code></td><td>Execute simulation</td></tr>
-                      <tr><td><code>query_topis_speed</code></td><td>Real-time Seoul traffic API</td></tr>
-                      <tr><td><code>load_csv_data</code></td><td>Load external traffic data</td></tr>
-                      <tr><td><code>recommend_road</code></td><td>Suggest similar roads</td></tr>
-                      <tr><td><code>find_similar_roads</code></td><td>Find roads matching criteria</td></tr>
-                      <tr><td><code>validate_simulation</code></td><td>Validate simulation output</td></tr>
-                      <tr><td><code>calibrate_params</code></td><td>Calibrate parameters from results</td></tr>
-                    </tbody>
-                  </table>
-                </div>
-                <div>
-                  <p class="section-copy"><strong>Example:</strong> input "simulate a congested commute road"</p>
-                  <div class="formula-block">
-                    1. search_location("commute road") → no location<br>
-                    2. get_traffic_stats("arterial","rush hour") → refs<br>
-                    3. generate_simulation(params) → .net/.rou/.sumocfg<br>
-                    4. run_sumo(config) → avg 22.3 km/h, 1850 veh<br>
-                    5. validate_simulation(results) → grade B, −8.2%
-                  </div>
-                  <p class="section-copy" style="margin-top:12px">The agent layer uses LLM tool-use. The base LLM is configurable across Claude, GPT, and Gemini.</p>
-                </div>
-              </div>
-            </div>
-          </details>
-
-          <!-- 4. Role-separated LLM design -->
-          <details>
-            <summary>
-              <span class="summary-title">Role-separated LLM design — 4 components</span>
-              <span class="summary-sub">FT extractor · geometry LLM · agent · logging</span>
-            </summary>
-            <div class="accordion-body">
-              <p class="accordion-lead"><strong>Each component owns one responsibility.</strong> The fine-tuned model does not attempt geometry; the geometry LLM does not attempt structured extraction.</p>
-              <div class="cards-four" style="margin-top:4px">
-                <div class="card">
-                  <div class="metric-label">llm_parser.py</div>
-                  <p class="card-title" style="font-size:15px">Fine-tuned extractor</p>
-                  <p class="card-desc">Parses natural language into structured simulation parameters. Provides the machine-readable target for the rest of the pipeline.</p>
-                </div>
-                <div class="card">
-                  <div class="metric-label">base_llm.py</div>
-                  <p class="card-title" style="font-size:15px">Geometry LLM</p>
-                  <p class="card-desc">Classifies each user edit as parameter, geometry, or mixed. Handles road layout reasoning and generates fallback XML when OSM fails.</p>
-                </div>
-                <div class="card">
-                  <div class="metric-label">agent.py</div>
-                  <p class="card-title" style="font-size:15px">Tool-calling agent</p>
-                  <p class="card-desc">11-tool orchestration via LLM tool-use. Autonomous tool selection based on user intent with multi-turn execution.</p>
-                </div>
-                <div class="card">
-                  <div class="metric-label">session_db.py</div>
-                  <p class="card-title" style="font-size:15px">Logging and export</p>
-                  <p class="card-desc">Stores simulation runs and modification sessions. Separates trainable corrections from non-trainable tuning. Exports retraining JSONL.</p>
-                </div>
-              </div>
-            </div>
-          </details>
-
-          <!-- 5. Error pattern analysis -->
+          <!-- 2. Error pattern analysis -->
           <details>
             <summary>
               <span class="summary-title">Error pattern analysis — directional bias across 30 samples</span>
@@ -2337,85 +2267,59 @@ Output format:
             </div>
           </details>
 
-          <!-- 6. Modification classification -->
+          <!-- 3. Regulation RAG -->
           <details>
             <summary>
-              <span class="summary-title">Modification classification — parameter, geometry, or mixed</span>
-              <span class="summary-sub">LLM classifier · keyword fallback</span>
+              <span class="summary-title">Regulation RAG — bilingual law retrieval for parameter enrichment</span>
+              <span class="summary-sub">ChromaDB · OpenAI embeddings · hybrid search · 1,170 articles</span>
             </summary>
             <div class="accordion-body">
-              <p class="accordion-lead"><strong>When a user requests a change, the geometry LLM first classifies it</strong> before routing to the correct handler.</p>
+              <p class="accordion-lead"><strong>The FT training data covers 70 Seoul road segments.</strong> Scenarios outside this scope (school zones, construction, tunnels, autonomous zones) can produce inaccurate defaults. RAG retrieves relevant Korean traffic law articles and injects them into the FT prompt at inference time.</p>
               <div class="overview-grid">
                 <div>
-                  <p class="section-copy">The geometry LLM receives the user's edit request and returns one word: <code>parameter</code>, <code>geometry</code>, or <code>mixed</code>. If the LLM call fails, a keyword heuristic takes over.</p>
+                  <div class="panel-heading" style="color:var(--accent);">How it works</div>
+                  <p class="section-copy">Each law article is converted to a 1,536-dim vector using the OpenAI Embeddings API (<code>text-embedding-3-small</code>). Semantically similar texts produce vectors with high cosine similarity. Stored in ChromaDB (in-process vector DB).</p>
+                  <div class="panel-heading" style="color:var(--accent); margin-top:10px;">Search pipeline</div>
                   <div class="formula-block">
-                    User edit → Geometry LLM classifier<br>
-                    &nbsp;&nbsp;→ "parameter" → update speed/volume/sigma/tau<br>
-                    &nbsp;&nbsp;→ "geometry" → regenerate .nod.xml / .edg.xml<br>
-                    &nbsp;&nbsp;→ "mixed" → both paths, then rebuild
+                    1. Query expansion (synonym lookup)<br>
+                    &nbsp;&nbsp;"school zone" &rarr; + "child protection zone"<br><br>
+                    2. Embed query &rarr; 1,536-dim vector<br><br>
+                    3. Hybrid search (0.6 embedding + 0.4 keyword)<br>
+                    &nbsp;&nbsp;ChromaDB cosine similarity + title-weighted keywords<br><br>
+                    4. Top-3 articles &rarr; appended to user prompt<br>
+                    &nbsp;&nbsp;(3 articles ≈ 400 tokens — enough context, minimal cost)
                   </div>
-                </div>
-                <div>
+                  <div class="panel-heading" style="color:var(--accent); margin-top:14px;">Data sources</div>
                   <table class="ft-table">
-                    <thead><tr><th>Type</th><th>Examples</th></tr></thead>
+                    <thead><tr><th>Source</th><th>Articles</th></tr></thead>
                     <tbody>
-                      <tr><td><strong>parameter</strong></td><td>"lower the speed", "increase volume to 3000", "make it more congested"</td></tr>
-                      <tr><td><strong>geometry</strong></td><td>"add an intersection", "bend the road", "make it a 4-way crossing"</td></tr>
-                      <tr><td><strong>mixed</strong></td><td>"set speed limit to 70 and make road straight", "add lane and raise volume"</td></tr>
+                      <tr><td>Road Traffic Act (KR + EN)</td><td>~320</td></tr>
+                      <tr><td>Enforcement Rules (KR + EN)</td><td>~160</td></tr>
+                      <tr><td><strong>Total indexed</strong></td><td><strong>~1,170</strong></td></tr>
                     </tbody>
                   </table>
+                </div>
+                <div>
+                  <div class="panel-heading" style="color:var(--accent);">Benchmark: FT only vs FT + RAG</div>
+                  <table class="ft-table">
+                    <thead><tr><th>Scenario</th><th>FT only</th><th>FT+RAG</th></tr></thead>
+                    <tbody>
+                      <tr><td>School zone</td><td>50 km/h</td><td><strong>30 km/h</strong></td></tr>
+                      <tr><td>Construction</td><td>50 km/h</td><td>50 km/h</td></tr>
+                      <tr><td>Tunnel</td><td>60 km/h</td><td>60 km/h</td></tr>
+                      <tr><td>Rainy highway</td><td>80 km/h</td><td>80 km/h</td></tr>
+                      <tr><td>Autonomous zone</td><td>50 km/h</td><td><strong>30 km/h</strong></td></tr>
+                    </tbody>
+                  </table>
+                  <p class="section-copy" style="margin-top:12px">RAG corrected 2/5 cases where the FT model defaulted to generic values. The system prompt covers 5 common scenarios, but Korean traffic law contains 240+ articles — RAG ensures any regulation the FT has not seen in training can still inform extraction.</p>
+                  <div class="panel-heading" style="color:var(--accent); margin-top:14px;">Design</div>
+                  <p class="section-copy">Bilingual indexing (Korean + English) enables cross-language search. Article-level chunking preserves semantic boundaries. Regulations are appended to the user message, not the system prompt — non-invasive by design.</p>
                 </div>
               </div>
             </div>
           </details>
 
-          <!-- 7. Correction pipeline -->
-          <details>
-            <summary>
-              <span class="summary-title">Correction pipeline — human fixes stored in SQLite, exported as retraining data</span>
-              <span class="summary-sub">correction vs tuning · trainable flag · JSONL export</span>
-            </summary>
-            <div class="accordion-body">
-              <p class="accordion-lead"><strong>Every modification is stored in SQLite</strong> with before/after snapshots, modification type, edit intent, and a trainability flag. Only correction-intent records are exported for retraining.</p>
-              <div class="overview-grid">
-                <div>
-                  <div class="formula-block">
-                    prompt → FT prediction → simulation → user review<br>
-                    &nbsp;&nbsp;→ <strong>Correction</strong>: stored with trainable=1<br>
-                    &nbsp;&nbsp;→ <strong>Tuning</strong>: stored with trainable=0<br><br>
-                    export_corrections_for_training()<br>
-                    &nbsp;&nbsp;→ SELECT WHERE trainable=1 AND intent='correction'<br>
-                    &nbsp;&nbsp;→ sessions_corrections_openai.jsonl<br>
-                    &nbsp;&nbsp;→ merge with train_real_openai.jsonl → re-fine-tune
-                  </div>
-                  <p class="section-copy" style="margin-top:12px">
-                    This separation prevents preference-driven edits from polluting the fine-tuning signal.
-                    The admin dashboard at <code>/admin</code> shows correction history, modification breakdowns, and downloadable exports.
-                  </p>
-                </div>
-                <div>
-                  <table class="ft-table">
-                    <thead><tr><th>SQLite field</th><th>Purpose</th></tr></thead>
-                    <tbody>
-                      <tr><td><code>edit_intent</code></td><td>"correction" or "tuning"</td></tr>
-                      <tr><td><code>trainable</code></td><td>1 = exportable, 0 = analysis only</td></tr>
-                      <tr><td><code>modification_type</code></td><td>parameter / geometry / mixed</td></tr>
-                      <tr><td><code>details_json</code></td><td>Before/after parameter snapshots</td></tr>
-                    </tbody>
-                  </table>
-                  <table class="ft-table" style="margin-top:14px">
-                    <thead><tr><th>Data source</th><th>Samples</th><th>Ground truth</th></tr></thead>
-                    <tbody>
-                      <tr><td>Real-data (Seoul)</td><td>~2,450</td><td>Observed speed/volume</td></tr>
-                      <tr><td>Corrections (SQL)</td><td>grows over time</td><td>Human expert fixes on FT outputs</td></tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </details>
-
-          <!-- 8. Runtime parameter wiring -->
+          <!-- 4. Runtime parameter wiring -->
           <details>
             <summary>
               <span class="summary-title">Runtime parameter wiring — how FT output becomes a SUMO simulation</span>
@@ -2453,7 +2357,7 @@ Output format:
             </div>
           </details>
 
-          <!-- 9. Automatic calibration loop -->
+          <!-- 5. Automatic calibration loop -->
           <details>
             <summary>
               <span class="summary-title">Automatic calibration loop — proportional control with bounded drift</span>
@@ -2495,50 +2399,154 @@ Output format:
             </div>
           </details>
 
-          <!-- 10. Regulation RAG -->
+          <!-- 6. Tool-calling agent -->
           <details>
             <summary>
-              <span class="summary-title">Regulation RAG — bilingual law retrieval for parameter enrichment</span>
-              <span class="summary-sub">ChromaDB · OpenAI embeddings · hybrid search · 1,170 articles</span>
+              <span class="summary-title">Tool-calling agent — 11-tool orchestration</span>
+              <span class="summary-sub">LLM tool-use · autonomous selection</span>
             </summary>
             <div class="accordion-body">
-              <p class="accordion-lead"><strong>The FT training data covers 70 Seoul road segments.</strong> Scenarios outside this scope (school zones, construction, tunnels, autonomous zones) can produce inaccurate defaults. RAG retrieves relevant Korean traffic law articles and injects them into the FT prompt at inference time.</p>
+              <p class="accordion-lead"><strong>The agent autonomously selects and executes tools</strong> based on user requests, using the LLM tool-use feature.</p>
               <div class="overview-grid">
                 <div>
-                  <div class="panel-heading" style="color:var(--accent);">Search pipeline</div>
-                  <div class="formula-block">
-                    1. Query expansion (synonym lookup)<br>
-                    &nbsp;&nbsp;"school zone" &rarr; + "child protection zone"<br><br>
-                    2. Hybrid search (0.6 embedding + 0.4 keyword)<br>
-                    &nbsp;&nbsp;ChromaDB vector search + title-weighted keywords<br><br>
-                    3. Top-3 articles &rarr; appended to user prompt<br>
-                    &nbsp;&nbsp;FT sees: input + [Retrieved Regulations]
-                  </div>
-                  <div class="panel-heading" style="color:var(--accent); margin-top:14px;">Data sources</div>
                   <table class="ft-table">
-                    <thead><tr><th>Source</th><th>Articles</th></tr></thead>
+                    <thead><tr><th>Tool</th><th>Description</th></tr></thead>
                     <tbody>
-                      <tr><td>Road Traffic Act (KR + EN)</td><td>~320</td></tr>
-                      <tr><td>Enforcement Rules (KR + EN)</td><td>~160</td></tr>
-                      <tr><td><strong>Total indexed</strong></td><td><strong>~1,170</strong></td></tr>
+                      <tr><td><code>search_location</code></td><td>Geocode area names to coordinates</td></tr>
+                      <tr><td><code>build_road_network</code></td><td>Build SUMO network from OSM</td></tr>
+                      <tr><td><code>get_traffic_stats</code></td><td>Query local Seoul traffic statistics</td></tr>
+                      <tr><td><code>generate_simulation</code></td><td>Generate SUMO config files</td></tr>
+                      <tr><td><code>run_sumo</code></td><td>Execute simulation</td></tr>
+                      <tr><td><code>query_topis_speed</code></td><td>Real-time Seoul traffic API</td></tr>
+                      <tr><td><code>load_csv_data</code></td><td>Load external traffic data</td></tr>
+                      <tr><td><code>recommend_road</code></td><td>Suggest similar roads</td></tr>
+                      <tr><td><code>find_similar_roads</code></td><td>Find roads matching criteria</td></tr>
+                      <tr><td><code>validate_simulation</code></td><td>Validate simulation output</td></tr>
+                      <tr><td><code>calibrate_params</code></td><td>Calibrate parameters from results</td></tr>
                     </tbody>
                   </table>
                 </div>
                 <div>
-                  <div class="panel-heading" style="color:var(--accent);">Benchmark: FT only vs FT + RAG</div>
+                  <p class="section-copy"><strong>Example:</strong> input "simulate a congested commute road"</p>
+                  <div class="formula-block">
+                    1. search_location("commute road") → no location<br>
+                    2. get_traffic_stats("arterial","rush hour") → refs<br>
+                    3. generate_simulation(params) → .net/.rou/.sumocfg<br>
+                    4. run_sumo(config) → avg 22.3 km/h, 1850 veh<br>
+                    5. validate_simulation(results) → grade B, −8.2%
+                  </div>
+                  <p class="section-copy" style="margin-top:12px">The agent layer uses LLM tool-use. The base LLM is configurable across Claude, GPT, and Gemini.</p>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <!-- 7. Role-separated LLM design -->
+          <details>
+            <summary>
+              <span class="summary-title">Role-separated LLM design — 4 components</span>
+              <span class="summary-sub">FT extractor · geometry LLM · agent · logging</span>
+            </summary>
+            <div class="accordion-body">
+              <p class="accordion-lead"><strong>Each component owns one responsibility.</strong> The fine-tuned model does not attempt geometry; the geometry LLM does not attempt structured extraction.</p>
+              <div class="cards-four" style="margin-top:4px">
+                <div class="card">
+                  <div class="metric-label">llm_parser.py</div>
+                  <p class="card-title" style="font-size:15px">Fine-tuned extractor</p>
+                  <p class="card-desc">Parses natural language into structured simulation parameters. Provides the machine-readable target for the rest of the pipeline.</p>
+                </div>
+                <div class="card">
+                  <div class="metric-label">base_llm.py</div>
+                  <p class="card-title" style="font-size:15px">Geometry LLM</p>
+                  <p class="card-desc">Classifies each user edit as parameter, geometry, or mixed. Handles road layout reasoning and generates fallback XML when OSM fails.</p>
+                </div>
+                <div class="card">
+                  <div class="metric-label">agent.py</div>
+                  <p class="card-title" style="font-size:15px">Tool-calling agent</p>
+                  <p class="card-desc">11-tool orchestration via LLM tool-use. Autonomous tool selection based on user intent with multi-turn execution.</p>
+                </div>
+                <div class="card">
+                  <div class="metric-label">session_db.py</div>
+                  <p class="card-title" style="font-size:15px">Logging and export</p>
+                  <p class="card-desc">Stores simulation runs and modification sessions. Separates trainable corrections from non-trainable tuning. Exports retraining JSONL.</p>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <!-- 8. Modification classification -->
+          <details>
+            <summary>
+              <span class="summary-title">Modification classification — parameter, geometry, or mixed</span>
+              <span class="summary-sub">LLM classifier · keyword fallback</span>
+            </summary>
+            <div class="accordion-body">
+              <p class="accordion-lead"><strong>When a user requests a change, the geometry LLM first classifies it</strong> before routing to the correct handler.</p>
+              <div class="overview-grid">
+                <div>
+                  <p class="section-copy">The geometry LLM receives the user's edit request and returns one word: <code>parameter</code>, <code>geometry</code>, or <code>mixed</code>. If the LLM call fails, a keyword heuristic takes over.</p>
+                  <div class="formula-block">
+                    User edit → Geometry LLM classifier<br>
+                    &nbsp;&nbsp;→ "parameter" → update speed/volume/sigma/tau<br>
+                    &nbsp;&nbsp;→ "geometry" → regenerate .nod.xml / .edg.xml<br>
+                    &nbsp;&nbsp;→ "mixed" → both paths, then rebuild
+                  </div>
+                </div>
+                <div>
                   <table class="ft-table">
-                    <thead><tr><th>Scenario</th><th>FT only</th><th>FT+RAG</th></tr></thead>
+                    <thead><tr><th>Type</th><th>Examples</th></tr></thead>
                     <tbody>
-                      <tr><td>School zone</td><td>50 km/h</td><td><strong>30 km/h</strong></td></tr>
-                      <tr><td>Construction</td><td>50 km/h</td><td>50 km/h</td></tr>
-                      <tr><td>Tunnel</td><td>60 km/h</td><td>60 km/h</td></tr>
-                      <tr><td>Rainy highway</td><td>80 km/h</td><td>80 km/h</td></tr>
-                      <tr><td>Autonomous zone</td><td>50 km/h</td><td><strong>30 km/h</strong></td></tr>
+                      <tr><td><strong>parameter</strong></td><td>"lower the speed", "increase volume to 3000", "make it more congested"</td></tr>
+                      <tr><td><strong>geometry</strong></td><td>"add an intersection", "bend the road", "make it a 4-way crossing"</td></tr>
+                      <tr><td><strong>mixed</strong></td><td>"set speed limit to 70 and make road straight", "add lane and raise volume"</td></tr>
                     </tbody>
                   </table>
-                  <p class="section-copy" style="margin-top:12px">RAG corrected 2/5 cases where the FT model defaulted to generic values. The system prompt covers 5 common scenarios, but Korean traffic law contains 240+ articles — RAG ensures any regulation the FT has not seen in training can still inform extraction.</p>
-                  <div class="panel-heading" style="color:var(--accent); margin-top:14px;">Design</div>
-                  <p class="section-copy">Bilingual indexing (Korean + English) enables cross-language search. Article-level chunking preserves semantic boundaries. Regulations are appended to the user message, not the system prompt — non-invasive by design.</p>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <!-- 9. Correction pipeline -->
+          <details>
+            <summary>
+              <span class="summary-title">Correction pipeline — human fixes stored in SQLite, exported as retraining data</span>
+              <span class="summary-sub">correction vs tuning · trainable flag · JSONL export</span>
+            </summary>
+            <div class="accordion-body">
+              <p class="accordion-lead"><strong>Every modification is stored in SQLite</strong> with before/after snapshots, modification type, edit intent, and a trainability flag. Only correction-intent records are exported for retraining.</p>
+              <div class="overview-grid">
+                <div>
+                  <div class="formula-block">
+                    prompt → FT prediction → simulation → user review<br>
+                    &nbsp;&nbsp;→ <strong>Correction</strong>: stored with trainable=1<br>
+                    &nbsp;&nbsp;→ <strong>Tuning</strong>: stored with trainable=0<br><br>
+                    export_corrections_for_training()<br>
+                    &nbsp;&nbsp;→ SELECT WHERE trainable=1 AND intent='correction'<br>
+                    &nbsp;&nbsp;→ sessions_corrections_openai.jsonl<br>
+                    &nbsp;&nbsp;→ merge with train_real_openai.jsonl → re-fine-tune
+                  </div>
+                  <p class="section-copy" style="margin-top:12px">
+                    This separation prevents preference-driven edits from polluting the fine-tuning signal.
+                    The admin dashboard at <code>/admin</code> shows correction history, modification breakdowns, and downloadable exports.
+                  </p>
+                </div>
+                <div>
+                  <table class="ft-table">
+                    <thead><tr><th>SQLite field</th><th>Purpose</th></tr></thead>
+                    <tbody>
+                      <tr><td><code>edit_intent</code></td><td>"correction" or "tuning"</td></tr>
+                      <tr><td><code>trainable</code></td><td>1 = exportable, 0 = analysis only</td></tr>
+                      <tr><td><code>modification_type</code></td><td>parameter / geometry / mixed</td></tr>
+                      <tr><td><code>details_json</code></td><td>Before/after parameter snapshots</td></tr>
+                    </tbody>
+                  </table>
+                  <table class="ft-table" style="margin-top:14px">
+                    <thead><tr><th>Data source</th><th>Samples</th><th>Ground truth</th></tr></thead>
+                    <tbody>
+                      <tr><td>Real-data (Seoul)</td><td>~2,450</td><td>Observed speed/volume</td></tr>
+                      <tr><td>Corrections (SQL)</td><td>grows over time</td><td>Human expert fixes on FT outputs</td></tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
