@@ -11,7 +11,10 @@ Usage:
 
 import json
 import os
+import time
 from abc import ABC, abstractmethod
+
+from src.token_tracker import tracker as _tracker
 
 
 class LLMClient(ABC):
@@ -53,6 +56,7 @@ class ClaudeClient(LLMClient):
         return f"Claude ({self.model})"
 
     def chat(self, messages: list, system: str, tools: list) -> dict:
+        t0 = time.perf_counter()
         response = self.client.messages.create(
             model=self.model,
             max_tokens=4096,
@@ -60,6 +64,8 @@ class ClaudeClient(LLMClient):
             tools=tools,
             messages=messages,
         )
+        latency = (time.perf_counter() - t0) * 1000
+        _tracker.record("claude", self.model, response.usage.input_tokens, response.usage.output_tokens, latency, caller="agent")
 
         result = {"text": "", "tool_calls": [], "stop_reason": response.stop_reason}
 
@@ -184,11 +190,16 @@ class GeminiClient(LLMClient):
             temperature=0.3,
         )
 
+        t0 = time.perf_counter()
         response = self.client.models.generate_content(
             model=self.model,
             contents=gemini_contents,
             config=config,
         )
+        latency = (time.perf_counter() - t0) * 1000
+        um = getattr(response, "usage_metadata", None)
+        if um:
+            _tracker.record("gemini", self.model, getattr(um, "prompt_token_count", 0), getattr(um, "candidates_token_count", 0), latency, caller="agent")
 
         result = {"text": "", "tool_calls": [], "stop_reason": "end_turn"}
 
@@ -294,12 +305,16 @@ class GPTClient(LLMClient):
                         msg_dict["tool_calls"] = tool_calls_openai
                     openai_messages.append(msg_dict)
 
+        t0 = time.perf_counter()
         response = self.client.chat.completions.create(
             model=self.model,
             messages=openai_messages,
             tools=openai_tools if openai_tools else None,
             temperature=0.3,
         )
+        latency = (time.perf_counter() - t0) * 1000
+        if response.usage:
+            _tracker.record("openai", self.model, response.usage.prompt_tokens, response.usage.completion_tokens, latency, caller="agent")
 
         choice = response.choices[0]
         result = {"text": choice.message.content or "", "tool_calls": [], "stop_reason": "end_turn"}

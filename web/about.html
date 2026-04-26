@@ -1675,6 +1675,7 @@
           <span class="highlight-pill">SUMO</span>
           <span class="highlight-pill">SQLite</span>
           <span class="highlight-pill">Multi-LLM Routing</span>
+          <span class="highlight-pill">Token Observability</span>
           <span class="highlight-pill">Harness Engineering</span>
           <span class="highlight-pill">Cloud Run</span>
           <span class="highlight-pill">GitHub Actions</span>
@@ -2078,6 +2079,7 @@ flowchart LR
         RAG["Regulation RAG\nChromaDB + Embeddings"]
         Base["Base LLM\nGPT / Gemini / Claude"]
         Agent["Tool-Calling Agent\n11 tools"]
+        Tracker["TokenTracker\nper-call instrumentation"]
     end
 
     subgraph Tools
@@ -2098,6 +2100,10 @@ flowchart LR
     Laws --> RAG
     SSE --> RAG --> FT --> Base --> SUMO
     Agent --> Tools
+    FT -.tokens, latency, cost.-> Tracker
+    Base -.tokens, latency, cost.-> Tracker
+    Agent -.tokens, latency, cost.-> Tracker
+    Tracker -->|"GET /api/admin/token-usage"| AdminUI
     SUMO --> DB
     DB -->|"export"| JSONL
             </pre>
@@ -2547,6 +2553,83 @@ Output format:
                       <tr><td>Corrections (SQL)</td><td>grows over time</td><td>Human expert fixes on FT outputs</td></tr>
                     </tbody>
                   </table>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <!-- 11. Token usage & cost observability -->
+          <details>
+            <summary>
+              <span class="summary-title">Token usage and cost observability — $0.001 per session, 235x cheaper than an Opus agent</span>
+              <span class="summary-sub">TokenTracker singleton · per-call instrumentation · live /api/admin/token-usage</span>
+            </summary>
+            <div class="accordion-body">
+              <p class="accordion-lead"><strong>Every LLM API call is instrumented through a centralized <code>TokenTracker</code> singleton.</strong> Each call auto-records provider, model, input/output tokens, latency, and estimated cost — no manual logging required. Live summary exposed at <code>GET /api/admin/token-usage</code>.</p>
+              <div class="overview-grid">
+                <div>
+                  <div class="formula-block">
+                    src/llm_parser.py  ──→ FT model / Claude<br>
+                    src/base_llm.py    ──→ Gemini / GPT / Claude<br>
+                    src/llm_client.py  ──→ Agent tool-calling<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼<br>
+                    <strong>src/token_tracker.py</strong><br>
+                    &nbsp;&nbsp;tracker.record(provider, model, caller,<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;input_tokens, output_tokens,<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;latency_ms, cost_usd, timestamp)<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;│<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;▼<br>
+                    GET /api/admin/token-usage
+                  </div>
+                  <p class="section-copy" style="margin-top:12px">
+                    Token counts come straight from each provider's response object — <code>resp.usage.prompt_tokens</code> (OpenAI), <code>msg.usage.input_tokens</code> (Anthropic), <code>resp.usage_metadata.prompt_token_count</code> (Gemini) — then priced via a per-model lookup table with fuzzy matching for fine-tuned model IDs.
+                  </p>
+                </div>
+                <div>
+                  <table class="ft-table">
+                    <thead><tr><th>Instrumented file</th><th>Caller tag</th><th>Tracks</th></tr></thead>
+                    <tbody>
+                      <tr><td><code>llm_parser.py</code></td><td>parser_ft, parser</td><td>Parameter extraction</td></tr>
+                      <tr><td><code>base_llm.py</code></td><td>base_llm</td><td>XML generation, classification</td></tr>
+                      <tr><td><code>llm_client.py</code></td><td>agent</td><td>Tool-calling loop</td></tr>
+                    </tbody>
+                  </table>
+                  <p class="section-copy" style="margin-top:14px; font-weight:700;">Measured cost per session</p>
+                  <table class="ft-table">
+                    <thead><tr><th>Mode</th><th>Tokens</th><th>Cost</th><th>vs 1x</th></tr></thead>
+                    <tbody>
+                      <tr><td><strong>FT + Gemini (current)</strong></td><td>2,350</td><td><strong>$0.001</strong></td><td>1x</td></tr>
+                      <tr><td>GPT-4.1-mini Agent</td><td>~14,500</td><td>$0.007</td><td>7x</td></tr>
+                      <tr><td>Opus Agent</td><td>~14,500</td><td>$0.248</td><td>235x</td></tr>
+                    </tbody>
+                  </table>
+                  <p class="section-copy" style="margin-top:10px; font-size:13px;">
+                    Prompt: <em>"강남역 퇴근시간 8차로 간선도로 시뮬레이션"</em> + 1 parameter correction + 1 geometry correction.
+                  </p>
+                </div>
+              </div>
+              <p class="accordion-lead" style="margin-top:18px"><strong>Why the current architecture wins:</strong></p>
+              <div class="cards-four" style="margin-top:4px">
+                <div class="card">
+                  <div class="metric-label">Zero agent turns</div>
+                  <p class="card-title" style="font-size:15px">FT eliminates the loop</p>
+                  <p class="card-desc">FT GPT-4.1-mini extracts all 8 parameters in a single 251→103 token call. An agent re-sends 833-token system prompt + 1,826-token tool schemas (<strong>2,659 tokens/turn</strong>) across 6–8 turns.</p>
+                </div>
+                <div class="card">
+                  <div class="metric-label">Model tiering</div>
+                  <p class="card-title" style="font-size:15px">Right model per task</p>
+                  <p class="card-desc">FT GPT-4.1-mini for structured extraction, Gemini 2.5 Flash for long XML and trivial classification, Claude reserved for fallback. No task requires a frontier model.</p>
+                </div>
+                <div class="card">
+                  <div class="metric-label">Weights &gt; context</div>
+                  <p class="card-title" style="font-size:15px">Domain knowledge in the model</p>
+                  <p class="card-desc">Fine-tuning moves traffic-engineering rules into the parser's weights, so in-context reasoning (and its token cost) is unnecessary at inference time.</p>
+                </div>
+                <div class="card">
+                  <div class="metric-label">Observable</div>
+                  <p class="card-title" style="font-size:15px">LLM-native metrics</p>
+                  <p class="card-desc">Real-time per-call console logs + aggregated summary endpoint expose tokens/sec, cost-per-request, and per-model breakdowns without any external observability service.</p>
                 </div>
               </div>
             </div>

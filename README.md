@@ -28,6 +28,7 @@ A fine-tuned model handles parameter extraction (overall MAPE 10.6% vs 51.5% bas
 - [Dataset](#dataset)
 - [Role-Separated LLM Design](#role-separated-llm-design)
 - [Evaluation and Admin](#evaluation-and-admin)
+- [Token Usage and Cost Observability](#token-usage-and-cost-observability)
 - [Project Structure](#project-structure)
 - [Running the Project](#running-the-project)
 - [Lessons Learned](#lessons-learned)
@@ -110,6 +111,7 @@ flowchart LR
         RAG["Regulation RAG\nChromaDB + Embeddings"]
         Base["Base LLM\nGPT / Gemini / Claude"]
         Agent["Tool-Calling Agent\n11 tools"]
+        Tracker["TokenTracker\nper-call instrumentation"]
     end
 
     subgraph Tools
@@ -130,6 +132,10 @@ flowchart LR
     Laws --> RAG
     SSE --> RAG --> FT --> Base --> SUMO
     Agent --> Tools
+    FT -.tokens, latency, cost.-> Tracker
+    Base -.tokens, latency, cost.-> Tracker
+    Agent -.tokens, latency, cost.-> Tracker
+    Tracker -->|"GET /api/admin/token-usage"| Admin
     SUMO --> DB
     DB -->|"export"| JSONL
 ```
@@ -824,6 +830,49 @@ Downloadable exports:
 - **LLM evaluation report** — field-level error analysis, parameter deltas, geometry categories
 
 Every correction is traceable: user edit → SQLite → admin panel → exported JSONL → re-fine-tune.
+
+## Token Usage and Cost Observability
+
+Every LLM API call in the system is instrumented through a centralized `TokenTracker` singleton ([src/token_tracker.py](src/token_tracker.py)). Each call automatically records provider, model, input/output tokens, latency, and estimated cost — exposed live at `GET /api/admin/token-usage`.
+
+### Instrumented call sites
+
+| File | Caller tag | What it tracks |
+|------|-----------|----------------|
+| [src/llm_parser.py](src/llm_parser.py) | `parser`, `parser_ft` | Parameter extraction (FT GPT-4.1-mini / Claude fallback) |
+| [src/base_llm.py](src/base_llm.py) | `base_llm` | XML generation, classification, modification (Gemini/GPT/Claude) |
+| [src/llm_client.py](src/llm_client.py) | `agent` | Tool-calling agent loop |
+
+Token counts are pulled directly from each provider's response (`resp.usage.prompt_tokens`, `msg.usage.input_tokens`, `resp.usage_metadata.prompt_token_count`), then priced via a per-model lookup table with fuzzy matching for fine-tuned model IDs.
+
+### Measured cost per session
+
+Production prompt: `"강남역 퇴근시간 8차로 간선도로 시뮬레이션"`, new simulation + 1 parameter correction + 1 geometry correction.
+
+| Mode | LLM calls | Total tokens | Cost | vs Baseline |
+|------|----------:|-------------:|-----:|------------:|
+| **FT + Gemini (current)** | 6 | 2,350 | **$0.001** | 1x |
+| GPT-4.1-mini Agent | 6–8 turns | ~14,500 | $0.007 | 7x |
+| Opus Agent | 6–8 turns | ~14,500 | $0.248 | 235x |
+
+### Why the current architecture wins
+
+- **Fine-tuning eliminates agent turns.** FT GPT-4.1-mini extracts all 8 parameters in a single 251→103 token call; an agent must re-send the 833-token system prompt + 1,826-token tool schemas (**2,659 tokens overhead per turn**) across 6–8 turns.
+- **Model tiering (right model for the job).** FT GPT-4.1-mini for structured extraction, Gemini 2.5 Flash for long XML generation and trivial classifications, Claude reserved for fallback. No task requires a frontier model.
+- **Domain knowledge in weights, not context.** Fine-tuning moves the traffic-engineering rules into the parser's weights, so in-context reasoning (and its token cost) is unnecessary.
+
+### Live endpoint
+
+```
+GET /api/admin/token-usage
+→ { "summary": { "total_calls": 6, "input_tokens": 1158, "output_tokens": 1192,
+                 "total_cost_usd": 0.001055, "total_latency_ms": 30286,
+                 "by_model": { ... } },
+    "calls": [ { "provider", "model", "caller", "input_tokens",
+                 "output_tokens", "latency_ms", "cost_usd", "timestamp" }, ... ] }
+```
+
+See [docs/TOKEN_COST_ANALYSIS.md](docs/TOKEN_COST_ANALYSIS.md) for the full measurement methodology, per-call breakdown, pricing reference, and scaling projections.
 
 ## Project Structure
 

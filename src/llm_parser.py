@@ -11,7 +11,10 @@ required for SUMO traffic simulation.
 import json
 import os
 import re
+import time
 from dataclasses import dataclass, asdict
+
+from src.token_tracker import tracker as _tracker
 
 
 @dataclass
@@ -86,12 +89,15 @@ def parse_with_claude(user_input: str, api_key: str = None) -> SimulationParams:
         return parse_with_rules(user_input)
 
     client = anthropic.Anthropic(api_key=api_key)
+    t0 = time.perf_counter()
     message = client.messages.create(
         model="claude-sonnet-4-20250514",
         max_tokens=1024,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": user_input}],
     )
+    latency = (time.perf_counter() - t0) * 1000
+    _tracker.record("claude", "claude-sonnet-4-20250514", message.usage.input_tokens, message.usage.output_tokens, latency, caller="parser")
 
     response_text = message.content[0].text.strip()
 
@@ -243,6 +249,7 @@ def parse_with_finetuned(user_input: str, api_key: str = None) -> SimulationPara
 
         from openai import OpenAI
         client = OpenAI(api_key=api_key)
+        t0 = time.perf_counter()
         resp = client.chat.completions.create(
             model=ft_model,
             messages=[
@@ -252,6 +259,9 @@ def parse_with_finetuned(user_input: str, api_key: str = None) -> SimulationPara
             temperature=0.2,
             max_completion_tokens=300,
         )
+        latency = (time.perf_counter() - t0) * 1000
+        if resp.usage:
+            _tracker.record("openai", ft_model, resp.usage.prompt_tokens, resp.usage.completion_tokens, latency, caller="parser_ft")
         text = resp.choices[0].message.content.strip()
 
         # Extract JSON

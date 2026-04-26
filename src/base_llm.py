@@ -11,7 +11,10 @@ import os
 import re
 import shutil
 import subprocess
+import time
 from threading import local
+
+from src.token_tracker import tracker as _tracker
 
 
 def _load_env():
@@ -126,10 +129,14 @@ def _ask_openai(prompt: str, system: str, api_key: str, model_override: str = ""
     messages.append({"role": "user", "content": prompt})
 
     print(f"[BASE_LLM] OpenAI call: {model}")
+    t0 = time.perf_counter()
     resp = client.chat.completions.create(
         model=model, messages=messages, temperature=0.2, max_completion_tokens=2000,
     )
+    latency = (time.perf_counter() - t0) * 1000
     result = resp.choices[0].message.content.strip()
+    if resp.usage:
+        _tracker.record("openai", model, resp.usage.prompt_tokens, resp.usage.completion_tokens, latency, caller="base_llm")
     print(f"[BASE_LLM] response length: {len(result)} chars")
     return result
 
@@ -139,10 +146,15 @@ def _ask_gemini(prompt: str, system: str, api_key: str, model_override: str = ""
     client = genai.Client(api_key=api_key)
     full = f"{system}\n\n{prompt}" if system else prompt
     model = model_override or os.environ.get("BASE_LLM_GEMINI_MODEL", "gemini-2.5-flash")
+    t0 = time.perf_counter()
     resp = client.models.generate_content(
         model=model,
         contents=full,
     )
+    latency = (time.perf_counter() - t0) * 1000
+    um = getattr(resp, "usage_metadata", None)
+    if um:
+        _tracker.record("gemini", model, getattr(um, "prompt_token_count", 0), getattr(um, "candidates_token_count", 0), latency, caller="base_llm")
     return resp.text.strip()
 
 
@@ -150,12 +162,15 @@ def _ask_claude(prompt: str, system: str, api_key: str, model_override: str = ""
     import anthropic
     client = anthropic.Anthropic(api_key=api_key)
     model = model_override or os.environ.get("BASE_LLM_CLAUDE_MODEL", "claude-sonnet-4-5")
+    t0 = time.perf_counter()
     msg = client.messages.create(
         model=model,
         max_tokens=2000,
         system=system or "",
         messages=[{"role": "user", "content": prompt}],
     )
+    latency = (time.perf_counter() - t0) * 1000
+    _tracker.record("claude", model, msg.usage.input_tokens, msg.usage.output_tokens, latency, caller="base_llm")
     return msg.content[0].text.strip()
 
 

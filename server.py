@@ -418,6 +418,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         elif parsed.path == "/api/admin/report/llm-evaluation/download":
             self._handle_admin_report_llm_evaluation_download()
 
+        elif parsed.path == "/api/admin/token-usage":
+            self._handle_token_usage()
+
         elif parsed.path == "/api/traffic":
             params = urllib.parse.parse_qs(parsed.query)
             location = params.get("location", ["강남역"])[0]
@@ -661,6 +664,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         from tools.topis_api import query_realtime_traffic
         result = query_realtime_traffic(location)
         self.send_json(result)
+
+    def _handle_token_usage(self):
+        from src.token_tracker import tracker
+        summary = tracker.summary()
+        self.send_json({"summary": summary, "calls": tracker.to_list()})
 
     def _handle_admin_summary(self):
         from src.session_db import build_evaluation_summary
