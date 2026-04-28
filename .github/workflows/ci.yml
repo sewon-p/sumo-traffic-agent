@@ -77,6 +77,7 @@ jobs:
           BUCKET=${PROJECT_ID}-sumo-data
           gcloud run deploy $SERVICE_NAME \
             --image $IMAGE \
+            --revision-suffix ${GITHUB_SHA::7} \
             --region $REGION \
             --platform managed \
             --execution-environment gen2 \
