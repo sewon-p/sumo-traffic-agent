@@ -258,6 +258,7 @@
     <div class="grid">
       <div class="card priority"><div class="label">Correction Rate</div><div class="value" id="llm-correction-rate-top">-</div><div class="card-detail">Share of reviewed runs that needed a trainable correction.</div></div>
       <div class="card priority"><div class="label">Avg Error</div><div class="value" id="avg-error-top">-</div><div class="card-detail">Mean absolute speed error across all verified simulations.</div></div>
+      <div class="card priority"><div class="label">Total Cost (USD)</div><div class="value" id="token-cost-top">-</div><div class="card-detail">Cumulative LLM cost across all sessions in this instance.</div></div>
       <div class="card"><div class="label">Simulations</div><div class="value" id="sim-total">-</div><div class="card-detail">Total scenario runs captured in the current dataset.</div></div>
       <div class="card"><div class="label">Parameter Corr.</div><div class="value" id="llm-parameter-corrections-top">-</div><div class="card-detail">Trainable parameter corrections logged so far.</div></div>
       <div class="card"><div class="label">Geometry Corr.</div><div class="value" id="llm-geometry-corrections-top">-</div><div class="card-detail">Geometry-level fixes captured from review sessions.</div></div>
@@ -283,6 +284,30 @@
           <summary class="disclosure-summary">View average parameter delta (raw JSON)</summary>
           <pre id="param-delta-json" style="margin-top:8px;">loading...</pre>
         </details>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Token Usage &amp; Cost</h2>
+      <div class="content">
+        <p class="section-intro">
+          Per-call instrumentation of every LLM invocation (FT extractor, geometry LLM, agent). Token counts come straight from each provider's response object; cost is computed via a per-model price table.
+        </p>
+        <div class="grid" style="margin-bottom:16px;">
+          <div class="card"><div class="label">Total Calls</div><div class="value" id="token-total-calls">-</div></div>
+          <div class="card"><div class="label">Input Tokens</div><div class="value" id="token-input">-</div></div>
+          <div class="card"><div class="label">Output Tokens</div><div class="value" id="token-output">-</div></div>
+          <div class="card"><div class="label">Avg Latency</div><div class="value" id="token-avg-latency">-</div></div>
+        </div>
+        <h3>Per-Model Breakdown</h3>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr><th>Provider / Model</th><th>Calls</th><th>Input</th><th>Output</th><th>Avg ms</th><th>Cost (USD)</th></tr>
+            </thead>
+            <tbody id="token-by-model"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -426,12 +451,50 @@ function hideError() {
   document.getElementById('error-banner').style.display = 'none';
 }
 
+async function loadTokenUsage() {
+  try {
+    const data = await getJson('/api/admin/token-usage');
+    const summary = data.summary || {};
+    document.getElementById('token-cost-top').textContent =
+      summary.total_cost_usd != null ? `$${summary.total_cost_usd.toFixed(4)}` : '$0.0000';
+    document.getElementById('token-total-calls').textContent = summary.total_calls ?? 0;
+    document.getElementById('token-input').textContent =
+      (summary.input_tokens ?? 0).toLocaleString();
+    document.getElementById('token-output').textContent =
+      (summary.output_tokens ?? 0).toLocaleString();
+    const avgLat = summary.total_calls
+      ? Math.round(summary.total_latency_ms / summary.total_calls)
+      : 0;
+    document.getElementById('token-avg-latency').textContent = avgLat ? `${avgLat} ms` : '-';
+
+    const tbody = document.getElementById('token-by-model');
+    const byModel = summary.by_model || {};
+    if (!Object.keys(byModel).length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="color:var(--muted); text-align:center;">No LLM calls recorded yet.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = Object.entries(byModel)
+      .sort((a, b) => b[1].cost - a[1].cost)
+      .map(([key, s]) => `
+        <tr>
+          <td><code>${key}</code></td>
+          <td>${s.calls}</td>
+          <td>${s.in.toLocaleString()}</td>
+          <td>${s.out.toLocaleString()}</td>
+          <td>${Math.round(s.latency / s.calls)}</td>
+          <td>$${s.cost.toFixed(6)}</td>
+        </tr>`).join('');
+  } catch (err) {
+    document.getElementById('token-cost-top').textContent = '-';
+  }
+}
+
 async function refreshAll() {
   hideError();
   // Add skeleton states
   document.querySelectorAll('.card').forEach(c => c.classList.add('skeleton'));
   try {
-    await Promise.all([loadSummary(), loadLlmEval(), loadSimulations(), loadModifications()]);
+    await Promise.all([loadSummary(), loadLlmEval(), loadSimulations(), loadModifications(), loadTokenUsage()]);
   } catch (err) {
     showError(`Failed to load data: ${err.message || err}`);
   } finally {

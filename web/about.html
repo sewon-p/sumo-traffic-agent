@@ -2063,49 +2063,75 @@ flowchart TD
           <div class="mermaid-wrap">
             <pre class="mermaid">
 flowchart LR
-    subgraph Frontend
-        UI["Web UI\nindex.html"]
-        AdminUI["Admin Dashboard"]
-        AboutUI["About Page"]
+    subgraph FE_L["Frontend"]
+        UI["Chat UI<br/>index.html<br/>cards: params · tool · result<br/>validation · buttons"]
     end
 
-    subgraph Backend["server.py"]
-        SSE["SSE Streaming"]
-        API["REST API"]
+    subgraph BE["Backend / server.py"]
+        SimEP["POST /api/simulate<br/>(SSE)"]
+        CalEP["POST /api/calibrate<br/>(SSE)"]
+        AdminEP["GET /api/admin/*"]
+        Calib["Calibrator<br/>Krauss loop"]
     end
 
     subgraph LLM["LLM Layer"]
-        FT["Fine-tuned Model\ngpt-4.1-mini FT"]
-        RAG["Regulation RAG\nChromaDB + Embeddings"]
-        Base["Base LLM\nGPT / Gemini / Claude"]
-        Agent["Tool-Calling Agent\n11 tools"]
-        Tracker["TokenTracker\nper-call instrumentation"]
+        Laws["Traffic Law<br/>240+ articles<br/>1,170 chunks"]
+        RAG["Regulation RAG<br/>ChromaDB"]
+        FT["Fine-tuning<br/>gpt-4.1-mini<br/>(parse_user_input)"]
+        Classify{"Base LLM<br/>classify_<br/>modification"}
+        Modify["Base LLM<br/>modify_parameters /<br/>modify_network_xml"]
+        Base["Base LLM<br/>generate_network_xml<br/>(new geometry)"]
+        Tracker["TokenTracker"]
     end
 
-    subgraph Tools
-        OSM["OSM Network"]
-        SUMO["SUMO Generator"]
-        TOPIS["TOPIS API"]
-        Valid["Validator"]
+    subgraph DATA["Data / Storage"]
+        DB[("SQLite<br/>simulations<br/>modifications")]
+        GCS[("GCS")]
     end
 
-    subgraph Data
-        DB[("SQLite DB")]
-        JSONL["Training JSONL"]
-        Laws["Traffic Law Text\nRoad Traffic Act + Rules"]
+    subgraph SIM["Simulation"]
+        Net["Network<br/>OSM / netconvert"]
+        Sumo["SUMO<br/>headless"]
+        Valid["Validator<br/>grade A~F"]
     end
 
-    UI -->|"POST /api/simulate"| SSE
-    AdminUI -->|"GET /api/admin/*"| API
+    subgraph FE_R["Admin Frontend"]
+        Admin["Admin<br/>admin.html<br/>sessions · modifications<br/>token-usage · llm-eval"]
+    end
+
+    UI -->|new / Correction / Tuning| SimEP
+    UI -->|Calibrate btn| CalEP
+
+    SimEP -->|new req| FT
     Laws --> RAG
-    SSE --> RAG --> FT --> Base --> SUMO
-    Agent --> Tools
-    FT -.tokens, latency, cost.-> Tracker
-    Base -.tokens, latency, cost.-> Tracker
-    Agent -.tokens, latency, cost.-> Tracker
-    Tracker -->|"GET /api/admin/token-usage"| AdminUI
-    SUMO --> DB
-    DB -->|"export"| JSONL
+    RAG --> FT
+    FT --> Base
+    Base --> Net
+    SimEP -.modify req.-> Classify
+    Classify -->|param| Modify
+    Classify -->|geometry| Modify
+    Modify --> Net
+    Net --> Sumo
+    Sumo --> Valid
+    Valid -->|stream cards| SimEP
+    SimEP -->|render| UI
+
+    CalEP --> Calib
+    Calib --> Sumo
+    Calib -->|cal_iteration| CalEP
+    CalEP -->|render| UI
+
+    Sumo --> DB
+    DB <-->|sync| GCS
+    DB --> AdminEP
+    AdminEP --> Admin
+
+    FT -.tokens.-> Tracker
+    Base -.tokens.-> Tracker
+    Classify -.tokens.-> Tracker
+    Modify -.tokens.-> Tracker
+    Tracker --> AdminEP
+    DB -.export JSONL.-> FT
             </pre>
           </div>
         </div>

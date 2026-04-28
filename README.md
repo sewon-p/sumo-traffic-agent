@@ -102,42 +102,59 @@ flowchart LR
     end
 
     subgraph Backend["server.py"]
-        SSE["SSE Streaming"]
-        API["REST API"]
+        SimEP["POST /api/simulate (SSE)"]
+        CalEP["POST /api/calibrate (SSE)"]
+        AdminEP["GET /api/admin/*"]
+        Calib["Calibrator\nKrauss loop"]
     end
 
     subgraph LLM["LLM Layer"]
-        FT["Fine-tuned Model\ngpt-4.1-mini FT"]
+        Laws["Traffic Law\n240+ articles · 1,170 chunks"]
         RAG["Regulation RAG\nChromaDB + Embeddings"]
-        Base["Base LLM\nGPT / Gemini / Claude"]
-        Agent["Tool-Calling Agent\n11 tools"]
+        FT["Fine-tuned\ngpt-4.1-mini\n(parse_user_input)"]
+        Classify["Base LLM\nclassify_modification"]
+        Modify["Base LLM\nmodify_parameters /\nmodify_network_xml"]
+        Base["Base LLM\ngenerate_network_xml\n(new geometry)"]
+        Agent["Tool-Calling Agent\n11 tools (CLI only)"]
         Tracker["TokenTracker\nper-call instrumentation"]
     end
 
-    subgraph Tools
-        OSM["OSM Network"]
-        SUMO["SUMO Generator"]
-        TOPIS["TOPIS API"]
-        Valid["Validator"]
+    subgraph SIM["Simulation"]
+        Net["Network\nOSM / netconvert"]
+        SUMO["SUMO\nheadless"]
+        Valid["Validator\ngrade A~F"]
     end
 
     subgraph Data
         DB[("SQLite DB")]
-        JSONL["Training JSONL"]
-        Laws["Traffic Law Text\n도로교통법 + 시행규칙"]
+        GCS[("GCS")]
     end
 
-    UI -->|"POST /api/simulate"| SSE
-    Admin -->|"GET /api/admin/*"| API
+    UI -->|new / Correction / Tuning| SimEP
+    UI -->|Calibrate btn| CalEP
+    Admin --> AdminEP
+    SimEP -->|new req| FT
+    SimEP -.modify req.-> Classify
+    Classify -->|param / geometry| Modify
+    Modify --> Net
     Laws --> RAG
-    SSE --> RAG --> FT --> Base --> SUMO
-    Agent --> Tools
-    FT -.tokens, latency, cost.-> Tracker
-    Base -.tokens, latency, cost.-> Tracker
-    Agent -.tokens, latency, cost.-> Tracker
-    Tracker -->|"GET /api/admin/token-usage"| Admin
+    RAG --> FT
+    FT --> Base
+    Base --> Net
+    Net --> SUMO
+    SUMO --> Valid
+    Valid -->|stream cards| SimEP
+    CalEP --> Calib --> SUMO
     SUMO --> DB
-    DB -->|"export"| JSONL
+    DB <-->|sync| GCS
+    DB --> AdminEP --> Admin
+    FT -.tokens.-> Tracker
+    Base -.tokens.-> Tracker
+    Classify -.tokens.-> Tracker
+    Modify -.tokens.-> Tracker
+    Agent -.tokens.-> Tracker
+    Tracker --> AdminEP
+    DB -.export JSONL.-> FT
 ```
 
 ### End-to-End Generation Flow
