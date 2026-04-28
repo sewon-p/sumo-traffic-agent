@@ -73,11 +73,14 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
-          IMAGE=${REGION}-docker.pkg.dev/${PROJECT_ID}/docker-repo/${SERVICE_NAME}:${GITHUB_SHA::7}
-          BUCKET=${PROJECT_ID}-sumo-data
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/docker-repo/${SERVICE_NAME}:${SHORT_SHA}"
+          BUCKET="${PROJECT_ID}-sumo-data"
+          REV_SUFFIX="r${SHORT_SHA}-$(date +%H%M%S)"
+          echo "Deploying image $IMAGE with revision suffix $REV_SUFFIX"
           gcloud run deploy $SERVICE_NAME \
-            --image $IMAGE \
-            --revision-suffix ${GITHUB_SHA::7} \
+            --image "$IMAGE" \
+            --revision-suffix "$REV_SUFFIX" \
             --region $REGION \
             --platform managed \
             --execution-environment gen2 \
