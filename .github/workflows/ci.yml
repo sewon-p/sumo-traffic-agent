@@ -77,6 +77,7 @@ jobs:
           IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/docker-repo/${SERVICE_NAME}:${SHORT_SHA}"
           BUCKET="${PROJECT_ID}-sumo-data"
           REV_SUFFIX="r${SHORT_SHA}-$(date +%H%M%S)"
+          REVISION_NAME="${SERVICE_NAME}-${REV_SUFFIX}"
           echo "Deploying image $IMAGE with revision suffix $REV_SUFFIX"
           gcloud run deploy $SERVICE_NAME \
             --image "$IMAGE" \
@@ -92,3 +93,6 @@ jobs:
             --set-env-vars "SUMO_SERVER_SKIP_VENV_REEXEC=1,BASE_LLM_SHARED_PROVIDER=gemini,GCS_DB_BUCKET=${BUCKET},SIM_WARMUP_SECONDS=120" \
             --set-secrets "OPENAI_API_KEY=openai-api-key:latest,TOPIS_API_KEY=topis-api-key:latest,OPENAI_FT_MODEL=openai-ft-model:latest,GEMINI_API_KEY=gemini-api-key:latest,BASE_LLM_SHARED_KEY=gemini-api-key:latest" \
             --allow-unauthenticated
+          gcloud run services update-traffic $SERVICE_NAME \
+            --region $REGION \
+            --to-revisions "$REVISION_NAME=100"
